@@ -1,0 +1,91 @@
+# Compiler
+CXX := clang++
+CXXFLAGS := -std=c++23 -O3 -march=native -flto=thin -funroll-loops -fprefetch-loop-arrays -pthread
+
+# Application Target
+APP_TARGET := app
+
+# Debugging and Macros
+DEBUGFLAGS := -g -O0
+MACROS := -DEXECUTE_DELAY=5000
+
+# Paths to Libraries
+HOME := /Users/petertso
+OPT  := /opt/homebrew
+LIBS := /Library
+
+CNPY_PATH := $(HOME)/Documents/GitHub/cnpy/cnpy
+LIBTORCH_PATH := $(OPT)/Cellar/pytorch/2.5.1_4
+RAYLIB_PATH := $(OPT)/Cellar/raylib/5.0
+PYLON_PATH := $(LIBS)
+EIGEN_PATH := $(PWD)/eigen-3.4.0
+
+# Include and library directories
+INCLUDE_DIRS := $(LIBTORCH_PATH)/include \
+                $(LIBTORCH_PATH)/include/torch/csrc/api/include \
+                $(CNPY_PATH)/include \
+                $(RAYLIB_PATH)/include \
+                $(PYLON_PATH)/Frameworks/pylon.framework/Headers \
+                $(PYLON_PATH)/Frameworks/pylon.framework/Headers/GenICam \
+				$(EIGEN_PATH)/ \
+
+LIBRARY_DIRS := $(LIBTORCH_PATH)/lib \
+                $(CNPY_PATH)/lib \
+                $(RAYLIB_PATH)/lib
+
+FRAMEWORKS := -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework pylon
+
+# Libraries
+LIBRARIES := -ltorch -ltorch_cpu -lc10 -lcnpy -lz -lraylib
+
+# Flags
+INCLUDE_FLAGS := -F/Library/Frameworks \
+                 -I$(PYLON_PATH)/Frameworks/pylon.framework/Headers \
+                 -I$(PYLON_PATH)/Frameworks/pylon.framework/Headers/GenICam \
+                 $(addprefix -I, $(INCLUDE_DIRS))
+
+LIBRARY_FLAGS := $(addprefix -L, $(LIBRARY_DIRS)) -F/Library/Frameworks
+
+LDFLAGS := $(LIBRARY_FLAGS) $(LIBRARIES) $(FRAMEWORKS) \
+           -Wl,-rpath,$(LIBTORCH_PATH)/lib \
+           -Wl,-rpath,$(CNPY_PATH)/lib \
+           -Wl,-rpath,$(RAYLIB_PATH)/lib \
+           -Wl,-rpath,@loader_path/Libraries \
+           -Wl,-rpath,$(PYLON_PATH)/Frameworks \
+           -Wl,-rpath,/Library/Frameworks/pylon.framework/Versions/A/Libraries
+
+# Directories
+SRC_DIR := source
+BUILD_DIR := build
+
+# Find all source files recursively
+APP_SOURCES := $(shell find $(SRC_DIR) -type f -name '*.cpp')
+
+# Convert source file paths to object file paths
+APP_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(APP_SOURCES))
+
+# Default target: Build application (depends on libperfH.o)
+all: $(APP_TARGET)
+
+# Build Application (Uses libperfH.o)
+$(APP_TARGET): $(LIB_OBJECT) $(APP_OBJECTS)
+	@echo "Building application: $(APP_TARGET)"
+	$(CXX) $(CXXFLAGS) $(MACROS) $^ $(LDFLAGS) -o $@
+
+# Compile all source files from source/
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(MACROS) $(INCLUDE_FLAGS) -c $< -o $@
+
+# Create necessary directories
+$(BUILD_DIR):
+	mkdir -p $@
+
+# Clean all build files
+clean:
+	rm -rf $(BUILD_DIR) $(APP_TARGET)
+
+# Debug build
+debug: CXXFLAGS += $(DEBUGFLAGS)
+debug: clean all
+	@echo "Debug build complete."

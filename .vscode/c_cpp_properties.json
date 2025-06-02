@@ -1,0 +1,27 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/eigen-3.4.0/**",
+                "/opt/homebrew/Cellar/raylib/5.0/include",
+                "~/Documents/GitHub/cnpy/cnpy/include",
+                "/opt/homebrew/Cellar/pytorch/2.5.1_4/include/torch/csrc/api/include",
+                "/opt/homebrew/Cellar/pytorch/2.5.1_4/include"
+            ],
+            "defines": [],
+            "cStandard": "c23",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "macos-clang-arm64",
+            "compilerPath": "/usr/bin/gcc",
+            "compilerArgs": [
+                "-std=c++23",
+                "-Wall",
+                "-g",
+                "-O3"
+            ]
+        }
+    ],
+    "version": 4
+}
