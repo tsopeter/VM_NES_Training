@@ -1,13 +1,13 @@
 # Compiler
 CXX := clang++
-CXXFLAGS := -std=c++23 -O3 -march=native -flto=thin -funroll-loops -fprefetch-loop-arrays -pthread
+CXXFLAGS := -std=c++23 -O0 -march=native -flto=thin -funroll-loops -fprefetch-loop-arrays -pthread
 
 # Application Target
 APP_TARGET := app
 
 # Debugging and Macros
 DEBUGFLAGS := -g -O0
-MACROS := -DEXECUTE_DELAY=5000
+MACROS := -DDEVICE=torch::kMPS
 
 # Paths to Libraries
 HOME := /Users/petertso

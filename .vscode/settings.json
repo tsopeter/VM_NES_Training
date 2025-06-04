@@ -72,6 +72,9 @@
         "span": "cpp",
         "typeindex": "cpp",
         "unordered_set": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "future": "cpp",
+        "hash_map": "cpp",
+        "fft": "cpp"
     }
 }
