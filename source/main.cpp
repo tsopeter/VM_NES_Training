@@ -1,8 +1,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <chrono>
-#include <Eigen/Dense>
 #include "cnpy.h"
+#include <raylib.h>
 
 /**
  * s2

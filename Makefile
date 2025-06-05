@@ -1,23 +1,24 @@
 # Compiler
-CXX := clang++
-CXXFLAGS := -std=c++23 -O0 -march=native -flto=thin -funroll-loops -fprefetch-loop-arrays -pthread
+CXX := g++
+CXXFLAGS := -std=c++23 -O0 -march=native -funroll-loops -pthread
 
 # Application Target
 APP_TARGET := app
 
 # Debugging and Macros
 DEBUGFLAGS := -g -O0
-MACROS := -DDEVICE=torch::kMPS
+MACROS := -DDEVICE=torch::kCUDA
 
 # Paths to Libraries
-HOME := /Users/petertso
-OPT  := /opt/homebrew
-LIBS := /Library
+HOME  := /home/petertso
+DOWN  := /home/petertso/Downloads
+OPT   := /opt
+LOCAL := /usr/local
 
-CNPY_PATH := $(HOME)/Documents/GitHub/cnpy/cnpy
-LIBTORCH_PATH := $(OPT)/Cellar/pytorch/2.5.1_4
-RAYLIB_PATH := $(OPT)/Cellar/raylib/5.0
-PYLON_PATH := $(LIBS)
+CNPY_PATH := $(LOCAL)/
+LIBTORCH_PATH := $(DOWN)/libtorch
+RAYLIB_PATH := $(LOCAL)/
+PYLON_PATH := $(OPT)/pylon/
 EIGEN_PATH := $(PWD)/eigen-3.4.0
 
 # Include and library directories
@@ -25,34 +26,27 @@ INCLUDE_DIRS := $(LIBTORCH_PATH)/include \
                 $(LIBTORCH_PATH)/include/torch/csrc/api/include \
                 $(CNPY_PATH)/include \
                 $(RAYLIB_PATH)/include \
-                $(PYLON_PATH)/Frameworks/pylon.framework/Headers \
-                $(PYLON_PATH)/Frameworks/pylon.framework/Headers/GenICam \
+                $(PYLON_PATH)/include \
+                $(PYLON_PATH)/include/GenICam \
 				$(EIGEN_PATH)/ \
 
 LIBRARY_DIRS := $(LIBTORCH_PATH)/lib \
                 $(CNPY_PATH)/lib \
-                $(RAYLIB_PATH)/lib
-
-FRAMEWORKS := -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework pylon
+                $(RAYLIB_PATH)/lib \
+                $(PYLON_PATH)/lib64
 
 # Libraries
-LIBRARIES := -ltorch -ltorch_cpu -lc10 -lcnpy -lz -lraylib
+LIBRARIES := -ltorch -ltorch_cpu -lc10 -lcnpy -lz -lraylib -lpylonbase -lpylonutility
 
 # Flags
-INCLUDE_FLAGS := -F/Library/Frameworks \
-                 -I$(PYLON_PATH)/Frameworks/pylon.framework/Headers \
-                 -I$(PYLON_PATH)/Frameworks/pylon.framework/Headers/GenICam \
-                 $(addprefix -I, $(INCLUDE_DIRS))
+INCLUDE_FLAGS := $(addprefix -I, $(INCLUDE_DIRS))
 
-LIBRARY_FLAGS := $(addprefix -L, $(LIBRARY_DIRS)) -F/Library/Frameworks
+LIBRARY_FLAGS := $(addprefix -L, $(LIBRARY_DIRS))
 
 LDFLAGS := $(LIBRARY_FLAGS) $(LIBRARIES) $(FRAMEWORKS) \
            -Wl,-rpath,$(LIBTORCH_PATH)/lib \
            -Wl,-rpath,$(CNPY_PATH)/lib \
-           -Wl,-rpath,$(RAYLIB_PATH)/lib \
-           -Wl,-rpath,@loader_path/Libraries \
-           -Wl,-rpath,$(PYLON_PATH)/Frameworks \
-           -Wl,-rpath,/Library/Frameworks/pylon.framework/Versions/A/Libraries
+           -Wl,-rpath,$(RAYLIB_PATH)/lib
 
 # Directories
 SRC_DIR := source

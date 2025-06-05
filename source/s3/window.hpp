@@ -4,7 +4,6 @@
 #include <iostream>
 #include "raylib.h"                 // Library for simple Open GL drawing
 #include "rlgl.h"
-#include <OpenGL/gl.h>              // glFinish (maybe it's not necessary...)
 
 #define PLATFORM_DESKTOP
 
