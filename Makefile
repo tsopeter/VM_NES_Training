@@ -19,7 +19,6 @@ CNPY_PATH := $(LOCAL)/
 LIBTORCH_PATH := $(DOWN)/libtorch
 RAYLIB_PATH := $(LOCAL)/
 PYLON_PATH := $(OPT)/pylon/
-EIGEN_PATH := $(PWD)/eigen-3.4.0
 
 # Include and library directories
 INCLUDE_DIRS := $(LIBTORCH_PATH)/include \
@@ -27,16 +26,17 @@ INCLUDE_DIRS := $(LIBTORCH_PATH)/include \
                 $(CNPY_PATH)/include \
                 $(RAYLIB_PATH)/include \
                 $(PYLON_PATH)/include \
-                $(PYLON_PATH)/include/GenICam \
-				$(EIGEN_PATH)/ \
+                $(PYLON_PATH)/include/GenICam
 
 LIBRARY_DIRS := $(LIBTORCH_PATH)/lib \
                 $(CNPY_PATH)/lib \
                 $(RAYLIB_PATH)/lib \
-                $(PYLON_PATH)/lib64
+                $(PYLON_PATH)/lib
 
 # Libraries
-LIBRARIES := -ltorch -ltorch_cpu -lc10 -lcnpy -lz -lraylib -lpylonbase -lpylonutility
+LIBRARIES := -ltorch -ltorch_cpu -lc10 -lc10_cuda -lcnpy -lz -lraylib \
+             -lpylonbase -lpylonutility -lGenApi_gcc_v3_1_Basler_pylon \
+             -lGCBase_gcc_v3_1_Basler_pylon
 
 # Flags
 INCLUDE_FLAGS := $(addprefix -I, $(INCLUDE_DIRS))
@@ -46,7 +46,9 @@ LIBRARY_FLAGS := $(addprefix -L, $(LIBRARY_DIRS))
 LDFLAGS := $(LIBRARY_FLAGS) $(LIBRARIES) $(FRAMEWORKS) \
            -Wl,-rpath,$(LIBTORCH_PATH)/lib \
            -Wl,-rpath,$(CNPY_PATH)/lib \
-           -Wl,-rpath,$(RAYLIB_PATH)/lib
+           -Wl,-rpath,$(RAYLIB_PATH)/lib \
+           -Wl,-rpath,$(PYLON_PATH)/lib \
+           
 
 # Directories
 SRC_DIR := source

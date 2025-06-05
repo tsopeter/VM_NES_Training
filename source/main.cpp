@@ -100,6 +100,11 @@ public:
 };
 
 int main (int argc, const char *argv[]) {
+    if (!torch::cuda::is_available()) {
+        std::cerr << "CUDA not available!" << std::endl;
+        return 1;
+    }
+
     s3_Window win {};
     win.monitor = 0;
     win.load(); /* init screen */

@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/eigen-3.4.0/**",
                 "/usr/local/include",
-                "/home/petertso/Downloads/libtorch/include/**",
+                "/home/petertso/Downloads/libtorch/include",
+                "/home/petertso/Downloads/libtorch/include/torch/csrc/api/include",
                 "/opt/pylon/include"
             ],
             "defines": [],
