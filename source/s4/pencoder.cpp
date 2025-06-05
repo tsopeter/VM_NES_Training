@@ -193,10 +193,10 @@ Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
 
     Image ret {
         .data    = data,
-        .format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
-        .height  = m_h,
         .width   = m_w,
-        .mipmaps = 1
+        .height  = m_h,
+        .mipmaps = 1,
+        .format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
     };
     return ret;
 }

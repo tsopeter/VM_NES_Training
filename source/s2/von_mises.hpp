@@ -57,15 +57,6 @@ public:
     torch::Tensor m_rejection_r ();
 
     /**
-     * @brief VonMises calculated using method proposed in
-     * `Fast Python sampler for the von Mises Fisher distribution`
-     * 
-     * Link: https://hal.science/hal-04004568v2/file/main.pdf
-     */
-    torch::Tensor sample_muller(int);
-
-
-    /**
      * @brief Prints stats
      * 
      */
