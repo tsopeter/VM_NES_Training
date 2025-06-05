@@ -19,7 +19,7 @@ static int vm_calls = 0;
 
 using rejection_fn = std::function<torch::Tensor>;
 
-#define VONMISES_PRECISION torch::kFloat32
+#define VONMISES_PRECISION torch::kFloat64
 
 std::vector<double>
  _I0_COEF_SMALL = {

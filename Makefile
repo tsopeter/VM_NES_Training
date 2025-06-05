@@ -34,7 +34,7 @@ LIBRARY_DIRS := $(LIBTORCH_PATH)/lib \
                 $(PYLON_PATH)/lib
 
 # Libraries
-LIBRARIES := -ltorch -ltorch_cpu -lc10 -lc10_cuda -lcnpy -lz -lraylib \
+LIBRARIES := -Wl,--no-as-needed -ltorch -ltorch_cpu -ltorch_cuda -lc10 -lc10_cuda -lcnpy -lz -lraylib -lcuda \
              -lpylonbase -lpylonutility -lGenApi_gcc_v3_1_Basler_pylon \
              -lGCBase_gcc_v3_1_Basler_pylon
 
