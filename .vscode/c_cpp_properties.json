@@ -13,10 +13,10 @@
             "defines": [],
             "cStandard": "c23",
             "cppStandard": "c++23",
-            "intelliSenseMode": "linux-gcc-x86",
+            "intelliSenseMode": "linux-gcc-x64",
             "compilerPath": "/usr/bin/gcc",
             "compilerArgs": [
-                "-std=c++23",
+                "-std=c++2b",
                 "-Wall",
                 "-g",
                 "-O3"
