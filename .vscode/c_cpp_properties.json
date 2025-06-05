@@ -4,7 +4,6 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/eigen-3.4.0/**",
                 "/usr/local/include",
                 "/home/petertso/Downloads/libtorch/include",
                 "/home/petertso/Downloads/libtorch/include/torch/csrc/api/include",
@@ -14,6 +13,33 @@
             "cStandard": "c23",
             "cppStandard": "c++23",
             "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "compilerArgs": [
+                "-std=c++2b",
+                "-Wall",
+                "-g",
+                "-O3"
+            ]
+        },
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/Users/petertso/Documents/GitHub/cnpy/cnpy/include",
+                "/opt/homebrew/Cellar/pytorch/2.5.1_4/include",
+                "/opt/homebrew/Cellar/raylib/5.0/include",
+                "/opt/homebrew/Cellar/pytorch/2.5.1_4/include/torch/csrc/api/include",
+                "/Library/Frameworks/pylon.framework/Headers/",
+                "/Library/Frameworks/pylon.framework/Headers/GenICam/",
+                "/Library/Frameworks/"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "cStandard": "c23",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "macos-clang-arm64",
             "compilerPath": "/usr/bin/gcc",
             "compilerArgs": [
                 "-std=c++2b",
