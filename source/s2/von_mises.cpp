@@ -117,20 +117,20 @@ torch::Tensor m_rejection_sampling(
 }
 
 VonMises::VonMises ()
-{
-    
-}
+{}
 
 VonMises::VonMises (torch::Tensor &mu, torch::Tensor &kappa) :
     m_mu(mu), m_kappa(kappa) {
 
     m_mu    = m_mu.to(VONMISES_PRECISION);
     m_kappa = m_kappa.to(VONMISES_PRECISION).to(m_mu.device());
+    m_r     = m_rejection_r();  /* precomputed */
 }
 
 VonMises::VonMises (torch::Tensor &mu, double kappa) :
     m_mu(mu) {
-    m_kappa = torch::full_like(mu, kappa, VONMISES_PRECISION).to(m_mu.device());;
+    m_kappa = torch::full_like(mu, kappa, VONMISES_PRECISION).to(m_mu.device());
+    m_r     = m_rejection_r();  /* precomputed */
 }
 
 VonMises::~VonMises () {
@@ -147,8 +147,7 @@ torch::Tensor VonMises::sample(int n) {
     // Allocate x
     auto x = torch::empty(shape, m_mu.options().dtype(VONMISES_PRECISION));
 
-    auto proposal_r = VonMises::m_rejection_r();
-    auto result = m_rejection_sampling(m_mu, m_kappa, proposal_r, x);
+    auto result = m_rejection_sampling(m_mu, m_kappa, m_r, x);
 
     return result.to(m_mu.dtype());
 }
@@ -175,4 +174,104 @@ void VonMises::print_stats () const {
                "\t\tMin Rounds: "<<vm_min_rounds<<'\n'<<
                "\t\tMax Rounds: "<<vm_max_rounds<<'\n'<<
                "\t\tTotal calls: "<<vm_calls<<'\n';
+}
+
+// Output shape: [n, H, W]
+/**
+ *  Below is a copy of the VMF function that was used as reference to implement sample_muller(...)
+ * 
+ * 
+    import numpy as np
+
+    def random_vMF(mu, kappa, size=None):
+        """
+        Sample from the von Mises–Fisher (vMF) distribution with given mean direction `mu` and concentration `kappa`.
+        Based on: https://hal.science/hal-04004568
+        """
+        # Determine number of samples and output shape
+        n = 1 if size is None else np.prod(size)
+        shape = () if size is None else tuple(np.ravel(size))
+
+        # Normalize mean direction
+        mu = np.asarray(mu)
+        mu = mu / np.linalg.norm(mu)
+        (d,) = mu.shape
+
+        # Sample points orthogonal to mu
+        z = np.random.normal(0, 1, (n, d))
+        z /= np.linalg.norm(z, axis=1, keepdims=True)
+        z = z - (z @ mu[:, None]) * mu[None, :]
+        z /= np.linalg.norm(z, axis=1, keepdims=True)
+
+        # Sample cos(θ) values
+        cos = _random_vMF_cos(d, kappa, n)
+        sin = np.sqrt(1 - cos ** 2)
+
+        # Combine radial and angular components
+        x = z * sin[:, None] + cos[:, None] * mu[None, :]
+        return x.reshape((*shape, d))
+
+    def _random_vMF_cos(d, kappa, n):
+        """
+        Rejection sampling to generate cos(θ) values with density:
+        p(t) ∝ (1 - t^2)^((d-2)/2) * exp(kappa * t)
+        """
+        b = (d - 1) / (2 * kappa + np.sqrt(4 * kappa ** 2 + (d - 1) ** 2))
+        x0 = (1 - b) / (1 + b)
+        c = kappa * x0 + (d - 1) * np.log(1 - x0 ** 2)
+
+        found = 0
+        out = []
+        while found < n:
+            m = min(n, int((n - found) * 1.5))
+            z = np.random.beta((d - 1) / 2, (d - 1) / 2, size=m)
+            t = (1 - (1 + b) * z) / (1 - (1 - b) * z)
+            test = kappa * t + (d - 1) * np.log(1 - x0 * t) - c
+            accept = test >= -np.random.exponential(size=m)
+            out.append(t[accept])
+            found += len(out[-1])
+
+        return np.concatenate(out)[:n]
+ */
+torch::Tensor VonMises::sample_muller(int n) {
+    auto shape = m_mu.sizes().vec();
+    int d = shape.size();
+    shape.insert(shape.begin(), n);  // Result shape: [n, d]
+
+    // Normalize mu
+    torch::Tensor mu = m_mu / torch::linalg::norm(m_mu, -1, true);
+
+    // Sample z ~ N(0,1) and make it orthogonal to mu
+    auto z = torch::randn(shape, m_mu.options());
+    auto dot = torch::sum(z * mu, -1, true);             // [n, 1]
+    auto proj = dot * mu;                                // [n, d]
+    z = z - proj;                                        // Make orthogonal
+    z = z / torch::linalg::norm(z, -1, true);            // Normalize to unit vector
+
+    // Sample cos(theta)
+    int D = d;
+    double kappa_val = m_kappa.item<double>();
+    double b = (D - 1) / (2 * kappa_val + std::sqrt(4 * kappa_val * kappa_val + (D - 1) * (D - 1)));
+    double x0 = (1 - b) / (1 + b);
+    double c = kappa_val * x0 + (D - 1) * std::log(1 - x0 * x0);
+
+    std::vector<double> cos_vals;
+    cos_vals.reserve(n);
+
+    while (cos_vals.size() < static_cast<size_t>(n)) {
+        int m = std::min(n, static_cast<int>((n - cos_vals.size()) * 1.5));
+        auto z_beta = torch::distributions::Beta((D - 1) / 2.0, (D - 1) / 2.0).sample({m});
+        auto t = (1 - (1 + b) * z_beta) / (1 - (1 - b) * z_beta);
+        auto test = kappa_val * t + (D - 1) * torch::log(1 - x0 * t) - c;
+        auto accept = test >= -torch::rand({m}).exponential_();
+        auto accepted = t.index({accept});
+        cos_vals.insert(cos_vals.end(), accepted.data_ptr<double>(), accepted.data_ptr<double>() + accepted.numel());
+    }
+
+    auto cos_tensor = torch::from_blob(cos_vals.data(), {n}, m_mu.options()).clone();
+    auto sin_tensor = torch::sqrt(1 - cos_tensor * cos_tensor).unsqueeze(1);  // [n,1]
+    cos_tensor = cos_tensor.unsqueeze(1);                                     // [n,1]
+
+    auto x = z * sin_tensor + mu * cos_tensor;
+    return x.to(m_mu.dtype());
 }
