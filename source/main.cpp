@@ -100,10 +100,12 @@ public:
 };
 
 int main (int argc, const char *argv[]) {
+#ifndef __APPLE__   /* macOS devices cannot have CUDA */
     if (!torch::cuda::is_available()) {
         std::cerr << "CUDA not available!" << std::endl;
         return 1;
     }
+#endif
 
     s3_Window win {};
     win.monitor = 0;

@@ -5,8 +5,8 @@
 
 class s4_Optimizer {
 public:
-    Optimizer ();
-    ~Optimizer ();
+    s4_Optimizer ();
+    ~s4_Optimizer ();
 private:
 
     void step (torch::Tensor &loss);
