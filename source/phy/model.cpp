@@ -69,3 +69,7 @@ torch::Tensor Phy_Model::get_actions_sequentially () {
 int64_t Phy_Model::N_samples () const {
     return m_number_of_actions;
 }
+
+std::vector<torch::Tensor> Phy_Model::parameters () {
+    return {m_parameter};
+}

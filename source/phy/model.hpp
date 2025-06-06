@@ -97,6 +97,12 @@ public:
      */
     torch::Tensor get_actions_sequentially ();
 
+    /**
+     * @brief Returns a vector of all parameters in network.
+     * 
+     */
+    std::vector<torch::Tensor> parameters ();
+
 private:
     Phy_Model_Parameters m_params;
 
