@@ -1,6 +1,6 @@
 #include <iostream>
-#include "examples/e1.hpp"
+#include "examples/e2.hpp"
 
 int main () {
-    e1();
+    e2();
 }

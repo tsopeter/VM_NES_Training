@@ -91,6 +91,7 @@ private:
 
 torch::Tensor env (torch::Tensor &p) {
     // MSE
+    torch::NoGradGuard no_grad;
     auto d = (p - 3.0f);
     return torch::sum(
         d * d
