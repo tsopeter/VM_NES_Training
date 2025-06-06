@@ -1,7 +1,7 @@
 #include "e2.hpp"
-#include "../s2/dist.hpp"
-#include "../s4/model.hpp"      /* Model Definition */
-#include "../s4/optimizer.hpp"  /* Optimizer */
+#include "../s2/dist.hpp"       /* Distribution Virtual Class*/
+#include "../s4/model.hpp"      /* Model Virtual Class  */
+#include "../s4/optimizer.hpp"  /* Black-Box Optimizer */
 
 #include <iostream>
 #include <torch/torch.h>

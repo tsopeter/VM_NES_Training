@@ -1,136 +1,79 @@
 #include "e1.hpp"
 #include <iostream>
-#include <unistd.h>
-#include <chrono>
-#include "cnpy.h"
-#include <raylib.h>
 
-/**
- * s2
- * 
- * /s2/ denotes small modules
- */
-#include "../s2/von_mises.hpp"
 #include "../s2/quantize.hpp"
 #include "../s2/dataloader.hpp"
-
-/**
- * s3
- * 
- * /s3/ denotes large modules
- */
-#include "../s3/cam.hpp"
+#include "../s2/von_mises.hpp"
 #include "../s3/window.hpp"
-
-/**
- * s4
- * 
- * /s4/ denotes modules dedicated to neural network
- */
-#include "../s4/pencoder.hpp"
-#include "../s4/utils.hpp"
 #include "../s4/upscale.hpp"
+#include "../s4/utils.hpp"
+#include "../s4/pencoder.hpp"
 
 #include "../device.hpp"   /* Includes device macro */
 
-class e1_dl2 {
-private:
-    int m_num_images;
-    int m_counter;
-    int m_num_samples;
-    torch::Tensor m_phase_mask;
-    torch::Tensor m_samples;
 
-    s2_Dataloader m_dl {"./Datasets"};
-    s2_Data m_dd {};
-    PEncoder m_pp {};
-    s4_Upscale m_us {};
-    VonMises m_vm {};
-    Quantize m_q {};
+int e1 () {
+    /* Initialize screen */
+    s3_Window window {};
+    window.wmode   = WINDOWED;
+    window.monitor = 0;
+    window.load();
 
-    torch::Device m_device = DEVICE;
-    torch::Tensor m_ones = torch::ones(std::vector<int64_t>{24, 128, 128}).to(torch::kFloat32).to(m_device);
+    int64_t s = 128;
+    int64_t k = 200;
 
-public:
-    e1_dl2 (int n, int h, int w, int H, int W) : m_num_images(n) {
-        m_dd = m_dl.load(TEST, n);
-        m_dd.device(m_device);
+    /* Init distribution */
+    torch::Tensor mu = s4_Utils::GetRandomPhaseMask(s, s).to(DEVICE);
+    VonMises von_mises {mu, 25};
 
-        m_pp.m_x = 0;
-        m_pp.m_y = 0;
-        m_pp.m_h = H;
-        m_pp.m_w = W;
+    /* Dataloader */
+    s2_Dataloader dl {"./Datasets"};
+    s2_Data da = dl.load(TEST, 60);
+    da.device(DEVICE);
 
-        m_us.m_h = h;
-        m_us.m_w = w;
-        m_us.m_mode = (BINARY | BILINEAR | NORMALIZE | ROUND);
-        m_us.assign_args();
+    /* Upscaler */
+    s4_Upscale upscale   {(int)k, (int)k, (BINARY | NORMALIZE | ROUND | BILINEAR)};
+    s4_Upscale upscale_p {(int)k, (int)k, (BILINEAR)};
+ 
+    /* Phase Encoder */
+    PEncoder pen {0, 0, window.Height, window.Width};
 
-        m_phase_mask = s4_Utils::GetRandomPhaseMask(h, w).to(torch::kFloat32).to(m_device);
+    /* Quantizer */
+    Quantize q;
 
-        m_vm = VonMises(m_phase_mask, 25.0);
-
-        m_num_samples = 144;
-        m_samples = m_vm.sample(m_num_samples);
-        m_counter = m_num_samples;
-    }
-
-    Image operator[](int i) {
-        if (m_counter <= 0) {
-            m_samples = m_vm.sample(m_num_samples);
-            m_counter = m_num_samples;
-        }
-
-        i %= m_num_images;
-        auto [img, _] = m_dd[i];
-        img = m_us(img);    /* upscale */
-
-        auto samples = m_samples.slice(0, m_num_samples - m_counter, m_num_samples - m_counter + 24);
-        m_counter -= 24;
-
-        samples    = m_pp.ImageTensorMap(samples, img); /* apply */
-        auto m1 = m_pp.MEncode_u8Tensor2(samples);
-        auto image = m_pp.u8MTensor_Image(m1);
-
-        return image;
-    }
-
-    ~e1_dl2 () {
-        m_vm.print_stats();
-    }
-};
-
-int e1 (int argc, const char *argv[]) {
-#ifndef __APPLE__   /* macOS devices cannot have CUDA */
-    if (!torch::cuda::is_available()) {
-        std::cerr << "CUDA not available!" << std::endl;
-        return 1;
-    }
-#endif
-
-    s3_Window win {};
-    win.monitor = 0;
-    win.load(); /* init screen */
-
-    e1_dl2 d {
-        24, 128, 128, win.Height, win.Width
-    };
-
-    int i = 0;
     while (!WindowShouldClose()) {
-        /* CPU -> GPU */
-        auto image     = d[i];
-        auto texture   = LoadTextureFromImage(image);
+        auto samples = von_mises.sample(144);   // [N, H, W]
 
-        BeginDrawing();
-        ClearBackground(WHITE);
+        for (int i = 0; i < da.len(); ++i) {
+            auto [simg, slabel] = da[i];
 
-        DrawTextureEx(texture, {0, 0}, 0.0, 1.0, WHITE);
-        DrawFPS(10, 10);
-        EndDrawing();
+            /* Upscale */
+            auto img = upscale(simg);
 
-        ++i;
-        UnloadTexture(texture);
+            for (int j = 0; j < 144; j += 24) {
+                auto bsamples = samples.slice(0, j, j + 24); // [B, H, W]
+
+                // upscale bsamples
+                bsamples = upscale_p(bsamples);
+                
+                /* Combine bsamples and img */
+                auto comb = pen.BImageTensorMap(bsamples, img);
+
+                /* Transform into Image */
+                auto timage = pen.MEncode_u8Tensor2(comb);
+                auto  image = pen.u8MTensor_Image(timage);
+
+                /* Draw */
+                Texture texture = LoadTextureFromImage(image);
+                BeginDrawing();
+                ClearBackground(BLACK);
+                DrawTextureEx(texture, {0, 0}, 0, 1, WHITE);
+                DrawFPS(10, 10);
+                EndDrawing();
+                UnloadTexture(texture);
+            }
+        }
     }
+
     return 0;
 }

@@ -2,7 +2,7 @@
 #define examples_e1_hpp__
 
 /**
- * @brief e1 () is an example to combine images
+ * @brief e1 () is an example to combine images and Phase masks together
  * 
  */
 int e1 ();
