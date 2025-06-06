@@ -181,60 +181,8 @@ void VonMises::print_stats () const {
                "\t\tTotal calls: "<<vm_calls<<'\n';
 }
 
-// Output shape: [n, H, W]
-/**
- *  Below is a copy of the VMF function that was used as reference to implement sample_muller(...)
- * 
- * 
-    import numpy as np
-
-    def random_vMF(mu, kappa, size=None):
-        """
-        Sample from the von Mises–Fisher (vMF) distribution with given mean direction `mu` and concentration `kappa`.
-        Based on: https://hal.science/hal-04004568
-        """
-        # Determine number of samples and output shape
-        n = 1 if size is None else np.prod(size)
-        shape = () if size is None else tuple(np.ravel(size))
-
-        # Normalize mean direction
-        mu = np.asarray(mu)
-        mu = mu / np.linalg.norm(mu)
-        (d,) = mu.shape
-
-        # Sample points orthogonal to mu
-        z = np.random.normal(0, 1, (n, d))
-        z /= np.linalg.norm(z, axis=1, keepdims=True)
-        z = z - (z @ mu[:, None]) * mu[None, :]
-        z /= np.linalg.norm(z, axis=1, keepdims=True)
-
-        # Sample cos(θ) values
-        cos = _random_vMF_cos(d, kappa, n)
-        sin = np.sqrt(1 - cos ** 2)
-
-        # Combine radial and angular components
-        x = z * sin[:, None] + cos[:, None] * mu[None, :]
-        return x.reshape((*shape, d))
-
-    def _random_vMF_cos(d, kappa, n):
-        """
-        Rejection sampling to generate cos(θ) values with density:
-        p(t) ∝ (1 - t^2)^((d-2)/2) * exp(kappa * t)
-        """
-        b = (d - 1) / (2 * kappa + np.sqrt(4 * kappa ** 2 + (d - 1) ** 2))
-        x0 = (1 - b) / (1 + b)
-        c = kappa * x0 + (d - 1) * np.log(1 - x0 ** 2)
-
-        found = 0
-        out = []
-        while found < n:
-            m = min(n, int((n - found) * 1.5))
-            z = np.random.beta((d - 1) / 2, (d - 1) / 2, size=m)
-            t = (1 - (1 + b) * z) / (1 - (1 - b) * z)
-            test = kappa * t + (d - 1) * np.log(1 - x0 * t) - c
-            accept = test >= -np.random.exponential(size=m)
-            out.append(t[accept])
-            found += len(out[-1])
-
-        return np.concatenate(out)[:n]
- */
+void VonMises::set_mu (torch::Tensor &mu, double kappa) {
+    m_mu    = mu.to(VONMISES_PRECISION);
+    m_kappa = torch::full_like(mu, kappa, VONMISES_PRECISION).to(m_mu.device());
+    m_r     = m_rejection_r();  /* precomputed */
+}

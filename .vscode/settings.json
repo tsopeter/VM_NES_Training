@@ -75,6 +75,7 @@
         "valarray": "cpp",
         "future": "cpp",
         "hash_map": "cpp",
-        "fft": "cpp"
+        "fft": "cpp",
+        "functional": "cpp"
     }
 }

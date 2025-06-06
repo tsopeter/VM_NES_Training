@@ -4,7 +4,9 @@
 #include <functional>
 #include <cmath>
 
-class VonMises {
+#include "dist.hpp"
+
+class VonMises : public Dist {
 public:
     /**
      * @brief VonMises (or circular normal) is implemented
@@ -41,13 +43,13 @@ public:
      *             mu = [X,Y,...], sample(N) = [N,X,Y,...]
      * @return Sampled result as torch Tensor
      */
-    torch::Tensor sample(int);
+    torch::Tensor sample(int) override;
 
     /**
      * @brief Computes the Log Probability given of a tensor
      * 
      */
-    torch::Tensor log_prob(torch::Tensor&);
+    torch::Tensor log_prob(torch::Tensor&) override;
 
     /**
      * @brief Privately used rejection filter for Von Mises
@@ -61,6 +63,12 @@ public:
      * 
      */
     void print_stats () const;
+
+    /**
+     * @brief Set mu
+     * 
+     */
+    void set_mu (torch::Tensor &mu, double kappa);
 
 private:
     torch::Tensor m_mu, m_kappa;
