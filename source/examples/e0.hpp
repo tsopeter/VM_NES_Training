@@ -2,7 +2,7 @@
 #define examples_e0_hpp__
 
 /**
- * @brief e0 () is an example which initializes camera, and display images on to
+ * @brief e0 () is an example which display images on to
  *        the screen.
  * 
  */

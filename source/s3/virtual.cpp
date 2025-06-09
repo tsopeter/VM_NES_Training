@@ -136,13 +136,22 @@ void s3_Virtual_Camera::p_open () {
     camera.ExposureTime.SetValue(prop.ExposureTime);
     camera.Height.SetValue(prop.Height);
     camera.Width.SetValue(prop.Width);
+    std::cout<<"INFO: [s3_Virtual_Camera]: Set Physical Properties.\n";
 
     camera.TriggerSelector.SetValue(prop.TriggerSelect);
+    std::cout<<"INFO: [s3_Virtual_Camera]: Set Trigger Select.\n";
+
     camera.TriggerMode.SetValue(prop.TriggerMode);
+    std::cout<<"INFO: [s3_Virtual_Camera]: Set Trigger Mode.\n";
+
     camera.TriggerSource.SetValue(prop.TriggerSource);
+    std::cout<<"INFO: [s3_Virtual_Camera]: Set Trigger Source.\n";
+
     camera.TriggerActivation.SetValue(prop.TriggerActivation);
-    
-    camera.TriggerDelay.SetValue(prop.TriggerDelay);
+    std::cout<<"INFO: [s3_Virtual_Camera]: Set Trigger Activation.\n";
+
+    //camera.TriggerDelay.SetValue(prop.TriggerDelay);
+    //std::cout<<"INFO: [s3_Virtual_Camera]: Set Trigger Delay.\n";
 
     if (prop.TriggerSelect == Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameBurstStart)
         camera.AcquisitionBurstFrameCount.SetValue(prop.AcqBurstCount);

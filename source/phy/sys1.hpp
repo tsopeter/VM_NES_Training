@@ -24,6 +24,10 @@
 
 #include "../device.hpp"
 
+using  index_t   = int64_t;
+using  label_t   = uint8_t;
+using  compute_t = std::tuple<index_t, label_t, torch::Tensor>; 
+
 struct Phy_Sys1_Settings {
     /* Window Settings */
     int monitor = 0;
@@ -70,7 +74,9 @@ private:
      * 
      */
     void compute();
-    void process(s4_Slicer&, torch::Tensor&);
+    void process(s4_Slicer&, compute_t&);
+
+    void update(Phy_Model&, s4_Optimizer&);
 
     s4_Slicer get_slicer ();
 

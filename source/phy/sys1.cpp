@@ -3,8 +3,8 @@
 #include <thread>
 #include <functional>
 
-static moodycamel::ConcurrentQueue<torch::Tensor> computeq;
-static moodycamel::ConcurrentQueue<torch::Tensor> lossq;
+static moodycamel::ConcurrentQueue<compute_t> computeq;
+static moodycamel::ConcurrentQueue<compute_t> lossq;
 
 Phy_Sys1::Phy_Sys1 (Phy_Sys1_Settings setting)
 : m_setting(setting) {}
@@ -99,19 +99,22 @@ void Phy_Sys1::run () {
                     UnloadTexture(texture);
 
                     /* Read from camera */
+                    std::vector<torch::Tensor> images;
                     while (camera.count < m_setting.n_bits) {
-                        auto images = camera.read();    /* Can be [], [H, W] or [N, H, W] */
-                        /* Place onto computeq */
-                        computeq.enqueue(images);       /* Compute thread will handle computation and handling of images */
+                        auto image = camera.read();    /* Can be [], [H, W] or [N, H, W] */
+                        images.push_back(image);
                     }
                     camera.count = 0;   /* reset count */
+
+                    /* Place onto the compute queue for loss computation */
+                    computeq.enqueue({static_cast<int64_t>(j), label.item<label_t>(), torch::stack(images)});
+
                 }
                 model.refill_actions_without_sampling();
             }
 
-            // Update Mask
-
-            // Read from lossq, and store reshape it as 
+            // Update Mask (this is blocking )
+            update(model, opt);
 
         }
     }
@@ -120,11 +123,43 @@ void Phy_Sys1::run () {
     m_running = false;  // Tell compute thread to stop computing
     compute_thread.join();
 }
-void Phy_Sys1::process (s4_Slicer &s, torch::Tensor &t) {
-    auto det = s.detect(t); // [B, 10]
 
-    /* Store detection results into Loss queue */
+void Phy_Sys1::update(Phy_Model &model, s4_Optimizer &opt) {
+    /* Read from lossq (which is stored as [{index_t, label_t, torch::Tensor}])*/
+    /* Where it can be  [24]  */
 
+    std::vector<torch::Tensor> losses;
+
+    // This is the number of losses we should see in lossq
+    int64_t size = m_setting.bsz * (m_setting.n_actions / m_setting.n_bits);
+    compute_t t;
+    while (losses.size() < size) {
+        if (lossq.try_dequeue(t)) {
+            auto &[index, label, loss_tensor] = t;
+            losses.push_back(loss_tensor);
+        }
+    }
+
+    if (!losses.empty()) {
+        auto all_rewards = torch::cat(losses);  // [B * N]
+        int64_t total = all_rewards.size(0);
+        auto rewards = -all_rewards.view({m_setting.bsz, m_setting.n_actions}).mean(0);    // [N]
+        opt.step(rewards);
+    }
+}
+
+void Phy_Sys1::process (s4_Slicer &s, compute_t &t) {
+    auto &[index, label, tensor] = t;
+    auto det = s.detect(tensor); // [B, 10]
+
+    // Extend label (uint8_t) to same size as det
+    auto labels = torch::full({det.size(0)}, static_cast<int64_t>(label), torch::TensorOptions().dtype(torch::kLong).device(det.device()));
+
+    // Compute Loss using CrossEntropyLoss (no reduction)
+    auto loss = loss_fn(det, labels);
+
+    // Send loss and label back to main thread via lossq
+    lossq.enqueue({index, label, loss});
 }
 
 void Phy_Sys1::compute () {
@@ -133,9 +168,9 @@ void Phy_Sys1::compute () {
 
     /* Compute loop */
     while (m_running) {
-        torch::Tensor tensor;
-        if (computeq.try_dequeue(tensor)) {
-            process(slicer, tensor);
+        compute_t com;
+        if (computeq.try_dequeue(com)) {
+            process(slicer, com);
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Avoid busy-waiting
         }

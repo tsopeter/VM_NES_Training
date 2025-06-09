@@ -1,6 +1,6 @@
 #include <iostream>
-#include "examples/e3.hpp"
+#include "examples.hpp"
 
 int main () {
-    e3();
+    examples_::SoftwareTrigger();
 }
