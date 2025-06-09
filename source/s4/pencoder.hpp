@@ -13,6 +13,11 @@
  */
 class PEncoder {
 public:
+    /**
+     * @brief PEncoder is used to generate variable-sized binary masks for PLM.
+     *        If you need to simply generate a Image from Tensor, use s4_Utils::TensorToImage.
+     * 
+     */
     PEncoder ();
     PEncoder (int x, int y, int h, int w);
     ~PEncoder();

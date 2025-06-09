@@ -13,13 +13,34 @@ enum s4_Upscale_Modes : unsigned {
 
 class s4_Upscale {
 public:
+    /**
+     * @brief s4_Upscale is a upscaler that allows multiple types of upscaling and image manip operations.
+     * 
+     */
     s4_Upscale();
+
+    /**
+     * @brief s4_Upscale is a upscaler that allows multiple types of upscaling and image manip operations.
+     * 
+     * @param m_h  Size to upscale to
+     * @param m_w  Size to upscale to
+     * @param mode Modes that can be selected from s4_Upscale_Modes. Use OR operation to select multiple modes. 
+     */
     s4_Upscale(int m_h, int m_w, unsigned=static_cast<unsigned>(NEAREST | BINARY | NORMALIZE));
     ~s4_Upscale();
 
+    /**
+     * @brief Calls the upscale operation
+     * 
+     */
     torch::Tensor operator()(torch::Tensor &);
 
     /* You must call assign args after changing arguments */
+    /**
+     * @brief assign_args() must be called if the arguments to s4_Upscaler has changed, otherwise
+     *        the changes might not take place.
+     * 
+     */
     void assign_args();
 
     int m_h, m_w;
