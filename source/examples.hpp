@@ -14,6 +14,7 @@
 #include "examples/e3.hpp"
 #include "examples/e4.hpp"
 #include "examples/e5.hpp"
+#include "examples/e6.hpp"
 
 namespace examples_ {
     /**
@@ -93,6 +94,17 @@ namespace examples_ {
      * 
      */
     inline auto HardwareTrigger       = e5;
+
+    /**
+     * @brief
+     *  ## Synchronization
+     * 
+     *      Example for showing how synchronization between screen and camera could be done.
+     * 
+     * @param  None
+     * @return Return value 0 or -1
+     */
+    inline auto Syncrhonization       = e6;
 }
 
 

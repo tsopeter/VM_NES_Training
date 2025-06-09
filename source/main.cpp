@@ -2,5 +2,5 @@
 #include "examples.hpp"
 
 int main () {
-    examples_::HardwareTrigger();
+    examples_::Syncrhonization();
 }

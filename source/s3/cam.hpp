@@ -44,6 +44,12 @@ public:
     void open();
     void close();
     torch::Tensor read();
+    torch::Tensor read(int);
+
+    void enable();
+    void disable();
+    void clear();
+    int64_t len();
 
     void properties() const;
 
@@ -61,7 +67,7 @@ public:
 
     // Image buffer
     moodycamel::ConcurrentQueue<u8Image> buffer;
-    int count;
+    int count = 0;
 
 private:
     void attach_read_handle();

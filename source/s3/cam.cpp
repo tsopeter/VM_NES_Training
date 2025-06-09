@@ -3,6 +3,8 @@
 #include <functional>
 
 
+std::atomic<bool> s3_i0_can_read = true;
+
 /**
  * @brief s3_camera_handler should be used to capture the images.
  *        s3_Camera is responsible to use it.
@@ -18,8 +20,11 @@ public:
         if (ptrGrabResult->GrabSucceeded()) {      
             const uint8_t *raw_data = static_cast<uint8_t*>(ptrGrabResult->GetBuffer());
             u8Image v_raw_data(raw_data, raw_data+size);
-            ids->enqueue(v_raw_data);
-            ++(*count);
+
+            if (s3_i0_can_read.load()) {
+                ids->enqueue(v_raw_data);
+                ++(*count);
+            }
         }
         else {
             std::cerr<<"Failed to grab image..\n";
@@ -38,6 +43,7 @@ s3_Camera::s3_Camera(s3_Camera_Properties p)
 : prop(p)
 {
     is_open = false;
+    count = 0;
 }
 
 s3_Camera::~s3_Camera() {
@@ -178,4 +184,22 @@ std::ostream& operator<<(std::ostream &os, const s3_Camera &cam) {
         os << "  [Error reading from camera: " << e.GetDescription() << "]\n";
     }
     return os << "]";
+}
+
+void s3_Camera::enable () {
+    /* Enable handler to read */
+    s3_i0_can_read.store(true);
+}
+
+void s3_Camera::disable () {
+    /* Disable handler to read */
+    s3_i0_can_read.store(false);
+}
+
+void s3_Camera::clear () {
+
+}
+
+int64_t s3_Camera::len () {
+    return buffer.size_approx();
 }
