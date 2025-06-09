@@ -13,7 +13,7 @@ int e5 () {
     /* Initialize screen */
     s3_Window window {};
     window.wmode   = WINDOWED;
-    window.monitor = 0;
+    window.monitor = 1;
     window.load();
 
     /* Create Camera */
@@ -25,6 +25,7 @@ int e5 () {
 
     camera.start();
     int64_t frame_count=0;
+    int64_t image_count=0;
     while (!WindowShouldClose()) {
         /* Drawing loop */
         BeginDrawing();
@@ -34,11 +35,13 @@ int e5 () {
         EndDrawing();
 
         /* Triggered Externally by hardware (PLM or DLP) */
-        while (camera.count == 0) {
+        while (image_count==0) {
             result = camera.read().squeeze();
+            ++image_count;
         }
-        camera.count = 0;
+        image_count=0;
         std::cout<<"INFO: [e5] Frame "<<++frame_count<<'\n';
+        std::cout<<"INFO: [e5] Frametime: "<<GetFrameTime()*1e3<<" ms\n";
     }
 
     camera.close();

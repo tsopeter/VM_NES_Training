@@ -27,6 +27,7 @@ int e4 () {
 
     camera.start();
     int64_t frame_count=0;
+    int64_t image_count=0;
     while (!WindowShouldClose()) {
         /* Drawing loop */
         BeginDrawing();
@@ -36,10 +37,11 @@ int e4 () {
         EndDrawing();
 
         internal_trigger(camera);
-        while (camera.count == 0) {
+        while (image_count==0) {
             result = camera.read().squeeze();
+            ++image_count;
         }
-        camera.count = 0;
+        image_count=0;
         std::cout<<"INFO: [e4] Frame "<<++frame_count<<'\n';
     }
 
