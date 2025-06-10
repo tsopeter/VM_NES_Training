@@ -61,6 +61,12 @@ private:
     s3_Virtual_Camera *sft_cam = nullptr;
     Pylon::PylonAutoInitTerm init {};
 };
+
+double function_timer (std::function<void()>&);
+double report_timer   (std::function<void()>&);
+double report_timer   (std::function<void()>&,const std::string&);
+
+
 }
 
 #endif

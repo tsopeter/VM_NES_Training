@@ -129,3 +129,24 @@ torch::Tensor examples::SimpleCamera::read (int n) {
 
     return torch::cat(results, 0);  // Concatenate into [N, H, W]
 }
+
+double examples::function_timer(std::function<void()>& func) {
+    auto start = std::chrono::high_resolution_clock::now();
+    func();
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    return static_cast<double>(duration_us);
+}
+
+double examples::report_timer(std::function<void()>& func) {
+    auto duration_us = function_timer(func);
+    const std::type_info& ti = typeid(func);
+    std::cout << "INFO: [" << ti.name() << "] Time elapsed: " << duration_us << " us" << std::endl;
+    return duration_us;
+}
+
+double examples::report_timer(std::function<void()>& func,const std::string&name) {
+    auto duration_us = function_timer(func);
+    std::cout << "INFO: [" << name << "] Time elapsed: " << duration_us << " us" << std::endl;
+    return duration_us;
+}

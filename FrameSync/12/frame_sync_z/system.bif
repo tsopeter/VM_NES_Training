@@ -1,0 +1,7 @@
+/*base_2024_06_10_12_46_pm*/
+the_ROM_image:
+{
+ [bootloader] <base_2024_06_10_12_46_pm/boot/fsbl.elf>
+ <bitstream>
+ <elf,ps7_cortexa9_0>
+}

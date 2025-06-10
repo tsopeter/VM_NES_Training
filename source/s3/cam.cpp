@@ -25,6 +25,7 @@ public:
                 ids->enqueue(v_raw_data);
                 ++(*count);
             }
+            //std::cout<<"INFO : [s3_camera_handler] triggered: "<<*count<<'\n';
         }
         else {
             std::cerr<<"Failed to grab image..\n";
@@ -104,6 +105,20 @@ void s3_Camera::start() {
         throw std::runtime_error("Camera is not open.");
     }
     camera.StartGrabbing(Pylon::GrabStrategy_OneByOne, Pylon::GrabLoop_ProvidedByInstantCamera);
+}
+
+torch::Tensor s3_Camera::sread () {
+    torch::Tensor t;
+    u8Image image;
+    while (true) {
+        if (buffer.try_dequeue(image)) {
+            t = torch::from_blob(image.data(),
+            {prop.Height, prop.Width},
+            torch::kUInt8).clone();
+            break;
+        }
+    }
+    return t;
 }
 
 torch::Tensor s3_Camera::read () {

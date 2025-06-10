@@ -15,6 +15,7 @@
 #include "examples/e4.hpp"
 #include "examples/e5.hpp"
 #include "examples/e6.hpp"
+#include "examples/e7.hpp"
 
 namespace examples_ {
     /**
@@ -105,6 +106,17 @@ namespace examples_ {
      * @return Return value 0 or -1
      */
     inline auto Syncrhonization       = e6;
+
+    /**
+     * @brief
+     *  ## Serial
+     * 
+     *      Example of how the serial class can be used
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto SerialExample         = e7;
 }
 
 
