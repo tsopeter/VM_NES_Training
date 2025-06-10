@@ -1,0 +1,42 @@
+12:27:08 DEBUG : Logs will be stored at 'C:/Users/p221t801/Downloads/PHC_2/ws/IDE.log'.
+12:27:12 INFO  : Registering command handlers for Vitis TCF services
+12:27:12 INFO  : Launching XSCT server: xsct.bat -n  -interactive C:\Users\p221t801\Downloads\PHC_2\ws\temp_xsdb_launch_script.tcl
+12:27:13 INFO  : Platform repository initialization has completed.
+12:27:17 INFO  : XSCT server has started successfully.
+12:27:23 INFO  : Successfully done setting XSCT server connection channel  
+12:27:23 INFO  : plnx-install-location is set to ''
+12:27:23 INFO  : Successfully done query RDI_DATADIR 
+12:27:23 INFO  : Successfully done setting workspace for the tool. 
+12:28:11 INFO  : Result from executing command 'getProjects': base_2024_06_10_12_24_pm
+12:28:11 INFO  : Result from executing command 'getPlatforms': xilinx_zcu102_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_202220_1/xilinx_zcu102_base_202220_1.xpfm;xilinx_zcu102_base_dfx_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_dfx_202220_1/xilinx_zcu102_base_dfx_202220_1.xpfm;xilinx_zcu104_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu104_base_202220_1/xilinx_zcu104_base_202220_1.xpfm
+12:28:57 INFO  : Result from executing command 'getProjects': base_2024_06_10_12_24_pm
+12:28:57 INFO  : Result from executing command 'getPlatforms': base_2024_06_10_12_24_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_24_pm/export/base_2024_06_10_12_24_pm/base_2024_06_10_12_24_pm.xpfm;xilinx_zcu102_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_202220_1/xilinx_zcu102_base_202220_1.xpfm;xilinx_zcu102_base_dfx_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_dfx_202220_1/xilinx_zcu102_base_dfx_202220_1.xpfm;xilinx_zcu104_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu104_base_202220_1/xilinx_zcu104_base_202220_1.xpfm
+12:51:43 INFO  : Result from executing command 'getProjects': base_2024_06_10_12_24_pm;base_2024_06_10_12_46_pm
+12:51:43 INFO  : Result from executing command 'getPlatforms': base_2024_06_10_12_24_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_24_pm/export/base_2024_06_10_12_24_pm/base_2024_06_10_12_24_pm.xpfm;xilinx_zcu102_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_202220_1/xilinx_zcu102_base_202220_1.xpfm;xilinx_zcu102_base_dfx_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_dfx_202220_1/xilinx_zcu102_base_dfx_202220_1.xpfm;xilinx_zcu104_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu104_base_202220_1/xilinx_zcu104_base_202220_1.xpfm
+12:51:47 ERROR : Failed to openhw "C:/Users/p221t801/AppData/Local/Temp/1/hwspec_base_2024_06_10_12_46_pm3088605967563819929/base_2024_06_10_12_46_pm.xsa"
+Reason: ERROR: [Common 17-39] 'hsi::open_hw_design' failed due to earlier errors.
+
+12:52:31 INFO  : Result from executing command 'getProjects': base_2024_06_10_12_24_pm;base_2024_06_10_12_46_pm
+12:52:31 INFO  : Result from executing command 'getPlatforms': base_2024_06_10_12_24_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_24_pm/export/base_2024_06_10_12_24_pm/base_2024_06_10_12_24_pm.xpfm;base_2024_06_10_12_46_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_46_pm/export/base_2024_06_10_12_46_pm/base_2024_06_10_12_46_pm.xpfm;xilinx_zcu102_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_202220_1/xilinx_zcu102_base_202220_1.xpfm;xilinx_zcu102_base_dfx_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_dfx_202220_1/xilinx_zcu102_base_dfx_202220_1.xpfm;xilinx_zcu104_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu104_base_202220_1/xilinx_zcu104_base_202220_1.xpfm
+12:52:50 INFO  : The hardware specification used by project 'software' is out of sync with the platform. Resource files extracted from the hardware specification will be updated.
+12:52:53 INFO  : The file 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\bitstream\base_2024_06_10_12_24_pm.bit' stored in project is removed.
+12:52:53 INFO  : The updated bitstream files are copied from platform to folder 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\bitstream' in project 'software'.
+12:52:53 INFO  : The file 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\psinit\ps7_init.tcl' stored in project is removed.
+12:53:00 INFO  : The updated ps init files are copied from platform to folder 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\psinit' in project 'software'.
+12:54:04 INFO  : Checking for BSP changes to sync application flags for project 'software'...
+12:55:27 INFO  : Generated template bif file for software_system
+12:56:28 INFO  : Invoking Bootgen: bootgen -image software_system.bif -arch zynq -o C:/Users/p221t801/Downloads/PHC_2/ws/software_system/_ide/bootimage/BOOT.bin
+12:56:31 INFO  : Bootgen command execution is done.
+15:47:33 INFO  : Result from executing command 'getProjects': base_2024_06_10_12_24_pm;base_2024_06_10_12_46_pm;base_2025_06_10_03_46_pm
+15:47:33 INFO  : Result from executing command 'getPlatforms': base_2024_06_10_12_24_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_24_pm/export/base_2024_06_10_12_24_pm/base_2024_06_10_12_24_pm.xpfm;base_2024_06_10_12_46_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_46_pm/export/base_2024_06_10_12_46_pm/base_2024_06_10_12_46_pm.xpfm;xilinx_zcu102_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_202220_1/xilinx_zcu102_base_202220_1.xpfm;xilinx_zcu102_base_dfx_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_dfx_202220_1/xilinx_zcu102_base_dfx_202220_1.xpfm;xilinx_zcu104_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu104_base_202220_1/xilinx_zcu104_base_202220_1.xpfm
+15:48:38 INFO  : Result from executing command 'getProjects': base_2024_06_10_12_24_pm;base_2024_06_10_12_46_pm;base_2025_06_10_03_46_pm
+15:48:38 INFO  : Result from executing command 'getPlatforms': base_2024_06_10_12_24_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_24_pm/export/base_2024_06_10_12_24_pm/base_2024_06_10_12_24_pm.xpfm;base_2024_06_10_12_46_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2024_06_10_12_46_pm/export/base_2024_06_10_12_46_pm/base_2024_06_10_12_46_pm.xpfm;base_2025_06_10_03_46_pm|C:/Users/p221t801/Downloads/PHC_2/ws/base_2025_06_10_03_46_pm/export/base_2025_06_10_03_46_pm/base_2025_06_10_03_46_pm.xpfm;xilinx_zcu102_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_202220_1/xilinx_zcu102_base_202220_1.xpfm;xilinx_zcu102_base_dfx_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu102_base_dfx_202220_1/xilinx_zcu102_base_dfx_202220_1.xpfm;xilinx_zcu104_base_202220_1|C:/Xilinx/Vitis/2022.2/base_platforms/xilinx_zcu104_base_202220_1/xilinx_zcu104_base_202220_1.xpfm
+15:48:48 INFO  : The hardware specification used by project 'software' is out of sync with the platform. Resource files extracted from the hardware specification will be updated.
+15:48:52 INFO  : The file 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\bitstream\base_2024_06_10_12_46_pm.bit' stored in project is removed.
+15:48:52 INFO  : The updated bitstream files are copied from platform to folder 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\bitstream' in project 'software'.
+15:48:52 INFO  : The file 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\psinit\ps7_init.tcl' stored in project is removed.
+15:49:00 INFO  : The updated ps init files are copied from platform to folder 'C:\Users\p221t801\Downloads\PHC_2\ws\software\_ide\psinit' in project 'software'.
+15:49:05 INFO  : Checking for BSP changes to sync application flags for project 'software'...
+15:50:21 INFO  : Invoking Bootgen: bootgen -image software_system.bif -arch zynq -o C:/Users/p221t801/Downloads/PHC_2/ws/software_system/_ide/bootimage/BOOT.bin -w on
+15:50:21 INFO  : Overwriting existing bif file C:/Users/p221t801/Downloads/PHC_2/ws/software_system/_ide/bootimage/software_system.bif
+15:50:24 INFO  : Bootgen command execution is done.
