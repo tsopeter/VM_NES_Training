@@ -43,7 +43,47 @@ public:
 
     void open();
     void close();
+    /**
+     * @brief read: Non-blocking read
+     * 
+     */
     torch::Tensor read();
+
+    /**
+     * @brief sread: Blocking read. Only call when you *know* something is coming.
+     * 
+     */
+    torch::Tensor sread();
+
+    /**
+     * @brief read n: Blocking read. Waits till n images have been collected.
+     * 
+     */
+    torch::Tensor read(int);
+
+    /**
+     * @brief enable: Enables capturing
+     * 
+     */
+    void enable();
+
+    /**
+     * @brief disable: Disables capturing
+     * 
+     */
+    void disable();
+
+    /**
+     * @brief clear: Clears internal buffer *not implemented yet*
+     * 
+     */
+    void clear();
+
+    /**
+     * @brief len: Approximate length of internal buffer
+     * 
+     */
+    int64_t len();
 
     void properties() const;
 
@@ -61,7 +101,7 @@ public:
 
     // Image buffer
     moodycamel::ConcurrentQueue<u8Image> buffer;
-    int count;
+    int count = 0;
 
 private:
     void attach_read_handle();

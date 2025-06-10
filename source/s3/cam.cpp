@@ -3,6 +3,8 @@
 #include <functional>
 
 
+std::atomic<bool> s3_i0_can_read = true;
+
 /**
  * @brief s3_camera_handler should be used to capture the images.
  *        s3_Camera is responsible to use it.
@@ -18,8 +20,12 @@ public:
         if (ptrGrabResult->GrabSucceeded()) {      
             const uint8_t *raw_data = static_cast<uint8_t*>(ptrGrabResult->GetBuffer());
             u8Image v_raw_data(raw_data, raw_data+size);
-            ids->enqueue(v_raw_data);
-            ++(*count);
+
+            if (s3_i0_can_read.load()) {
+                ids->enqueue(v_raw_data);
+                ++(*count);
+            }
+            //std::cout<<"INFO : [s3_camera_handler] triggered: "<<*count<<'\n';
         }
         else {
             std::cerr<<"Failed to grab image..\n";
@@ -38,6 +44,7 @@ s3_Camera::s3_Camera(s3_Camera_Properties p)
 : prop(p)
 {
     is_open = false;
+    count = 0;
 }
 
 s3_Camera::~s3_Camera() {
@@ -98,6 +105,20 @@ void s3_Camera::start() {
         throw std::runtime_error("Camera is not open.");
     }
     camera.StartGrabbing(Pylon::GrabStrategy_OneByOne, Pylon::GrabLoop_ProvidedByInstantCamera);
+}
+
+torch::Tensor s3_Camera::sread () {
+    torch::Tensor t;
+    u8Image image;
+    while (true) {
+        if (buffer.try_dequeue(image)) {
+            t = torch::from_blob(image.data(),
+            {prop.Height, prop.Width},
+            torch::kUInt8).clone();
+            break;
+        }
+    }
+    return t;
 }
 
 torch::Tensor s3_Camera::read () {
@@ -178,4 +199,22 @@ std::ostream& operator<<(std::ostream &os, const s3_Camera &cam) {
         os << "  [Error reading from camera: " << e.GetDescription() << "]\n";
     }
     return os << "]";
+}
+
+void s3_Camera::enable () {
+    /* Enable handler to read */
+    s3_i0_can_read.store(true);
+}
+
+void s3_Camera::disable () {
+    /* Disable handler to read */
+    s3_i0_can_read.store(false);
+}
+
+void s3_Camera::clear () {
+
+}
+
+int64_t s3_Camera::len () {
+    return buffer.size_approx();
 }
