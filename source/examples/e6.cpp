@@ -23,6 +23,8 @@ int e6 () {
     window.load();
 
     /* Serial connection */
+    /* Serial is used to trigger the FPGA board to allow
+       synchronization between camera and DLP/PLM */
     Serial serial {"/dev/tty.usbmodem8326898B1E1E1", 115200};
     serial.Open();
 
@@ -45,10 +47,15 @@ int e6 () {
     camera.start();
     camera.enable();
 
+    /* Having each module separated into blocks 
+       make determining time alot easier */
+
+    /* Signal block */
     std::function<void()> signal_ = [&serial]()->void {
         serial.Signal();
     };
 
+    /* Draw block */
     std::function<void()> draw_ = []()->void {
         BeginDrawing();
         ClearBackground(BLACK);
@@ -56,6 +63,7 @@ int e6 () {
         EndDrawing();
     };
 
+    /* Capture block */
     std::function<void()> capture_ = [&camera, &num_images, &total_number_of_images]()->void {
         int64_t image_count=0;
         std::vector<torch::Tensor> images;
@@ -67,6 +75,7 @@ int e6 () {
         total_number_of_images += image_count;
     };
 
+    /* Report block */
     std::function<void()> report_ = [&frame_count, &total_number_of_images]()->void {
         float ft = GetFrameTime();
         std::cout<<"INFO: [e6] Frame "<<++frame_count<<'\n';

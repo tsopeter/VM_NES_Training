@@ -13,7 +13,6 @@
 #include "examples/e2.hpp"
 #include "examples/e3.hpp"
 #include "examples/e4.hpp"
-#include "examples/e5.hpp"
 #include "examples/e6.hpp"
 #include "examples/e7.hpp"
 
@@ -82,19 +81,6 @@ namespace examples_ {
      * 
      */
     inline auto SoftwareTrigger       = e4;
-
-    /**
-     * @brief
-     *  ## HardwareTrigger
-     * 
-     *      Example for showing how to use hardware triggered camera
-     *      and have it sync to vertical sync.
-     * 
-     * @param  None
-     * @return Return value 0 or -1
-     * 
-     */
-    inline auto HardwareTrigger       = e5;
 
     /**
      * @brief
