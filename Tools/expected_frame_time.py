@@ -11,17 +11,48 @@
     <mode>          frame_sync or frame_sync_z mode (0/1)
 """
 
-class Runner:
-    def __init__(self)->None:
-        pass
+#
+# Assumes the number of bits to capture is
+# the same as the number of bits sent
 
+def cycle_1(n_bits, tpb, mpt, mode)->int:
+    print(f'N={n_bits}')
+    if n_bits <= 0:
+        return 0
+    
+    # time for a single cycle
+    time = 0
+    next_time = 0
+    c = 0
+    j = 0
+    for i in range(n_bits):
+        if mode == 1 and i == 0:    # skip the first
+            time += tpb
+        else:
+            if next_time <= time:
+                c += 1
+                next_time = time + mpt
 
+            time += tpb
 
-def main():
-    pass
+            if time >= 16666:
+                break
+        
+    if (c < n_bits):
+        # ignore for other cycles as we don't consider
+        # the frame start
+        return 16666 + cycle_1(n_bits - c, tpb, mpt, 0)
+    else:
+        return time
+
+def roundup(time_us):
+    return ((time_us + 15999) // 16666) * 16666
 
 if __name__ == '__main__':
-    main()
+    time_us = cycle_1(24, 693, 500, 0)
+    ft = roundup(time_us)
+    print(f'Expected frametime: {ft} us')
+    print(f'Expected frame rate: {1/(ft*1e-6):.2f} fps')
 
 
 

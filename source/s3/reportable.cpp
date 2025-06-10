@@ -1,19 +1,19 @@
-#include "cam.hpp"
+#include "reportable.hpp"
 #include <stdexcept>
 #include <functional>
 #include <chrono>
 
 
-std::atomic<bool> s3_i0_can_read = true;
+std::atomic<bool> s3_r0_can_read = true;
 
 /**
- * @brief s3_camera_handler should be used to capture the images.
- *        s3_Camera is responsible to use it.
+ * @brief s3_Camera_Reportable_handler should be used to capture the images.
+ *        s3_Camera_Reportable is responsible to use it.
  * 
  */
-class s3_camera_handler : public Pylon::CImageEventHandler {
+class s3_Camera_Reportable_handler : public Pylon::CImageEventHandler {
 public:
-    s3_camera_handler() {}
+    s3_Camera_Reportable_handler() {}
         
     virtual void OnImageGrabbed (Pylon::CInstantCamera &camera,
                                  const Pylon::CGrabResultPtr &ptrGrabResult)
@@ -22,15 +22,15 @@ public:
             const uint8_t *raw_data = static_cast<uint8_t*>(ptrGrabResult->GetBuffer());
             u8Image v_raw_data(raw_data, raw_data+size);
 
-            if (s3_i0_can_read.load()) {
+            if (s3_r0_can_read.load()) {
                 ids->enqueue(v_raw_data);
                 ++(*count);
             }
-            /*
+            
             auto now = std::chrono::high_resolution_clock::now();
             auto timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-            std::cout << "INFO : [s3_camera_handler] timestamp (us): " << timestamp_us << '\n';
-            */
+            std::cout << "INFO : [s3_Camera_Reportable_handler] timestamp (us): " << timestamp_us << '\n';
+            
         }
         else {
             std::cerr<<"Failed to grab image..\n";
@@ -43,20 +43,20 @@ public:
 };
 
 // init
-static s3_camera_handler s3_i0_handle {};
+static s3_Camera_Reportable_handler s3_r0_handle {};
 
-s3_Camera::s3_Camera(s3_Camera_Properties p)
+s3_Camera_Reportable::s3_Camera_Reportable(s3_Camera_Reportable_Properties p)
 : prop(p)
 {
     is_open = false;
     count = 0;
 }
 
-s3_Camera::~s3_Camera() {
+s3_Camera_Reportable::~s3_Camera_Reportable() {
     close();
 }
 
-void s3_Camera::open () {
+void s3_Camera_Reportable::open () {
     if (is_open)
         return;
 
@@ -69,15 +69,15 @@ void s3_Camera::open () {
         is_open = true;
 
         // setup handle
-        s3_i0_handle.ids   = &buffer;
-        s3_i0_handle.count = &count;
-        s3_i0_handle.size  = prop.Height * prop.Width;
+        s3_r0_handle.ids   = &buffer;
+        s3_r0_handle.count = &count;
+        s3_r0_handle.size  = prop.Height * prop.Width;
 
         // attach handle
         attach_read_handle();
     }
     catch (Pylon::GenericException &e) {
-        std::cerr<<"s3_Camera::open() An exception has ocurred!\n"<<
+        std::cerr<<"s3_Camera_Reportable::open() An exception has ocurred!\n"<<
         e.GetDescription()<<'\n';
         is_open = false;
     }
@@ -87,16 +87,16 @@ void s3_Camera::open () {
     }
 }
 
-void s3_Camera::attach_read_handle () {
-    camera.RegisterImageEventHandler(&s3_i0_handle, Pylon::RegistrationMode_ReplaceAll,
+void s3_Camera_Reportable::attach_read_handle () {
+    camera.RegisterImageEventHandler(&s3_r0_handle, Pylon::RegistrationMode_ReplaceAll,
         Pylon::Cleanup_None);
     is_handle_attached = true;
 }
 
-void s3_Camera::close () {
+void s3_Camera_Reportable::close () {
     camera.StopGrabbing();
     if (is_handle_attached)  {
-        camera.DeregisterImageEventHandler(&s3_i0_handle);
+        camera.DeregisterImageEventHandler(&s3_r0_handle);
         is_handle_attached = false;
     }
 
@@ -105,14 +105,14 @@ void s3_Camera::close () {
     is_open = false;
 }
 
-void s3_Camera::start() {
+void s3_Camera_Reportable::start() {
     if (!is_open) {
         throw std::runtime_error("Camera is not open.");
     }
     camera.StartGrabbing(Pylon::GrabStrategy_OneByOne, Pylon::GrabLoop_ProvidedByInstantCamera);
 }
 
-torch::Tensor s3_Camera::sread () {
+torch::Tensor s3_Camera_Reportable::sread () {
     torch::Tensor t;
     u8Image image;
     while (true) {
@@ -126,7 +126,7 @@ torch::Tensor s3_Camera::sread () {
     return t;
 }
 
-torch::Tensor s3_Camera::read () {
+torch::Tensor s3_Camera_Reportable::read () {
     if (buffer.size_approx() == 0) {
         return torch::empty({0, prop.Height, prop.Width}, torch::kUInt8);
     }
@@ -145,7 +145,7 @@ torch::Tensor s3_Camera::read () {
     return torch::stack(tensors);
 }
 
-void s3_Camera::p_open () {
+void s3_Camera_Reportable::p_open () {
     camera.Attach(Pylon::CTlFactory::GetInstance().CreateFirstDevice());
     if (!camera.IsPylonDeviceAttached())
         throw std::runtime_error(
@@ -180,12 +180,12 @@ void s3_Camera::p_open () {
     camera.AcquisitionStatusSelector.SetValue(prop.AcqStatSel);
 }
 
-void s3_Camera::properties() const {
+void s3_Camera_Reportable::properties() const {
     std::cout << *this;
 }
 
-std::ostream& operator<<(std::ostream &os, const s3_Camera &cam) {
-    os << "[s3_Camera]\n[\n";
+std::ostream& operator<<(std::ostream &os, const s3_Camera_Reportable &cam) {
+    os << "[s3_Camera_Reportable]\n[\n";
     try {
         os << "  Width               : " << cam.camera.Width.GetValue() << '\n';
         os << "  Height              : " << cam.camera.Height.GetValue() << '\n';
@@ -206,20 +206,20 @@ std::ostream& operator<<(std::ostream &os, const s3_Camera &cam) {
     return os << "]";
 }
 
-void s3_Camera::enable () {
+void s3_Camera_Reportable::enable () {
     /* Enable handler to read */
-    s3_i0_can_read.store(true);
+    s3_r0_can_read.store(true);
 }
 
-void s3_Camera::disable () {
+void s3_Camera_Reportable::disable () {
     /* Disable handler to read */
-    s3_i0_can_read.store(false);
+    s3_r0_can_read.store(false);
 }
 
-void s3_Camera::clear () {
+void s3_Camera_Reportable::clear () {
 
 }
 
-int64_t s3_Camera::len () {
+int64_t s3_Camera_Reportable::len () {
     return buffer.size_approx();
 }

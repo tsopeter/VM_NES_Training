@@ -77,9 +77,10 @@ int e6 () {
 
     while (!WindowShouldClose()) {
         examples::report_timer(draw_, "Draw");
+        //examples::print_current_time_us();
         examples::report_timer(signal_, "Serial");
         examples::report_timer(capture_, "Capture");
-        //examples::report_timer(report_);
+        examples::report_timer(report_);
     }
 
     camera.close();

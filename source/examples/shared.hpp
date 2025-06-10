@@ -65,7 +65,7 @@ private:
 double function_timer (std::function<void()>&);
 double report_timer   (std::function<void()>&);
 double report_timer   (std::function<void()>&,const std::string&);
-
+void   print_current_time_us ();
 
 }
 
