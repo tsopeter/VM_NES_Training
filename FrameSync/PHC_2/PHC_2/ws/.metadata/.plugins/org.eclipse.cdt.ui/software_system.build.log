@@ -1,0 +1,10 @@
+15:49:07 **** Incremental Build of configuration Debug for project software_system ****
+make all 
+Generating bif file for the system project
+generate_system_bif.bat 54231 C:/Users/p221t801/Downloads/PHC_2/ws/base_2025_06_10_03_46_pm/export/base_2025_06_10_03_46_pm/base_2025_06_10_03_46_pm.xpfm standalone_domain C:/Users/p221t801/Downloads/PHC_2/ws/software_system/Debug/system.bif
+sdcard_gen --xpfm C:/Users/p221t801/Downloads/PHC_2/ws/base_2025_06_10_03_46_pm/export/base_2025_06_10_03_46_pm/base_2025_06_10_03_46_pm.xpfm --sys_config base_2025_06_10_03_46_pm --bif C:/Users/p221t801/Downloads/PHC_2/ws/software_system/Debug/system.bif --bitstream C:/Users/p221t801/Downloads/PHC_2/ws/software/_ide/bitstream/base_2025_06_10_03_46_pm.bit --elf C:/Users/p221t801/Downloads/PHC_2/ws/software/Debug/software.elf,ps7_cortexa9_0
+creating BOOT.BIN using C:/Users/p221t801/Downloads/PHC_2/ws/software/_ide/bitstream/base_2025_06_10_03_46_pm.bit
+Running C:/Xilinx/Vitis/2022.2/bin/bootgen  -image C:/Users/p221t801/Downloads/PHC_2/ws/software_system/Debug/sd_card_temp/boot.bif -w -o i BOOT.BIN
+
+15:49:15 Build Finished (took 8s.570ms)
+
