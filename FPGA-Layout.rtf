@@ -1,0 +1,261 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2821
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 BerkeleyMono-BoldOblique;\f1\fnil\fcharset0 BerkeleyMono-Regular;\f2\fnil\fcharset0 BerkeleyMono-Bold;
+\f3\fnil\fcharset0 BerkeleyMono-Black;\f4\fnil\fcharset0 BerkeleyMono-BlackOblique;}
+{\colortbl;\red255\green255\blue255;\red196\green26\blue22;\red255\green255\blue255;\red0\green0\blue0;
+}
+{\*\expandedcolortbl;;\csgenericrgb\c77000\c10200\c8600;\csgenericrgb\c100000\c100000\c100000;\cspthree\c0\c0\c0;
+}
+\margl1440\margr1440\vieww26300\viewh15620\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\i\b\fs72 \cf0 \outl\strokewidth60 \strokec0 ZEDBOARD-FPGA Connection Diagram
+\f1\i0\b0\fs24 \outl0\strokewidth0 \
+-------------------------------------------------------------------------------------------------------------------------[
+\f0\i\b 01/24/2025
+\f1\i0\b0 ]---------\
+This document lays out how the FPGA is connected to the Intensity DLP, Phase DLP, and camera. Each symbol 
+\f2\b [x]
+\f1\b0 , 
+\f2\b [+]
+\f1\b0 , ..., are outlined in the \
+
+\f2\b LEGEND
+\f1\b0  below. Wires 
+\f2\b <<
+\f1\b0 , and 
+\f2\b >>
+\f1\b0 , indicate the dataflow between functional blocks. Additional 
+\f2\b PMOD
+\f1\b0  modules such as 
+\f2\b PMOD-LED
+\f1\b0  (4) are added as \
+additional debug features, indicating the state of IP blocks. Software is needed to communicate to the onboard FTDI controller for UART \
+communication. UART communication over serial is bidirectional; a single-byte message "/0" or NULL-termination indicates to the FPGA to\
+start capturing. The DLP670S device has to be operating in 
+\f2\b VIDEO
+\f1\b0  mode with 
+\f2\b VIDEO PATTERN
+\f1\b0 , otherwise frame CLOCK and pixel CLOCK will not be \
+outputted by device over Line 1 and Line 2 respectively. Phase Light Modulator (PLM) can be used in either 
+\f2\b VIDEO
+\f1\b0  mode with 
+\f2\b VIDEO PATTERN
+\f1\b0  or\
+
+\f2\b Pattern On-The-Fly
+\f1\b0  mode, as it only senses the frame CLOCK. One should note that Pattern On-The-Fly mode is rather slow at updating data;\
+
+\f2\b VIDEO
+\f1\b0  mode with 
+\f2\b VIDEO PATTERN
+\f1\b0  is preferred.\
+\
+
+\f3\b \
+
+\f1\b0 Default switch positions:\
+\
+SW7\
+<|[|==]	6\
+<|[|==]	5\
+<|[|==]	4\
+<|[|==]	3\
+<|[|==]	2\
+<|[|==]	1\
+<|[|==]	0
+\f3\b \
+\
+\
+LEGEND				  \
+ /--------------------------\\ \
+|[x]	 
+\f1\b0 NO CONNECT (NC)
+\f3\b 	    |\
+|[+]	 
+\f1\b0 CONNECTED	
+\f3\b 	    |\
+|<|[]  
+\f1\b0 LED
+\f3\b 			    |\
+|<<--  
+\f1\b0 CONNECTION DIRECTION
+\f3\b   |\
+|[|==] 
+\f1\b0 SWITCH	
+\f3\b 		    |\
+|  
+\f1\b0 |
+\f3\b                          |\
+|  
+\f1\b0 +\'97-
+\f3\b [|==] 
+\f1\b0 OFF
+\f3\b               |\
+|  
+\f1\b0 |
+\f3\b                          |\
+|  
+\f1\b0 +--
+\f3\b [==|] 
+\f1\b0 ON
+\f3\b                |\
+ \\--------------------------/\
+\
+!!! NOTICE !!!\
+\
+
+\f1\b0 (1)	When using Frame CLOCK Input Selector, OFF uses DLP Line 1, ON uses UART Signal as CLOCK.\
+(2)  Single Input Switches are for use in debugzz.\
+(3)  Enables debugging switches.
+\f3\b \
+\
+_______________________________________________________________________________________________________________________________________________\
+\
+\
++----------------------+\
+| 
+\f4\i Camera
+\f3\i0                |BLACK\
+| HARDWARE TRIGGER	   |<<-----------------------------------------+\
+| LINE 3		        |							            |\
+|				   |RED						          -----\
+|				   |<<-------------------------------+        ---\
++----------------------+							  |         -\
+											  |                            +------------------------------------------+\
++----------------------+							  |                            |
+\f4\i COMPUTER 
+\f3\i0                                  |\
+|
+\f4\i  PLM	(Phase)
+\f3\i0       |							  |                            |                                          |\
+|                      |							  |                            |
+\f4\i SERIAL 
+\f3\i0                                    |\
+|				   |							  |                            |
+\f1\b0 DEV      \cf2 \cb3 /dev/tty.usbmodem8326898B1E1E1 
+\f3\b   \cf4 |\cf0 \cb1 \
+|				   |  Line 1 (Frame CLOCK)		  |                            |
+\f1\b0 BAUDRATE 115200 bps 
+\f3\b                       |\
+|                      |----------------------------+	  |                            |
+\f1\b0 PARITY   NONE  
+\f3\b                            |\
++----------------------+						  |	  |                            |
+\f1\b0 BITS     8
+\f3\b                                 |\
+										  |	  |                            |
+\f1\b0 STOP     1 
+\f3\b                                |\
+										  |    |                            |                                          |\
++---------------------------------------------------+	  | +----------------+         +------------------------------------------+\
+|											  | |                |          /\\\
+|						                           | |                |         /  \\\
+|						         +-------------+---+ |                |         |  |\
+|  						         |		        |     |              -----       |  |\
+|						         |	 BANK C	   |     |               ---        |  |\
+|					    +------------------------------------------+   -         |  |\
+|			STATUS	    |[+]     [+]     [x]   [x]   [x]     [x]   |             |  |\
+|				+--------|JC1_P   JC1_N   JC2_P JC2_N GND     VCC   |----------+--|  |---+---------------------+\
+|				|	    |
+\f1\b0         CAMERA	
+\f3\b 	  
+\f1\b0 CAMERA	
+\f3\b             |          |--UART---+                     |\
+|				|	    |
+\f1\b0         RED     
+\f3\b       
+\f1\b0 RED
+\f3\b                  |          +---------+                     |\
+|	BANK B    +------+								                   <|[] 
+\f1\b0 Receive Indicator
+\f3\b               |\
+|		    <|[]	
+\f1\b0 PLM Line 1 Frame CLOCK Indicator 
+\f3\b                                                               |\
+|		    <|[]	
+\f1\b0 DLP Line 2 Pixel CLOCK Indicator 
+\f3\b \
+|		    <|[]	
+\f1\b0 PLM Skip Indicator
+\f3\b \
+|		    <|[]	
+\f1\b0 Input Selection Indicator	
+\f3\b \
+|			+------+\
+|				|\
+|	BANK A    +------+\
+|			|[x]	VCC	
+\f1\b0 NC
+\f3\b \
+|			|[x]	GND	
+\f1\b0 NC
+\f3\b \
++------------>>|[+]	JA4	
+\f1\b0 PLM Line 1
+\f3\b \
+	+------->>|[+]	JA3	
+\f1\b0 DLP Line 2
+\f3\b \
+     |         |[x]	JA2	
+\f1\b0 NC
+\f3\b \
+  +--|------->>|[+]	JA1	
+\f1\b0 DLP Line 1
+\f3\b \
+  |	|		+------+\
+  |	|			|	\
+  |  |              |  
+\f4\i OFF   ON
+\f3\i0 		
+\f4\i STATUS
+\f3\i0 		                      
+\f4\i SWITCH OPERATION
+\f3\i0 \
+  |	|			|SW7	[|==] <|[]		
+\f1\b0 STATE 3                              NC
+\f3\b \
+  |	|			|  6	[|==] <|[]     
+\f1\b0 STATE 2                              PLM Skip Select
+\f3\b \
+  |	|			|  5	[|==] <|[]     
+\f1\b0 STATE 1                              PLM Single Input (2)
+\f3\b \
+  |	|			|  4	[|==] <|[]     
+\f1\b0 STATE 0                              Communication Single Input
+\f3\b \
+  |	|			|  3	[|==] <|[]	     
+\f1\b0 USER INDICATOR                       Debug Select (3)
+\f3\b \
+  |	|			|  2	[|==] <|[]		
+\f1\b0 RESET                                Pixel CLOCK Single Input (2)
+\f3\b \
+  |	|			|  1	[|==] <|[]		
+\f1\b0 CAMERA RED NEGATIVE
+\f3\b                   
+\f1\b0 Frame CLOCK Input Selector (1)
+\f3\b \
+  |	|			|  0	[|==] <|[]		
+\f1\b0 DLP Line 1 Frame CLOCK Indicator     Frame CLOCK Single Input (2)
+\f3\b \
+  |  |			|\
+  |  |			|				                       ZED BOARD\
+  |  |			+-----------------------------------------------------------------------------------+\
+  |  |\
+  |	+--------------------------------------------------+\
+  +-------------------------------------------------+   |\
+									       |   |\
++----------------------+						  |   |\
+| 
+\f4\i DLP670S	(Intensity)
+\f3\i0   |  Line 1 (Frame CLOCK)	  |   |\
+|                      |----------------------------+	 |\
+|				   |					  		 |\
+|				   |  Line 2 (Pixel CLOCK)          |\
+|                      |--------------------------------+\
++----------------------+
+\f1\b0 \
+\
+\
+\
+\
+}
