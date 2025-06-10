@@ -7,6 +7,7 @@
 #include "../s3/window.hpp"
 #include "../s4/utils.hpp"
 #include "shared.hpp"
+#include <OpenGL/gl.h>
 
 
 int e6 () {
@@ -31,15 +32,15 @@ int e6 () {
 
     torch::Tensor result = torch::empty({});
 
+    camera.disable();
     camera.start();
+    camera.disable();
     int64_t frame_count=0;
     int64_t image_count=0;
     int64_t total_number_of_images=0;
     const int64_t num_images=10;
     
-    camera.disable();
     while (!WindowShouldClose()) {
-        camera.enable();
         //auto texture = examples::createTextureFromFrameNumber(frame_count, window.Height, window.Width);
         /* Drawing loop */
         BeginDrawing();
@@ -48,12 +49,11 @@ int e6 () {
         DrawFPS(10, 10);
         EndDrawing();
 
-        std::cout<<"INFO: [e6] Number of Images already captuerd: "<<camera.count<<'\n';
-        break;
+        std::vector<torch::Tensor> images;
 
         /* Triggered Externally by hardware (PLM or DLP) */
-
-        std::vector<torch::Tensor> images;
+        glFinish();
+        camera.enable();
         while (image_count<num_images) {
             torch::Tensor image = camera.read().squeeze();
             if (image.numel() != 0) {
@@ -64,6 +64,9 @@ int e6 () {
         camera.disable();
         total_number_of_images += image_count;
         image_count=0;
+
+        std::cout<<"INFO: [e6] Number of Images already captuerd: "<<camera.count<<'\n';
+        break;
 
         std::cout<<"INFO: [e6] Images captured: "<<images.size()<<'\n';
         //Image image = TensorToTiledImage(images, window.Height, window.Width);
