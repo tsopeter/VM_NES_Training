@@ -11,6 +11,11 @@
 #include "shared.hpp"
 #include <OpenGL/gl.h>
 
+template <typename T>
+void save_data (const std::vector<T>&d, const std::string&f) {
+    cnpy::npy_save(f, d.data(), {d.size()}, "w");
+}
+
 int e7 () {
     Pylon::PylonAutoInitTerm init {};
 
@@ -38,16 +43,22 @@ int e7 () {
 
     const int64_t n_bits = 24;
     camera.start();
+
+    std::vector<double> delays;
+    std::vector<double> capture_times;
+    std::vector<double> frame_times;
+
     while (!WindowShouldClose()) {
         auto frame_start = std::chrono::high_resolution_clock::now();
+        auto signal_time = std::chrono::high_resolution_clock::now();
+        serial.Signal();    // signal
+  
         BeginDrawing();
         ClearBackground(BLACK);
         EndDrawing();
 
         int64_t image_count = 0;
         double first_read_delay = 0;
-        auto signal_time = std::chrono::high_resolution_clock::now();
-        serial.Signal();    // signal
 
         while (image_count < n_bits) {
             camera.sread();
@@ -58,14 +69,25 @@ int e7 () {
                 first_read_delay = elapsed.count();
             }
         }
-        
+        auto capture_end = std::chrono::high_resolution_clock::now();
+
         auto frame_end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> total_elapsed = frame_end - frame_start;
+        std::chrono::duration<double> capture_time  = capture_end - signal_time;
 
         // Print timing info
         std::cout << "INFO: [e7] First Read Delay: " << first_read_delay * 1e6 << " us\n";
+        std::cout << "INFO: [e7] Capture Time: " << capture_time * 1e6 << " us\n";
         std::cout << "INFO: [e7] Frame Rate: " << total_elapsed * 1e3 << " ms\n";
+
+        delays.push_back(first_read_delay * 1e6);
+        capture_times.push_back(capture_time.count() * 1e6);
+        frame_times.push_back(total_elapsed.count() * 1e6);
     }
+
+    save_data(delays, "TimingData/signal_delay.npy");
+    save_data(capture_times, "TimingData/capture.npy");
+    save_data(frame_times, "TimingData/frame.npy");
     
     serial.Close();
     camera.close();
