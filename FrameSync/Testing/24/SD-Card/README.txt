@@ -1,7 +1,7 @@
 -= SD card boot image =-
 
-Platform: base_2025_06_12_04_30_pm
-Application: base_2025_06_12_04_30_pm
+Platform: base_2025_06_12_04_43_pm
+Application: base_2025_06_12_04_43_pm
 
 1. Copy the contents of this directory to an SD card
 2. Set boot mode to SD
