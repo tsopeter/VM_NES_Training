@@ -15,6 +15,7 @@
 #include "examples/e4.hpp"
 #include "examples/e6.hpp"
 #include "examples/e7.hpp"
+#include "examples/e8.hpp"
 
 namespace examples_ {
     /**
@@ -84,14 +85,14 @@ namespace examples_ {
 
     /**
      * @brief
-     *  ## Synchronization
+     *  ## Hardware Capture Timing
      * 
-     *      Example for showing how synchronization between screen and camera could be done.
+     *      Example for showing how to capture a series of images from camera tied to PLM/DLP
      * 
      * @param  None
      * @return Return value 0 or -1
      */
-    inline auto Syncrhonization       = e6;
+    inline auto HardwareTrigger       = e6;
 
     /**
      * @brief
@@ -103,6 +104,17 @@ namespace examples_ {
      * @return Return value 0 or -1
      */
     inline auto SerialExample         = e7;
+
+    /**
+     * @brief
+     *  ## Synchronization
+     * 
+     *      Example of testing synchronization
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto Synchronization       = e8;
 }
 
 

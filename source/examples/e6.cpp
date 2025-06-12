@@ -3,7 +3,7 @@
 #include <iostream>
 #include "raylib.h"
 
-#include "../s3/cam.hpp"
+#include "../s3/reportable.hpp"
 #include "../s3/window.hpp"
 #include "../s4/utils.hpp"
 #include "../s3/Serial.hpp"
@@ -20,6 +20,8 @@ int e6 () {
     window.Width   = 2560;
     window.wmode   = BORDERLESS;
     window.monitor = 1;
+    window.fmode   = SET_TARGET_FPS; /* Rely on VSYNC only */
+    window.fps     = 60;
     window.load();
 
     /* Serial connection */
@@ -29,12 +31,12 @@ int e6 () {
     serial.Open();
 
     /* Create Camera */
-    s3_Camera_Properties cam_properties;
+    s3_Camera_Reportable_Properties cam_properties;
     cam_properties.AcqFrameRate = 2000;
     cam_properties.Height       = 320;
     cam_properties.Width        = 240;
 
-    s3_Camera camera {cam_properties};
+    s3_Camera_Reportable camera {cam_properties};
     camera.open();
 
     torch::Tensor result = torch::empty({});
@@ -42,7 +44,7 @@ int e6 () {
     int64_t frame_count=0;
     int64_t image_count=0;
     int64_t total_number_of_images=0;
-    const int64_t num_images=12;
+    const int64_t num_images=24;
     
     camera.start();
     camera.enable();
@@ -90,6 +92,7 @@ int e6 () {
         examples::report_timer(signal_, "Serial");
         examples::report_timer(capture_, "Capture");
         examples::report_timer(report_);
+        std::cout<<"INFO: [e6] Camera captured a total of: "<<camera.count<<" images (internal buffer report)\n";
     }
 
     camera.close();

@@ -29,7 +29,7 @@ struct s3_Camera_Properties {
     float AcqFrameRate  = 751;
     const Basler_UsbCameraParams::TriggerModeEnums TriggerMode = Basler_UsbCameraParams::TriggerModeEnums::TriggerMode_On;
     const Basler_UsbCameraParams::TriggerSourceEnums TriggerSource = Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_Line3;   // hardware trigger
-    const Basler_UsbCameraParams::TriggerActivationEnums TriggerActivation = Basler_UsbCameraParams::TriggerActivationEnums::TriggerActivation_FallingEdge;
+    const Basler_UsbCameraParams::TriggerActivationEnums TriggerActivation = Basler_UsbCameraParams::TriggerActivationEnums::TriggerActivation_RisingEdge;
     const Basler_UsbCameraParams::TriggerSelectorEnums TriggerSelect = Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameBurstStart;
     //const Basler_UsbCameraParams::TriggerSelectorEnums TriggerSelect = Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameStart;
     const Basler_UsbCameraParams::SensorReadoutModeEnums SenReadoutMode = Basler_UsbCameraParams::SensorReadoutModeEnums::SensorReadoutMode_Fast;

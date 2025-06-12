@@ -2,5 +2,5 @@
 #include "examples.hpp"
 
 int main () {
-    examples_::Syncrhonization();
+    examples_::SerialExample();
 }
