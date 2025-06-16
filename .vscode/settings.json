@@ -76,7 +76,8 @@
         "future": "cpp",
         "hash_map": "cpp",
         "fft": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "atomic": "cpp"
     },
     "cmake.sourceDirectory": "/Users/petertso/Documents/GitHub/VM_NES_Training/eigen-3.4.0/test"
 }

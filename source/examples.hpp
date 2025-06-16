@@ -16,6 +16,7 @@
 #include "examples/e6.hpp"
 #include "examples/e7.hpp"
 #include "examples/e8.hpp"
+#include "examples/e9.hpp"
 
 namespace examples_ {
     /**
@@ -115,6 +116,18 @@ namespace examples_ {
      * @return Return value 0 or -1
      */
     inline auto Synchronization       = e8;
+
+    /**
+     * @brief
+     *  ## GLSync Example
+     * 
+     *      Example of using GLSync class to estimate
+     *      VSYNC
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto GLSyncExample  = e9;
 }
 
 

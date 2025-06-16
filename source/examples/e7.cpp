@@ -10,11 +10,13 @@
 #include "../s3/Serial.hpp"
 #include "shared.hpp"
 #include <OpenGL/gl.h>
+#include <thread>
+#include <atomic>
 
-template <typename T>
-void save_data (const std::vector<T>&d, const std::string&f) {
-    cnpy::npy_save(f, d.data(), {d.size()}, "w");
-}
+#define save_data(d,f) {                                    \
+    cnpy::npy_save(f,d,"w");                                \
+    std::cout<<"INFO: [e7] Saved: " << f << " to disk.\n";  \
+}                                                           \
 
 int e7 () {
     Pylon::PylonAutoInitTerm init {};
@@ -41,24 +43,30 @@ int e7 () {
     s3_Camera camera {cam_properties};
     camera.open();
 
+    /* atomic */
+    std::atomic<bool> capture_complete = false;
+    std::atomic<bool> exit_thread      = false;
+
     const int64_t n_bits = 24;
-    camera.start();
+    int64_t frame_index  = 0;
 
     std::vector<double> delays;
     std::vector<double> capture_times;
     std::vector<double> frame_times;
 
+    camera.start();
     while (!WindowShouldClose()) {
         auto frame_start = std::chrono::high_resolution_clock::now();
-        auto signal_time = std::chrono::high_resolution_clock::now();
-        serial.Signal();    // signal
   
         BeginDrawing();
         ClearBackground(BLACK);
+        serial.Signal();
         EndDrawing();
+        glFinish();
 
         int64_t image_count = 0;
         double first_read_delay = 0;
+        auto signal_time = std::chrono::high_resolution_clock::now();
 
         while (image_count < n_bits) {
             camera.sread();
@@ -69,6 +77,8 @@ int e7 () {
                 first_read_delay = elapsed.count();
             }
         }
+        capture_complete.store(true);   /* tell handler thread to start counting down */
+
         auto capture_end = std::chrono::high_resolution_clock::now();
 
         auto frame_end = std::chrono::high_resolution_clock::now();
@@ -83,13 +93,17 @@ int e7 () {
         delays.push_back(first_read_delay * 1e6);
         capture_times.push_back(capture_time.count() * 1e6);
         frame_times.push_back(total_elapsed.count() * 1e6);
+
+        ++frame_index;
     }
 
-    save_data(delays, "TimingData/signal_delay.npy");
-    save_data(capture_times, "TimingData/capture.npy");
-    save_data(frame_times, "TimingData/frame.npy");
+    std::cout<<"INFO: [e7]: Amount of data recorderd: " << delays.size()<<'\n';
+    save_data(delays, "signal_delay.npy");
+    save_data(capture_times, "capture.npy");
+    save_data(frame_times, "frame.npy");
     
     serial.Close();
     camera.close();
+
     return 0;
 }

@@ -14,14 +14,15 @@
 #include <OpenGL/gl.h>
 #include <chrono>
 #include <future>
+#include <thread>
 
 
-std::vector<Texture> GenerateSynchronizationTextures (const int64_t n_bits);
+std::vector<Texture> e9_GenerateSynchronizationTextures (const int64_t n_bits);
 
 template<typename T>
-int64_t             argmin(const std::vector<T>&); 
+int64_t             e9_argmin(const std::vector<T>&); 
 
-int e8 () {
+int e9 () {
     Pylon::PylonAutoInitTerm init {};
 
     /* Initialize screen */
@@ -67,21 +68,52 @@ int e8 () {
     const int64_t n_bits = 24;
     int64_t frame_counter = 0;
     int64_t image_counter = 0;
-    auto textures = GenerateSynchronizationTextures(n_bits);
+    auto textures = e9_GenerateSynchronizationTextures(n_bits);
     int64_t previous_first_capture_time = 0;
 
     camera.start();
-    std::vector<int64_t> is;
-    std::vector<int64_t> timings;
-    std::vector<int64_t> ts;
-    std::vector<int64_t> firsts;
-    std::vector<int64_t> startings;
-    std::vector<int64_t> diffs;
-    std::vector<int64_t> mtd;
-    std::vector<int64_t> adv_c;
-    double fts = 0;
+    std::vector<int8_t> is;
+    std::vector<int8_t> ts;
+    std::vector<int8_t> diffs;
+
+    std::atomic<bool> end_thread {false};
+    std::atomic<int8_t> actual {0}, expected {0};
+    std::atomic<int64_t> cdiffs {0};
+    std::function<void()> capture_function = [&ts, &is, &end_thread, &camera, &n_bits, &actual, &expected, &mvt, &cdiffs](){
+        int64_t i_c = 0;
+        int64_t vs_1 = mvt.vsync_counter.load();
+        while (!end_thread) {
+            int64_t image_count = 0;
+            int64_t m = INT64_MIN;
+            int64_t m_i = 0;
+            while(image_count<n_bits) {
+                torch::Tensor image = camera.sread();
+                auto sum = image.sum().item<int64_t>();
+
+                if (sum > m) {
+                    m_i = image_count;
+                    m   = sum;
+                }
+                ++image_count;
+            }
+            is.push_back(m_i);
+            
+            actual.store(m_i);
+            expected.store(ts[i_c]);
+            ++i_c;
+            int64_t vs_2 = mvt.vsync_counter.load();
+            auto d = vs_2 - vs_1;
+            cdiffs.store(d);
+            vs_1 = vs_2;
+        }
+    };
+    std::thread capture_thread {capture_function};
 
     int64_t vs_c = mvt.vsync_counter.load();
+    int64_t breakpoint_countdown = 10;
+    bool    same_error_det = false;
+    bool    one_behind_error_det = false;
+    std::string notice_1 = "", notice_2 = "";
     while (!WindowShouldClose()) {
         auto &texture = textures[frame_counter % n_bits];
 
@@ -96,99 +128,70 @@ int e8 () {
         );
         EndDrawing();
 
-        auto capture_start = std::chrono::high_resolution_clock::now();
-        startings.push_back(std::chrono::duration_cast<std::chrono::microseconds>(capture_start.time_since_epoch()).count());
-
-        int64_t image_count   = 0;
-        int64_t m   = INT64_MIN;
         int64_t m_i = 0;
-        int64_t capture_time = 0;
-        int64_t total_time   = 0;
-        int64_t first_time   = 0;
-
-        //serial.Signal();
-        while(image_count<n_bits) {
-            torch::Tensor image = camera.sread();
-            auto sum = image.sum().item<int64_t>();
-
-            auto tj_1 = std::chrono::high_resolution_clock::now();
-            if (image_count==0) {
-                first_time     = std::chrono::duration_cast<std::chrono::microseconds>(tj_1 - capture_start).count();
-            }
-
-            if (sum > m) {
-                m_i = image_count;
-                m   = sum;
-            }
-            ++image_count;
-        }
-        auto capture_end = std::chrono::high_resolution_clock::now();
-        capture_time = std::chrono::duration_cast<std::chrono::microseconds>(capture_end - capture_start).count();
-        total_time += capture_time;
-
-        image_counter += image_count;
+        while (enable_capture.load());
+        enable_capture.store(true);
+        
         int64_t vs_c_1 = mvt.vsync_counter.load();
         int64_t vs_diff = vs_c_1 - vs_c;
 
-
-        /* Set run count based on previous timing data */
-        auto ft = GetFrameTime();
-        fts += ft;
-        std::cout << "INFO: [e8] -----------------------------------------\n";
-        std::cout << "INFO: [e8] Frame Index: " << frame_counter << '\n';
-        std::cout << "INFO: [e8] Bit Index  : " << frame_counter % n_bits << '\n';
-        std::cout<<"INFO: [e8] Capture time: "<<total_time<<" us\n";
-        std::cout<<"INFO: [e8] Got    index : "<<m_i<<'\n';
-        std::cout<<"INFO: [e8] Actual index : "<<(frame_counter % n_bits)<<'\n';
-        std::cout<<"INFO: [e8] Frame Rate: "<<(1/ft)<<'\n';
-        std::cout<<"INFO: [e8] First Capture Time: "<<first_time<<'\n';
-        std::cout<<"INFO: [e8] VSync Count: " << mvt.vsync_counter.load() << '\n';
-        std::cout<<"INFO: [e8] VSync Diff : " << (vs_c_1 - vs_c) << '\n';
-
-        is.push_back(m_i);
-        ts.push_back((frame_counter-2) % n_bits);
-        timings.push_back(static_cast<int64_t>(total_time));    // us
-        firsts.push_back(first_time);
+        ts.push_back(frame_counter % n_bits);
         diffs.push_back(vs_c_1 - vs_c);
+
+        int64_t al = actual.load(), el = expected.load();
+        int64_t wel = (((el-1) % 24) + 24) % 24;
+
+        bool same_det = al == el;
+        bool one_behind_det = al == wel;
+
+        if (!same_det) {
+            same_error_det = true;
+            notice_1 = "*";
+        }
+
+        if (same_error_det && !one_behind_det) {
+            one_behind_error_det = true;
+            notice_2 = "*";
+        }
+
+        auto ft = GetFrameTime();
+        std::cout<<"INFO: [e9] FrameTime: "<<ft*1e6<<" us\n";
+        std::cout<<"INFO: [e9] Actual: "<<al<<'\n';
+        std::cout<<"INFO: [e9] Expected: "<<el<<'\n';
+        std::cout<<"INFO: [e9] VSYNC Differences: "<<(vs_c_1 - vs_c) <<'\n';
+        std::cout<<"INFO: [e9] Capture VSYNC: "<<cdiffs.load()<<'\n';
+        std::cout<<"INFO: [e9] Same: "<<(al==el)<<" "<<notice_1<<'\n';
+        std::cout<<"INFO: [e9] One Behind: "<<(al==wel)<<" "<<notice_2<<'\n';
+        std::cout<<"INFO: [e9] Frame Index: "<<frame_counter<<'\n';
+
+        if (one_behind_error_det)
+            break;
 
         vs_c = vs_c_1;
         ++frame_counter;
     }
+
+    end_thread.store(true);
+    capture_thread.join();
 
     camera.close();
     serial.Close();
 
     // save to numpy
     cnpy::npy_save("TimingData/signal.npy", is.data(), {is.size()}, "w");
-    cnpy::npy_save("TimingData/timing.npy", timings.data(), {timings.size()}, "w");
     cnpy::npy_save("TimingData/bits.npy", ts.data(), {ts.size()}, "w");
-    cnpy::npy_save("TimingData/first.npy", firsts.data(), {firsts.size()}, "w");
-    cnpy::npy_save("TimingData/vsync.npy", vsync_time_stamps.data(), {vsync_time_stamps.size()}, "w");
-    cnpy::npy_save("TimingData/start.npy", startings.data(), {startings.size()}, "w");
     cnpy::npy_save("TimingData/vs.npy", diffs.data(), {diffs.size()}, "w");
-    cnpy::npy_save("TimingData/adv.npy", adv_c.data(), {adv_c.size()}, "w");
+    
 
     for (auto &t : textures)
         UnloadTexture(t);
 
     window.close(); /* close window */
 
-    /* Print out FPS */
-    std::cout<<"INFO: [e8] Average Frame Rate: "<<(frame_counter)/(fts)<<'\n';
-
-    /* Print out number of frames captured */
-    std::cout<<"INFO: [e8] Frames Sent: " << frame_counter*n_bits << '\n';
-
-    /* Print out number of frames received */
-    std::cout<<"INFO: [e8] Images Recv: " << image_counter << '\n';
-
-    /* Print out internal count */
-    std::cout<<"INFO: [e8] Internal count: " << camera.count << '\n';
-
     return 0;
 }
 
-std::vector<Texture> GenerateSynchronizationTextures(const int64_t n_bits) {
+std::vector<Texture> e9_GenerateSynchronizationTextures(const int64_t n_bits) {
     std::vector<Texture> textures;
     textures.reserve(n_bits);
 
@@ -218,7 +221,7 @@ std::vector<Texture> GenerateSynchronizationTextures(const int64_t n_bits) {
 }
 
 template<typename T>
-int64_t argmin(const std::vector<T> &v) {
+int64_t e9_argmin(const std::vector<T> &v) {
     int64_t m = INT64_MAX;
     int64_t j = 0;
 
