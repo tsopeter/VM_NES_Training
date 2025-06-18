@@ -16,7 +16,7 @@ OPT   := /opt
 LOCAL := /usr/local
 
 CNPY_PATH := $(LOCAL)/
-LIBTORCH_PATH := $(DOWN)/libtorch
+LIBTORCH_PATH := $(OPT)/libtorch
 RAYLIB_PATH := $(LOCAL)/
 PYLON_PATH := $(OPT)/pylon/
 
