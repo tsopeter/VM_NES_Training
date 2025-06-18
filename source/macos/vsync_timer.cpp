@@ -21,7 +21,7 @@ CGDirectDisplayID macOS_Vsync_Timer::getDisplayByIndex(int index) {
 }
 
 macOS_Vsync_Timer::macOS_Vsync_Timer (int display, 
-    std::function<void()> &f) :
+    std::function<void(std::atomic<uint64_t>&)> &f) :
 displ(display), m_f(f) {
     std::cout<<"INFO: [macOS_Vsync_Timer] Getting dislay...\n";
     id = getDisplayByIndex(displ);
@@ -57,7 +57,7 @@ CVReturn macOS_Vsync_Timer::callback(CVDisplayLinkRef,
     auto* self = static_cast<macOS_Vsync_Timer*>(userInfo);
     self->vsync_counter.fetch_add(1, std::memory_order_release);
     self->vsync_ready.store(true, std::memory_order_release);
-    self->m_f();
+    self->m_f(self->vsync_counter);
     return kCVReturnSuccess;
 }
 

@@ -24,13 +24,8 @@ public:
 
             if (s3_i0_can_read.load()) {
                 ids->enqueue(v_raw_data);
-                ++(*count);
+                count->fetch_add(1,std::memory_order_release);
             }
-            /*
-            auto now = std::chrono::high_resolution_clock::now();
-            auto timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-            std::cout << "INFO : [s3_camera_handler] timestamp (us): " << timestamp_us << '\n';
-            */
         }
         else {
             std::cerr<<"Failed to grab image..\n";
@@ -38,7 +33,7 @@ public:
     }
         
     moodycamel::ConcurrentQueue<u8Image> *ids = nullptr;
-    int *count = nullptr;
+    std::atomic<int64_t> *count = nullptr;
     int  size;
 };
 

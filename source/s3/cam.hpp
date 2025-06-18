@@ -4,6 +4,7 @@
 #include <pylon/PylonIncludes.h>    
 #include <pylon/usb/BaslerUsbInstantCamera.h>  
 #include <memory>
+#include <atomic>
 
 // Third-Party includes
 #include "../third-party/concurrentqueue.h"
@@ -101,7 +102,7 @@ public:
 
     // Image buffer
     moodycamel::ConcurrentQueue<u8Image> buffer;
-    int count = 0;
+    std::atomic<int64_t> count;
 
 private:
     void attach_read_handle();

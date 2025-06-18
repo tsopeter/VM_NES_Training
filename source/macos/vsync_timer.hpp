@@ -13,6 +13,7 @@
 #include <CoreVideo/CoreVideo.h>
 #include <CoreGraphics/CoreGraphics.h>
 #include <IOKit/hidsystem/IOHIDTypes.h> // or similar
+#include <atomic>
 
 #ifdef interface
 #pragma pop_macro("interface")
@@ -20,14 +21,14 @@
 
 class macOS_Vsync_Timer {
 public:
-    macOS_Vsync_Timer (int,std::function<void()>&);
+    macOS_Vsync_Timer (int,std::function<void(std::atomic<uint64_t>&)>&);
     ~macOS_Vsync_Timer();
 
     std::atomic<uint64_t> vsync_counter {0};
     std::atomic<bool>     vsync_ready {false};
 private:
     int displ;
-    std::function<void()> &m_f;
+    std::function<void(std::atomic<uint64_t>&)> &m_f;
     CGDirectDisplayID id;
     CVDisplayLinkRef dispLink;
 
