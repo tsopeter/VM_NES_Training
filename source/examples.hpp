@@ -17,6 +17,7 @@
 #include "examples/e7.hpp"
 #include "examples/e8.hpp"
 #include "examples/e9.hpp"
+#include "examples/e10.hpp"
 
 namespace examples_ {
     /**
@@ -128,6 +129,18 @@ namespace examples_ {
      * @return Return value 0 or -1
      */
     inline auto GLSyncExample  = e9;
+
+    /**
+     * @brief
+     *  ## Single Update Example (e10)
+     * 
+     * 
+     *      Example of how to train a full-system given a single image.
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto SingleUpdateExample = e10;
 }
 
 
