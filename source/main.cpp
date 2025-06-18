@@ -2,5 +2,9 @@
 #include "examples.hpp"
 
 int main () {
-    examples_::Syncrhonization();
+#ifdef __APPLE__
+    examples_::macOSGLSyncExample();
+#elif __linux__
+    examples_::linuxGLSyncExample();
+#endif
 }

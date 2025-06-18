@@ -1,10 +1,10 @@
-#ifndef s3_cam_hpp__
-#define s3_cam_hpp__
+#ifndef s3_reportable_hpp__
+#define s3_reportable_hpp__
+
 #include <torch/torch.h>
 #include <pylon/PylonIncludes.h>    
 #include <pylon/usb/BaslerUsbInstantCamera.h>  
 #include <memory>
-#include <atomic>
 
 // Third-Party includes
 #include "../third-party/concurrentqueue.h"
@@ -15,7 +15,7 @@
  */
 using u8Image = std::vector<uint8_t>;
 
-struct s3_Camera_Properties {
+struct s3_Camera_Reportable_Properties {
 // Dimensional
     int   Height        = 480;
     int   Width         = 640;
@@ -30,17 +30,17 @@ struct s3_Camera_Properties {
     float AcqFrameRate  = 751;
     const Basler_UsbCameraParams::TriggerModeEnums TriggerMode = Basler_UsbCameraParams::TriggerModeEnums::TriggerMode_On;
     const Basler_UsbCameraParams::TriggerSourceEnums TriggerSource = Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_Line3;   // hardware trigger
-    const Basler_UsbCameraParams::TriggerActivationEnums TriggerActivation = Basler_UsbCameraParams::TriggerActivationEnums::TriggerActivation_RisingEdge;
+    const Basler_UsbCameraParams::TriggerActivationEnums TriggerActivation = Basler_UsbCameraParams::TriggerActivationEnums::TriggerActivation_FallingEdge;
     const Basler_UsbCameraParams::TriggerSelectorEnums TriggerSelect = Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameBurstStart;
     //const Basler_UsbCameraParams::TriggerSelectorEnums TriggerSelect = Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameStart;
     const Basler_UsbCameraParams::SensorReadoutModeEnums SenReadoutMode = Basler_UsbCameraParams::SensorReadoutModeEnums::SensorReadoutMode_Fast;
     const Basler_UsbCameraParams::AcquisitionStatusSelectorEnums AcqStatSel = Basler_UsbCameraParams::AcquisitionStatusSelectorEnums::AcquisitionStatusSelector_FrameBurstTriggerWait;
 };
 
-class s3_Camera {
+class s3_Camera_Reportable {
 public:
-    s3_Camera(s3_Camera_Properties);
-    ~s3_Camera();
+    s3_Camera_Reportable(s3_Camera_Reportable_Properties);
+    ~s3_Camera_Reportable();
 
     void open();
     void close();
@@ -91,7 +91,7 @@ public:
     void start();
 
     // Camera properties
-    s3_Camera_Properties prop;
+    s3_Camera_Reportable_Properties prop;
 
     // Flag to tell if camera is open
     bool is_open;
@@ -102,7 +102,7 @@ public:
 
     // Image buffer
     moodycamel::ConcurrentQueue<u8Image> buffer;
-    std::atomic<int64_t> count;
+    int count = 0;
 
 private:
     void attach_read_handle();
@@ -110,6 +110,7 @@ private:
     void p_open();
 };
 
-std::ostream& operator<<(std::ostream &os, const s3_Camera &cam);
+std::ostream& operator<<(std::ostream &os, const s3_Camera_Reportable &cam);
 
 #endif
+

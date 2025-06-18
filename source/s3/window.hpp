@@ -20,19 +20,27 @@ enum s3_Windowing_Mode {
     BORDERLESS = 1
 };
 
+enum s3_TargetFPS_Mode {
+    SET_TARGET_FPS = 0,
+    NO_TARGET_FPS  = 1
+};
+
 class s3_Window {
 public:
     s3_Window();
     ~s3_Window();
 
     void load();
-
+    void close();
 
     int Height, Width;
     int monitor;
     int fps;
     std::string title;
     s3_Windowing_Mode wmode;
+    s3_TargetFPS_Mode fmode;
+
+    bool window_open = false;
 };
 
 #endif

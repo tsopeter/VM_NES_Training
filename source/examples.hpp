@@ -13,14 +13,17 @@
 #include "examples/e2.hpp"
 #include "examples/e3.hpp"
 #include "examples/e4.hpp"
-#include "examples/e5.hpp"
 #include "examples/e6.hpp"
 #include "examples/e7.hpp"
+#include "examples/e8.hpp"
+#include "examples/e9.hpp"
+#include "examples/e10.hpp"
+#include "examples/e11.hpp"
 
 namespace examples_ {
     /**
      * @brief
-     *  ## DisplayImages
+     *  ## DisplayImages (e0)
      * 
      *      Example for showing how to use dataloader
      *      and Upscaler to display images to the screen.
@@ -33,7 +36,7 @@ namespace examples_ {
 
     /**
      * @brief
-     *  ## CombinePhaseAndImages
+     *  ## CombinePhaseAndImages (e1)
      * 
      *      Example for showing how to combine images and phase masks together using
      *      PEncoder
@@ -46,7 +49,7 @@ namespace examples_ {
 
     /**
      * @brief
-     *  ## BlackBoxOptimization
+     *  ## BlackBoxOptimization (e2)
      * 
      *      Example for showing how to define distributions and models, and
      *      how to perform black-box optimization using s4_Optimizer on a
@@ -60,7 +63,7 @@ namespace examples_ {
 
     /**
      * @brief
-     *  ## SlicerUsage
+     *  ## SlicerUsage (e3)
      * 
      *      Example for showing how to use the s4_Slicer
      * 
@@ -72,7 +75,7 @@ namespace examples_ {
 
     /**
      * @brief
-     *  ## SoftwareTrigger
+     *  ## SoftwareTrigger (e4)
      * 
      *      Example for showing how to use software triggered camera
      *      and have it sync with image change.
@@ -85,31 +88,18 @@ namespace examples_ {
 
     /**
      * @brief
-     *  ## HardwareTrigger
+     *  ## Hardware Capture Timing (e6)
      * 
-     *      Example for showing how to use hardware triggered camera
-     *      and have it sync to vertical sync.
-     * 
-     * @param  None
-     * @return Return value 0 or -1
-     * 
-     */
-    inline auto HardwareTrigger       = e5;
-
-    /**
-     * @brief
-     *  ## Synchronization
-     * 
-     *      Example for showing how synchronization between screen and camera could be done.
+     *      Example for showing how to capture a series of images from camera tied to PLM/DLP
      * 
      * @param  None
      * @return Return value 0 or -1
      */
-    inline auto Syncrhonization       = e6;
+    inline auto HardwareTrigger       = e6;
 
     /**
      * @brief
-     *  ## Serial
+     *  ## Serial (e7)
      * 
      *      Example of how the serial class can be used
      * 
@@ -117,6 +107,53 @@ namespace examples_ {
      * @return Return value 0 or -1
      */
     inline auto SerialExample         = e7;
+
+    /**
+     * @brief
+     *  ## Synchronization (e8) (*deprecated, use GLSync/e9 instead)
+     * 
+     *      Example of testing synchronization
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto Synchronization       = e8;
+
+    /**
+     * @brief
+     *  ## macOS GLSync Example (e9)
+     * 
+     *      Example of using sync timer classes to synchronize
+     *      camera and display.
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto macOSGLSyncExample  = e9;
+
+    /**
+     * @brief
+     *  ## linux GLSync Example (e9)
+     * 
+     *      Example of using sync timer classes to synchronize
+     *      camera and display.
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto linuxGLSyncExample  = e11;
+
+    /**
+     * @brief
+     *  ## Single Update Example (e10)
+     * 
+     * 
+     *      Example of how to train a full-system given a single image.
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto SingleUpdateExample = e10;
 }
 
 

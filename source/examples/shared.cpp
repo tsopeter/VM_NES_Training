@@ -150,3 +150,9 @@ double examples::report_timer(std::function<void()>& func,const std::string&name
     std::cout << "INFO: [" << name << "] Time elapsed: " << duration_us << " us" << std::endl;
     return duration_us;
 }
+
+void examples::print_current_time_us () {
+    auto now = std::chrono::high_resolution_clock::now();
+    auto timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    std::cout << "INFO: [current_time_us] timestamp (us): " << timestamp_us << std::endl;
+}

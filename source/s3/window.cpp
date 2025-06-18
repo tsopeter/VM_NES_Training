@@ -11,12 +11,20 @@ s3_Window::s3_Window() {
     fps     = 60;
     title   = "Default Title";
     wmode   = WINDOWED;
+    fmode   = NO_TARGET_FPS;
 
     static_assert(GLSL_VERSION >= 330);
 }
 
 s3_Window::~s3_Window() {
-    CloseWindow();
+    close();
+}
+
+void s3_Window::close () {
+    if (window_open) {
+        CloseWindow();
+        window_open = false;
+    }
 }
 
 void s3_Window::load() {
@@ -24,5 +32,7 @@ void s3_Window::load() {
     InitWindow(Width, Height, title.c_str());
     SetWindowMonitor(monitor);
     if (wmode == BORDERLESS) ToggleBorderlessWindowed();
-    SetTargetFPS(fps);
+    if (fmode == SET_TARGET_FPS)
+        SetTargetFPS(fps);
+    window_open = true;
 }

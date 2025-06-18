@@ -61,6 +61,7 @@ void Serial::Close() {
 
 int Serial::Send(const std::string & data) {
     ssize_t num_bytes_written = write(port, data.c_str(), data.size());
+    tcdrain(port);
     if (num_bytes_written <= 0) {
         return -1;
     }

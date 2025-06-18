@@ -31,7 +31,7 @@ LIBRARY_DIRS := $(LIBTORCH_PATH)/lib \
                 $(CNPY_PATH)/lib \
                 $(RAYLIB_PATH)/lib
 
-FRAMEWORKS := -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework pylon
+FRAMEWORKS := -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework CoreFoundation -framework pylon
 
 # Libraries
 LIBRARIES := -ltorch -ltorch_cpu -lc10 -lcnpy -lz -lraylib

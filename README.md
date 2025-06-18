@@ -27,7 +27,14 @@ Only supports Linux and macOS.
 
 4. Setting up FPGA.
 
-    Go to FrameSync/Zybo/12/ and copy the files from frame_sync_z to an SD-Card. Insert SD-Card to Zybo and turn it on. Initialization sequence will take ~10 seconds.
+    Go to FrameSync/Prebuilt/Zybo/12/ and copy the files from frame_sync_z to an SD-Card. Insert SD-Card to Zybo and turn it on. Initialization sequence will take ~10 seconds.
+
+    Files are stored as Prebuilt/Zybo/n, where n is n_bits (number of bits per frame).
+
+    frame_sync   does not count the frame start as a bit.
+    frame_sync_z does count frame start as a bit (and thus counts n_bits - 1 bits actually)
+    frame_sync_u counts frame start as bit iff bit signal arrives also exactly at the same time.
+
 
     Connect FPGA to computer over serial. Baudrate is 115200 bps.
 
