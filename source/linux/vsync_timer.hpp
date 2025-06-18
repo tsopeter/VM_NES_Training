@@ -11,7 +11,7 @@
 class glx_Vsync_timer {
 public:
     glx_Vsync_timer (Display*, Window, std::function<void()>&);
-    ~glc_Vsync_timer ();
+    ~glx_Vsync_timer ();
     
     std::atomic<uint64_t> vsync_counter {0};
     std::atomic<bool> vsync_ready {false};
