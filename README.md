@@ -7,6 +7,10 @@ Only supports Linux and macOS.
 
         git clone https://github.com/tsopeter/VM_NES_Training.git
 
+    You can get the Datasets from:
+    https://drive.google.com/drive/folders/191RRGr2NXQwkembqanOB8V5hno4EVjsl?usp=sharing
+    
+
 2.  Download the requirement
 
     * Raylib 5.0
