@@ -8,7 +8,12 @@
 #include "../s4/utils.hpp"
 #include "../s3/Serial.hpp"
 #include "shared.hpp"
-#include <OpenGL/gl.h>
+
+#ifdef __APPLE__
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
 
 
 int e6 () {

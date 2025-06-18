@@ -11,16 +11,22 @@
 #include "../s4/utils.hpp"
 #include "../s3/Serial.hpp"
 #include "shared.hpp"
-#include <OpenGL/gl.h>
+
+#ifdef __APPLE__
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
+
 #include <chrono>
 #include <future>
-
 
 std::vector<Texture> GenerateSynchronizationTextures (const int64_t n_bits);
 
 template<typename T>
 int64_t             argmin(const std::vector<T>&); 
 
+#ifdef __APPLE__
 int e8 () {
     Pylon::PylonAutoInitTerm init {};
 
@@ -216,6 +222,12 @@ std::vector<Texture> GenerateSynchronizationTextures(const int64_t n_bits) {
 
     return textures;
 }
+#else
+    int e8 () {
+        throw std::runtime_error("Error: [e8] is only implemented for macOS machines.");
+        return 0;
+    }
+#endif
 
 template<typename T>
 int64_t argmin(const std::vector<T> &v) {

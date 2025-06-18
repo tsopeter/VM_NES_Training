@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <fcntl.h>      // File control definitions
 #include <unistd.h>     // UNIX standard function definitions
+#include <cstring>  // For strerror
 
 Serial::Serial (const std::string port_name, int baud_rate)
 : port_name(port_name), baud_rate(baud_rate) {}

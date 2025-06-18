@@ -35,8 +35,9 @@ LIBRARY_DIRS := $(LIBTORCH_PATH)/lib \
 
 # Libraries
 LIBRARIES := -Wl,--no-as-needed -ltorch -ltorch_cpu -ltorch_cuda -lc10 -lc10_cuda -lcnpy -lz -lraylib -lcuda \
-             -lpylonbase -lpylonutility -lGenApi_gcc_v3_1_Basler_pylon \
-             -lGCBase_gcc_v3_1_Basler_pylon
+             -lpylonbase -lpylonutility -lGenApi_gcc_v3_1_Basler_pylon_v3 \
+             -lGCBase_gcc_v3_1_Basler_pylon_v3 \
+             -lGL -lGLX -lX11
 
 # Flags
 INCLUDE_FLAGS := $(addprefix -I, $(INCLUDE_DIRS))

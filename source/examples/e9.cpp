@@ -11,7 +11,13 @@
 #include "../s4/utils.hpp"
 #include "../s3/Serial.hpp"
 #include "shared.hpp"
-#include <OpenGL/gl.h>
+
+#ifdef __APPLE__
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
+
 #include <chrono>
 #include <future>
 #include <thread>
@@ -25,6 +31,7 @@ int64_t e9_time_now_us ();
 
 int64_t e9_mod(int64_t x, int64_t m);
 
+#ifdef __APPLE__
 int e9 () {
     Pylon::PylonAutoInitTerm init {};
 
@@ -228,6 +235,12 @@ int e9 () {
 
     return 0;
 }
+#else
+    int e9 () {
+        throw std::runtime_error("Error: [e9] is only implemented for macOS machines.");
+        return 0;
+    }
+#endif
 
 std::vector<Texture> e9_GenerateSynchronizationTextures(const int64_t n_bits) {
     std::vector<Texture> textures;
