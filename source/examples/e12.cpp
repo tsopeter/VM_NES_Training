@@ -42,7 +42,7 @@ int e12 () {
     window.wmode   = BORDERLESS;
     window.fmode   = NO_TARGET_FPS;
     //window.fps     = 60;
-    window.monitor = 0; /* For some reason, DLP is 0 on the Linux machine */
+    window.monitor = 1; /* For some reason, DLP is 0 on the Linux machine */
     window.load();
 
     /* Serial connection */
@@ -63,10 +63,7 @@ int e12 () {
         }
     };
 
-    Display* dpy = glx_Vsync_timer::XOpenDisplay_alias(NULL);
-    if (!dpy) throw std::runtime_error("Failed to open X display.");
-    Window win = glx_Vsync_timer::glxGetCurrentDrawable_alias();
-    glx_Vsync_timer mvt(dpy, win, timer);
+    glx_Vsync_timer mvt(window.monitor, timer);
 
     /* Create Camera */
     s3_Camera_Properties cam_properties;
