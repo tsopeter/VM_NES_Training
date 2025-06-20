@@ -2,3 +2,5 @@
 build/
 app
 *.o
+Serial/serial
+Serial/build/

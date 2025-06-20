@@ -27,7 +27,7 @@ void Serial::Open () {
 
     if (port < 0)
         throw std::runtime_error(std::string{"Error opening serial port"} + port_name +
-                                 std::string{"Errno: "} + std::string{strerror(errno)});
+                                 std::string{" Errno: "} + std::string{strerror(errno)});
     fcntl(port, F_SETFL, 0); // Clear O_NONBLOCK
     
     struct termios options;
