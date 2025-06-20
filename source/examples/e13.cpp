@@ -46,22 +46,26 @@ int e13 () {
         }
     };
 
-    
+    /*
     std::cout<<"INFO: [e13] Starting timer...\n";
     Display* dpy = glx_Vsync_timer::XOpenDisplay_alias(":0");
     if (!dpy) throw std::runtime_error("Failed to open X display.");
     Window win = glx_Vsync_timer::glxGetCurrentDrawable_alias();
 
     glx_Vsync_timer mvt(dpy, win, timer);
-    
+    */
+    glx_Vsync_timer mvt(window.monitor, timer);
 
     int64_t frame_counter=0;
+    uint64_t vsync_count=0;
     while (!WindowShouldClose()) {
+        vsync_count = mvt.vsync_counter.load(std::memory_order_acquire);
         BeginDrawing();
         ClearBackground(BLACK);
         DrawFPS(10,10);
+        DrawText(TextFormat("VSYNC count: %llu", vsync_count), 10, 30, 20, RAYWHITE);
+        DrawText(TextFormat("Frame count: %lld", frame_counter), 10, 50, 20, RAYWHITE);
         EndDrawing();
-        std::cout<<"INFO: [e13] Frame: "<<frame_counter<<'\n';
         ++frame_counter;
     }
 

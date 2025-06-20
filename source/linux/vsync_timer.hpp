@@ -14,6 +14,7 @@ typedef struct __GLXcontextRec *GLXContext;
 class glx_Vsync_timer {
 public:
     glx_Vsync_timer (Display*, Window, std::function<void(std::atomic<uint64_t>&)>&);
+    glx_Vsync_timer (int,std::function<void(std::atomic<uint64_t>&)>&);
     ~glx_Vsync_timer ();
 
     static Display *XOpenDisplay_alias(const char*);
@@ -22,6 +23,7 @@ public:
     std::atomic<uint64_t> vsync_counter {0};
     std::atomic<bool> vsync_ready {false};
 private:
+    void init_thread ();
     static void thread_entry (
         Display*,
         Window,
