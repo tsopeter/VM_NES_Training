@@ -9,7 +9,11 @@
 #include <pthread.h>
 #include <sched.h>
 
+#ifdef __linux__
 #include "../linux/vsync_timer.hpp"
+#else
+#include "../macos/vsync_timer.hpp"
+#endif
 
 #include "../s3/reportable.hpp"
 #include "../s3/window.hpp"
@@ -33,7 +37,7 @@ int32_t e13_pixel2value(unsigned char pixel[3]);
 
 void DrawToScreen(Texture&, s3_Window&);
 
-#ifdef __linux__
+#ifdef (__linux__ || __APPLE__)
 int e13 () {
     Pylon::PylonAutoInitTerm init {};
     /* Initialize screen */
@@ -41,7 +45,7 @@ int e13 () {
     window.Height  = 1600;
     window.Width   = 2560;
     window.wmode   = WINDOWED;
-    window.fmode   = SET_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
+    window.fmode   = NO_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 240;
     window.monitor = 1;
     window.load();
@@ -67,7 +71,11 @@ int e13 () {
             enable_capture.store(false,std::memory_order_release);
         }
     };
+    #ifdef __linux__
     glx_Vsync_timer mvt(0, timer);
+    #else
+    macOS_Vsync_Timer mvt(window.monitor, timer);
+    #endif
 
     /* Create Camera */
     s3_Camera_Reportable_Properties cam_properties;
@@ -87,7 +95,8 @@ int e13 () {
     moodycamel::ConcurrentQueue<int32_t> gl_buffer;
     std::atomic<int64_t> capture_count {0};
     std::atomic<bool> kill_process {false};
-    std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer]()->void {
+    const int n_textures = 2;
+    std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
         /*
         struct sched_param sched;
         sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
@@ -132,7 +141,7 @@ int e13 () {
             int64_t frame;
             while (!frames_buffer.try_dequeue(frame));
 
-            int64_t bit = frame % n_bits;
+            int64_t bit = frame % n_textures;
 
             int64_t fvsync;
             while (!frames_vsync.try_dequeue(fvsync));
@@ -152,7 +161,9 @@ int e13 () {
             while (!gl_buffer.try_dequeue(gl_value));
 
             int64_t cp_diff_prev = cp_diff;
-            cp_diff = e13_mod(bit - m_i, n_bits);
+            v_diff = abs(bit - m_i) % n_bits;
+	        v_diff = std::min(v_diff, 24 - v_diff);
+            cp_diff = v_diff;
             if (i_c >= n_bits && cp_diff != cp_diff_prev) {
                 det_error = true;
                 err_counter++;
@@ -164,8 +175,6 @@ int e13 () {
                     kill_process.store(true, std::memory_order_release);
             }
 
-	        v_diff = abs(bit - m_i) % n_bits;
-	        v_diff = std::min(v_diff, 24 - v_diff);
 
             std::cout<<"1------------------------------------------------------------------\n";
             std::cout<<"INFO: [capture_thread] Frame: " << frame << '\n';
@@ -199,12 +208,12 @@ int e13 () {
 
     int texHeight = 1600;
     int texWidth  = 2560;
-    auto textures = e13_GenerateSynchronizationTextures(n_bits, texHeight, texWidth);
+    auto textures = e13_GenerateSynchronizationTextures(n_textures, texHeight, texWidth);
     int64_t vsync_index_1 = mvt.vsync_counter.load(std::memory_order_acquire);
     std::vector<uint64_t> frames_vsync_indexes;
 
     while (!WindowShouldClose()) {
-        auto &texture = textures[frame_counter % n_bits];
+        auto &texture = textures[frame_counter % n_textures];
 
         if (kill_process.load(std::memory_order_acquire))
             break;

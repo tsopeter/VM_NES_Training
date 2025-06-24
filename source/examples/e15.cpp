@@ -32,18 +32,20 @@ int32_t pixel2value(unsigned char[3]);
 
 int e15 () {
     s3_Window window {};
-    window.Height  = 480;
-    window.Width   = 640;
+    window.Height  = 1600;
+    window.Width   = 2560;
     window.wmode   = WINDOWED;
     window.fmode   = NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 60;
-    window.monitor = 0;
+    window.monitor = 1;
     window.load();
 
-    const int64_t n_bits = 24;
+    const int64_t n_bits = 2;
     auto textures = e15_GenerateSynchronizationTextures(n_bits);
     int64_t frame_counter=0;
 
+    int64_t actual=0;
+    int64_t expected=0;
     while (!WindowShouldClose()) {
         auto &texture = textures[frame_counter % n_bits];
         ++frame_counter;
@@ -63,16 +65,18 @@ int e15 () {
                 );
             DrawFPS(10,10);
 
+            DrawText(TextFormat("Actual: %d, Expected: %d", actual, expected), 10, 30, 20, BLACK);
+
         EndDrawing();
 
         unsigned char pixel[3];
         glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
 
-        int actual = pixel2value(pixel);
+        actual = pixel2value(pixel);
         #ifdef __linux__
-            int expected = (frame_counter - 0) % n_bits;
+            expected = (frame_counter - 1) % n_bits;
         #else
-            int expected = (frame_counter - 1) % n_bits;
+            expected = (frame_counter - 1) % n_bits;
         #endif
         int diff = std::abs(actual - expected);
         int min_diff = std::min(diff, static_cast<int>(n_bits - diff));
