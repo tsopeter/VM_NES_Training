@@ -41,8 +41,8 @@ int e13 () {
     window.Height  = 1600;
     window.Width   = 2560;
     window.wmode   = WINDOWED;
-    window.fmode   = NO_TARGET_FPS; //SET_TARGET_FPS;
-    window.fps     = 60;
+    window.fmode   = SET_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
+    window.fps     = 240;
     window.monitor = 1;
     window.load();
 
@@ -101,7 +101,8 @@ int e13 () {
         int64_t cp_diff=0;
 	    int64_t v_diff=0;
         uint64_t prev_timestamp=0;
-        int64_t err_counter=10;
+        int64_t err_counter=0;
+	    int64_t fire_kill_process=10;
         uint64_t prev_frame_timestamp=0;
         while (!end_thread.load(std::memory_order_acquire)) {
             if (capture_pending.load(std::memory_order_acquire) <= 0) continue;
@@ -152,17 +153,19 @@ int e13 () {
 
             int64_t cp_diff_prev = cp_diff;
             cp_diff = e13_mod(bit - m_i, n_bits);
-            if (i_c >= n_bits && cp_diff != cp_diff_prev)
+            if (i_c >= n_bits && cp_diff != cp_diff_prev) {
                 det_error = true;
+                err_counter++;
+            }
+
+            if(det_error) {
+                --fire_kill_process;
+                if (fire_kill_process <= 0)
+                    kill_process.store(true, std::memory_order_release);
+            }
 
 	        v_diff = abs(bit - m_i) % n_bits;
 	        v_diff = std::min(v_diff, 24 - v_diff);
-
-            if (det_error) {
-                --err_counter;
-                if (err_counter <= 0)
-                    kill_process.store(true, std::memory_order_release);
-            }
 
             std::cout<<"1------------------------------------------------------------------\n";
             std::cout<<"INFO: [capture_thread] Frame: " << frame << '\n';
@@ -181,6 +184,7 @@ int e13 () {
             std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp/1'000 << " us \n";
             std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us \n";
             std::cout<<"INFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << '\n';
+            std::cout<<"INFO: [capture_thread] Error Ratio: " << 100 * (static_cast<double>(err_counter) / static_cast<double>(capture_count.load(std::memory_order_acquire))) << "%\n";
 
             std::cout<<"2------------------------------------------------------------------\n";
             prev_timestamp = timestamp;
