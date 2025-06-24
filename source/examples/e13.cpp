@@ -50,7 +50,11 @@ int e13 () {
     window.monitor = 1;
     window.load();
 
+    #ifdef __linux__
     Serial serial {"/dev/ttyACM0", 115200};
+    #else
+    Serial serial {"/dev/tty.usbmodem8326898B1E1E1", 115200};
+    #endif
     serial.Open();
 
     /* Generate test images */
