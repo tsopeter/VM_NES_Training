@@ -165,7 +165,10 @@ int e13 () {
             std::cout<<"INFO: [capture_thread] Frames Held: " << hvsync << '\n';
             std::cout<<"INFO: [capture_thread] Sent on: " << fvsync << '\n';
             std::cout<<"INFO: [capture_thread] Captured on: " << cvsync << '\n';
-            std::cout<<"INFO: [capture_thread] Detected Error: " << det_error << '\n';
+            if (det_error)
+                std::cout<<"\033[1;31mINFO: [capture_thread] Detected Error: true\033[0m\n";
+            else
+                std::cout<<"INFO: [capture_thread] Detected Error: false\n";
 	        std::cout<<"INFO: [capture_thread] Difference: "<< v_diff << '\n';
             std::cout<<"INFO: [capture_thread] Images in Queue: " << camera.image_count.load(std::memory_order_acquire) << '\n';
             std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp/1'000 << " us \n";
@@ -192,25 +195,21 @@ int e13 () {
     while (!WindowShouldClose()) {
         auto &texture = textures[frame_counter % n_bits];
 
-        //if (kill_process.load(std::memory_order_acquire))
-        //    break;
+        if (kill_process.load(std::memory_order_acquire))
+            break;
 
         if (frame_counter==1)
             while (frame_counter!=capture_count.load(std::memory_order_acquire));
-
-        DrawToScreen(texture, window);
 
         frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::high_resolution_clock::now().time_since_epoch()
         ).count());
 
-        
         int64_t vsync_index_2;
         do {
             vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
         } while ((vsync_index_2 - vsync_index_1) <= 0);
         
-
         /* Send enable if possible */
         while (enable_capture.load(std::memory_order_acquire));
         enable_capture.store(true, std::memory_order_release);
@@ -222,6 +221,8 @@ int e13 () {
 
         ++frame_counter;
         vsync_index_1 = vsync_index_2;
+
+        DrawToScreen(texture, window);
     }
 
     /* Close threads */
@@ -292,12 +293,13 @@ void DrawToScreen(Texture &texture, s3_Window &window) {
     BeginDrawing();
 
         ClearBackground(BLACK);
-        DrawTexturePro(
-            texture,
-            {0, 0, 1, 1}, // Source rectangle
-            {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
-            {0, 0}, 0.0f, WHITE
-        );
+        for (int i = 0; i < 1; ++i)
+            DrawTexturePro(
+                texture,
+                {0, 0, 1, 1}, // Source rectangle
+                {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
+                {0, 0}, 0.0f, WHITE
+            );
         DrawFPS(10,10);
 
     EndDrawing();
