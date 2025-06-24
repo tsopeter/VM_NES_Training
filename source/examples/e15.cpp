@@ -69,7 +69,11 @@ int e15 () {
         glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
 
         int actual = pixel2value(pixel);
-        int expected = (frame_counter - 1) % n_bits;
+        #ifdef __linux__
+            int expected = (frame_counter - 0) % n_bits;
+        #else
+            int expected = (frame_counter - 1) % n_bits;
+        #endif
         int diff = std::abs(actual - expected);
         int min_diff = std::min(diff, static_cast<int>(n_bits - diff));
         if (min_diff != 1)

@@ -29,6 +29,7 @@
 
 std::vector<Texture> e13_GenerateSynchronizationTextures (const int64_t n_bits, int Height=1, int Width=1);
 int64_t e13_mod(int64_t x, int64_t m);
+int32_t e13_pixel2value(unsigned char pixel[3]);
 
 void DrawToScreen(Texture&, s3_Window&);
 
@@ -83,9 +84,10 @@ int e13 () {
     moodycamel::ConcurrentQueue<int64_t> frames_vsync;
     moodycamel::ConcurrentQueue<int64_t> frames_held;
     moodycamel::ConcurrentQueue<uint64_t> frame_timestamps;
+    moodycamel::ConcurrentQueue<int32_t> gl_buffer;
     std::atomic<int64_t> capture_count {0};
     std::atomic<bool> kill_process {false};
-    std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process]()->void {
+    std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer]()->void {
         /*
         struct sched_param sched;
         sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
@@ -145,6 +147,9 @@ int e13 () {
 
             frame_timestamps_v.push_back(frame_timestamp);
 
+            int32_t gl_value;
+            while (!gl_buffer.try_dequeue(gl_value));
+
             int64_t cp_diff_prev = cp_diff;
             cp_diff = e13_mod(bit - m_i, n_bits);
             if (i_c >= n_bits && cp_diff != cp_diff_prev)
@@ -163,6 +168,7 @@ int e13 () {
             std::cout<<"INFO: [capture_thread] Frame: " << frame << '\n';
             std::cout<<"INFO: [capture_thread] Pending: " << capture_pending.load(std::memory_order_acquire) << '\n';
             std::cout<<"INFO: [capture_thread] Captured: " << m_i << ", Expected: " << bit << '\n';
+            std::cout<<"INFO: [capture_thread] GL_Value: " << gl_value << '\n';
             std::cout<<"INFO: [capture_thread] Frames Held: " << hvsync << '\n';
             std::cout<<"INFO: [capture_thread] Sent on: " << fvsync << '\n';
             std::cout<<"INFO: [capture_thread] Captured on: " << cvsync << '\n';
@@ -223,7 +229,13 @@ int e13 () {
         ++frame_counter;
         vsync_index_1 = vsync_index_2;
 
+        unsigned char pixel[3];
+        glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
+
+        gl_buffer.enqueue(e13_pixel2value(pixel));
+
         DrawToScreen(texture, window);
+
     }
 
     /* Close threads */
@@ -309,4 +321,23 @@ void DrawToScreen(Texture &texture, s3_Window &window) {
         DrawFPS(10,10);
 
     EndDrawing();
+}
+
+int32_t e13_pixel2value(unsigned char pixel[3]) {
+    int32_t value = -1;
+
+    for (int i = 0; i < 24; ++i) {
+        int byte_index = i / 8;
+        int bit_index = i % 8;
+
+        unsigned char expected[3] = {0xFF, 0xFF, 0xFF};
+        expected[byte_index] = ~(1 << bit_index);
+
+        if (pixel[0] == expected[0] && pixel[1] == expected[1] && pixel[2] == expected[2]) {
+            value = i;
+            break;
+        }
+    }
+
+    return value;
 }
