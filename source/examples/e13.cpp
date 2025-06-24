@@ -39,6 +39,7 @@ void DrawToScreen(Texture&, s3_Window&);
 
 #if defined(__linux__) || defined(__APPLE__)
 int e13 () {
+
     Pylon::PylonAutoInitTerm init {};
     /* Initialize screen */
     s3_Window window {};
@@ -196,7 +197,10 @@ int e13 () {
             std::cout<<"INFO: [capture_thread] Images in Queue: " << camera.image_count.load(std::memory_order_acquire) << '\n';
             std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp/1'000 << " us \n";
             std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us \n";
-            std::cout<<"INFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << '\n';
+            if ((frame_timestamp-prev_frame_timestamp)>18'000)
+                std::cout<<"\033[1;31mINFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << "\033[0m\n";
+            else
+                std::cout<<"INFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << '\n';
             std::cout<<"INFO: [capture_thread] Error Ratio: " << 100 * (static_cast<double>(err_counter) / static_cast<double>(capture_count.load(std::memory_order_acquire))) << "%\n";
 
             std::cout<<"2------------------------------------------------------------------\n";
