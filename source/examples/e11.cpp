@@ -25,6 +25,7 @@ int64_t e11_time_now_us ();
 
 int64_t e11_mod(int64_t x, int64_t m);
 
+#ifdef __linux__
 int e11 () {
     Pylon::PylonAutoInitTerm init {};
 
@@ -232,6 +233,11 @@ int e11 () {
 
     return 0;
 }
+#else
+    int e11() {
+        return -1;
+    }
+#endif
 
 std::vector<Texture> e11_GenerateSynchronizationTextures(const int64_t n_bits) {
     std::vector<Texture> textures;
