@@ -37,7 +37,7 @@ int32_t e13_pixel2value(unsigned char pixel[3]);
 
 void DrawToScreen(Texture&, s3_Window&);
 
-#ifdef (__linux__ || __APPLE__)
+#if defined(__linux__) || defined(__APPLE__)
 int e13 () {
     Pylon::PylonAutoInitTerm init {};
     /* Initialize screen */
