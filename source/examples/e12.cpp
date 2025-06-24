@@ -42,7 +42,7 @@ int e12 () {
     window.wmode   = BORDERLESS;
     window.fmode   = NO_TARGET_FPS;
     //window.fps     = 60;
-    window.monitor = 1; /* For some reason, DLP is 0 on the Linux machine */
+    window.monitor = 1;
     window.load();
 
     /* Serial connection */
@@ -60,10 +60,11 @@ int e12 () {
             capture_pending.fetch_add(1,std::memory_order_release);
             serial.Signal();
             enable_capture.store(false,std::memory_order_release);
+            std::cout<<"INFO: [timer] Signal sent.\n";
         }
     };
 
-    glx_Vsync_timer mvt(window.monitor, timer);
+    glx_Vsync_timer mvt(0, timer);
 
     /* Create Camera */
     s3_Camera_Properties cam_properties;
@@ -180,15 +181,11 @@ int e12 () {
 
     int64_t sent_count = 0;
 
-    int64_t vsync_index_1 = mvt.vsync_counter.load(std::memory_order_acquire);
     while (!WindowShouldClose()) {
         auto &texture = textures[frame_counter % n_bits];
 
         if (end_system.load(std::memory_order_acquire))
             break;
-
-        if (frame_counter == 1)
-            while (sent_count != capture_count.load(std::memory_order_acquire));
 
         /* Draw loop */
         BeginDrawing();
@@ -199,21 +196,31 @@ int e12 () {
             {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
             {0, 0}, 0.0f, WHITE
         );
+        DrawFPS(10, 10);
         EndDrawing();
-
-        int64_t vsync_index_2;
-        do {
-            vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
-        } while ((vsync_index_2 - vsync_index_1) <= 0);
-        frames.enqueue(frame_counter % n_bits);
-        sent_vsync_index.enqueue(vsync_index_2);
-        while (enable_capture.load(std::memory_order_acquire));
-        enable_capture.store(true, std::memory_order_release);
-
         ++frame_counter;
-        ++sent_count;
-        vsync_index_1 = vsync_index_2;
-  
+        continue;
+
+        /* Skipped :( */
+        serial.Signal();
+        
+        /* Capture */
+        int64_t image_count=0;
+        int64_t m_i = 0;
+        int64_t m   = INT64_MIN;
+        while(image_count<n_bits) {
+            torch::Tensor image = camera.sread();
+            auto sum = image.sum().item<int64_t>();
+
+            if (sum > m) {
+                m_i = image_count;
+                m   = sum;
+            }
+            ++image_count;
+        }
+        std::cout<<"INFO: [e13] Bit Recv: " << m_i << '\n';
+        std::cout<<"INFO: [e13] Bit Sent: " << frame_counter % n_bits << '\n';
+        ++frame_counter;
     }
 
     enable_capture.store(false, std::memory_order_release);

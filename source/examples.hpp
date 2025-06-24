@@ -20,6 +20,7 @@
 #include "examples/e10.hpp"
 #include "examples/e12.hpp"
 #include "examples/e13.hpp"
+#include "examples/e14.hpp"
 
 namespace examples_ {
     /**
@@ -166,6 +167,8 @@ namespace examples_ {
      * @return Return value 0 or -1
      */
     inline auto SingleUpdateExample = e10;
+
+    inline auto DisplayToScreenExample = e14;
 }
 
 

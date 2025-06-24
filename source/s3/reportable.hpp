@@ -9,6 +9,15 @@
 // Third-Party includes
 #include "../third-party/concurrentqueue.h"
 
+// Include VSYNC counter
+#ifdef __APPLE__
+    #include "../macos/vsync_timer.hpp"
+    #define s3_Camera_Reportable_VSYNC_Type macOS_Vsync_timer
+#else
+    #include "../linux/vsync_timer.hpp"
+    #define s3_Camera_Reportable_VSYNC_Type glx_Vsync_timer
+#endif
+
 /**
  * @brief u8Image is structured as a vector of uint8_t's
  *        It is 1-channel.
@@ -40,6 +49,7 @@ struct s3_Camera_Reportable_Properties {
 class s3_Camera_Reportable {
 public:
     s3_Camera_Reportable(s3_Camera_Reportable_Properties);
+    s3_Camera_Reportable(s3_Camera_Reportable_Properties,s3_Camera_Reportable_VSYNC_Type *);
     ~s3_Camera_Reportable();
 
     void open();
@@ -102,7 +112,11 @@ public:
 
     // Image buffer
     moodycamel::ConcurrentQueue<u8Image> buffer;
+    moodycamel::ConcurrentQueue<uint64_t> vsync;
+    moodycamel::ConcurrentQueue<uint64_t> timestamps;
+    s3_Camera_Reportable_VSYNC_Type *mvt = nullptr;
     int count = 0;
+    std::atomic<uint64_t> image_count {0};
 
 private:
     void attach_read_handle();
