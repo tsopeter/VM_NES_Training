@@ -48,7 +48,7 @@ int e8 () {
 
     std::atomic<bool> enable_capture {false};
     std::vector<int64_t> vsync_time_stamps;
-    std::function<void()> timer = [&serial,&vsync_time_stamps,&enable_capture]() {
+    std::function<void(std::atomic<uint64_t>&)> timer = [&serial,&vsync_time_stamps,&enable_capture](std::atomic<uint64_t>&_counter) {
         auto now = std::chrono::high_resolution_clock::now();
         int64_t us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
         vsync_time_stamps.push_back(us);

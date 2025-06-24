@@ -28,15 +28,16 @@
 #include <thread>
 
 std::vector<Texture> e15_GenerateSynchronizationTextures (const int64_t n_bits, int Height=1, int Width=1);
+int32_t pixel2value(unsigned char[3]);
 
 int e15 () {
     s3_Window window {};
-    window.Height  = 1600;
-    window.Width   = 2560;
+    window.Height  = 480;
+    window.Width   = 640;
     window.wmode   = WINDOWED;
     window.fmode   = NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 60;
-    window.monitor = 1;
+    window.monitor = 0;
     window.load();
 
     const int64_t n_bits = 24;
@@ -63,6 +64,20 @@ int e15 () {
             DrawFPS(10,10);
 
         EndDrawing();
+
+        unsigned char pixel[3];
+        glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
+
+        int actual = pixel2value(pixel);
+        int expected = (frame_counter - 1) % n_bits;
+        int diff = std::abs(actual - expected);
+        int min_diff = std::min(diff, static_cast<int>(n_bits - diff));
+        if (min_diff != 1)
+            std::cout << "\033[1;31m"; // Red
+        std::cout << "INFO: [e15] Pixel: " << actual << ", Bit: " << expected << '\n';
+        if (min_diff != 1)
+            std::cout << "\033[0m"; // Reset
+
     }
 
 
@@ -105,4 +120,23 @@ std::vector<Texture> e15_GenerateSynchronizationTextures(const int64_t n_bits, i
     }
 
     return textures;
+}
+
+int32_t pixel2value(unsigned char pixel[3]) {
+    int32_t value = -1;
+
+    for (int i = 0; i < 24; ++i) {
+        int byte_index = i / 8;
+        int bit_index = i % 8;
+
+        unsigned char expected[3] = {0xFF, 0xFF, 0xFF};
+        expected[byte_index] = ~(1 << bit_index);
+
+        if (pixel[0] == expected[0] && pixel[1] == expected[1] && pixel[2] == expected[2]) {
+            value = i;
+            break;
+        }
+    }
+
+    return value;
 }

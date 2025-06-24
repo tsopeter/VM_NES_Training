@@ -1,12 +1,6 @@
 #include <iostream>
-#include "examples.hpp"
+#include "examples/e15.hpp"
 
 int main () {
-#ifdef __APPLE__
-    examples_::macOSGLSyncExample();
-#elif __linux__
-    //examples_::linuxGLSyncExample();
-    examples_::linuxVsyncExample();
-   // examples_::DisplayToScreenExample();
-#endif
+    e15();
 }

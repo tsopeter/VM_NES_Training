@@ -12,7 +12,7 @@
 // Include VSYNC counter
 #ifdef __APPLE__
     #include "../macos/vsync_timer.hpp"
-    #define s3_Camera_Reportable_VSYNC_Type macOS_Vsync_timer
+    #define s3_Camera_Reportable_VSYNC_Type macOS_Vsync_Timer
 #else
     #include "../linux/vsync_timer.hpp"
     #define s3_Camera_Reportable_VSYNC_Type glx_Vsync_timer

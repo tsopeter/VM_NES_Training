@@ -32,6 +32,7 @@ int64_t e13_mod(int64_t x, int64_t m);
 
 void DrawToScreen(Texture&, s3_Window&);
 
+#ifdef __linux__
 int e13 () {
     Pylon::PylonAutoInitTerm init {};
     /* Initialize screen */
@@ -245,6 +246,11 @@ int e13 () {
 
     return 0;
 }
+#else
+    int e13 () {
+        throw std::runtime_error("ERROR: Not supported.\n");
+    }
+#endif
 
 int64_t e13_mod(int64_t x, int64_t m) {
     int64_t r = x % m;
