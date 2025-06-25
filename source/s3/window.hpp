@@ -17,7 +17,8 @@
 
 enum s3_Windowing_Mode {
     WINDOWED   = 0,
-    BORDERLESS = 1
+    BORDERLESS = 1,
+    FULLSCREEN = 2
 };
 
 enum s3_TargetFPS_Mode {

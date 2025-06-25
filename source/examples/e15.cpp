@@ -32,8 +32,8 @@ int32_t pixel2value(unsigned char[3]);
 
 int e15 () {
     s3_Window window {};
-    window.Height  = 1600;
-    window.Width   = 2560;
+    window.Height  = 480;
+    window.Width   = 640;
     window.wmode   = WINDOWED;
     window.fmode   = NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 60;

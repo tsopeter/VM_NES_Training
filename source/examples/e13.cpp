@@ -45,7 +45,7 @@ int e13 () {
     s3_Window window {};
     window.Height  = 1600;
     window.Width   = 2560;
-    window.wmode   = WINDOWED;
+    window.wmode   = BORDERLESS;
     window.fmode   = NO_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 240;
     window.monitor = 1;
@@ -116,7 +116,7 @@ int e13 () {
 	    int64_t v_diff=0;
         uint64_t prev_timestamp=0;
         int64_t err_counter=0;
-	    int64_t fire_kill_process=10;
+	    int64_t fire_kill_process=0;
         uint64_t prev_frame_timestamp=0;
         while (!end_thread.load(std::memory_order_acquire)) {
             if (capture_pending.load(std::memory_order_acquire) <= 0) continue;
@@ -264,11 +264,11 @@ int e13 () {
     end_thread.store(true, std::memory_order_release);
     capture_thread.join();
 
-    std::cout<<"INFO: [e13] Saving files...\n";
-    cnpy::npy_save("TimingData/frame_timestamps.npy", frame_timestamps_v, "w");
-    cnpy::npy_save("TimingData/frame_vsync_index.npy", frames_vsync_indexes, "w");
-    cnpy::npy_save("TimingData/vsync_timestamps.npy", vsync_timestamps, "w");
-    std::cout<<"INFO: [e13] Saved files.\n";
+    //std::cout<<"INFO: [e13] Saving files...\n";
+    //cnpy::npy_save("TimingData/frame_timestamps.npy", frame_timestamps_v, "w");
+    //cnpy::npy_save("TimingData/frame_vsync_index.npy", frames_vsync_indexes, "w");
+    //cnpy::npy_save("TimingData/vsync_timestamps.npy", vsync_timestamps, "w");
+    //std::cout<<"INFO: [e13] Saved files.\n";
 
     serial.Close();
     camera.close();

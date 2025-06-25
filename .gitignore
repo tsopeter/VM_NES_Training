@@ -4,3 +4,6 @@ app
 *.o
 Serial/serial
 Serial/build/
+Instruments.Profile
+Instruments.Profile/
+Instruments.Profile.trace/
