@@ -112,7 +112,7 @@ int e16 () {
     const int n_textures = 2;
     std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
 
-        /* Pin to core 0 */
+        /*
         #ifdef __APPLE__
             thread_affinity_policy_data_t policy = {0};  // 0 = core ID
             thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
@@ -120,6 +120,7 @@ int e16 () {
                             (thread_policy_t)&policy,
                             THREAD_AFFINITY_POLICY_COUNT);
         #endif
+        */
 
 
         int64_t i_c=0;
@@ -230,6 +231,8 @@ int e16 () {
             std::cout<<"INFO: [capture_thread] Images in Queue: " << camera.image_count.load(std::memory_order_acquire) << '\n';
             std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp/1'000 << " us \n";
             std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us \n";
+            if (i_c > n_bits && (timestamp - prev_timestamp)/1'000 > 33'500)
+                det_error=true; /* Throw error */
             if ((frame_timestamp-prev_frame_timestamp)>18'000)
                 std::cout<<"\033[1;31mINFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << "\033[0m\n";
             else
@@ -244,7 +247,7 @@ int e16 () {
     };
     std::thread capture_thread {capture_function};
 
-    /* Pin to core 0 */
+    /*
     #ifdef __APPLE__
         thread_affinity_policy_data_t policy = {0};  // 0 = core ID
         thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
@@ -252,6 +255,7 @@ int e16 () {
                 (thread_policy_t)&policy,
                 THREAD_AFFINITY_POLICY_COUNT);
     #endif
+    */
 
     /*
         #ifdef __linux__
@@ -340,7 +344,10 @@ int e16 () {
 
         gl_buffer.enqueue(e16_pixel2value(pixel));
 
-        while (frame_counter!=capture_count.load(std::memory_order_acquire));
+        while (frame_counter!=capture_count.load(std::memory_order_acquire)) {
+            /* Sleep for a little */
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
         e16_DrawToScreen(texture, window);
     #endif
     }
