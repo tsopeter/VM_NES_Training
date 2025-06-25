@@ -265,32 +265,41 @@ int e16 () {
     #else
         /* On Linux, use PingPonging to achieve the same effect */
         if (ping_pong % 2 == 0) {   /* Even draw */
-            auto &texture = textures[frame_counter % n_textures];
-            ++frame_counter;
             ++ping_pong;
+
+            auto &texture = textures[frame_counter % n_textures];
+            e16_DrawToScreen(texture, window);
+        }
+        else {  /* Odd capture */
+            ++ping_pong;
+
+            auto &texture = textures[frame_counter % n_textures];
+            e16_DrawToScreen(texture, window);
 
             frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now().time_since_epoch()
             ).count());
 
-            int64_t vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
+            int64_t vsync_index_2;
+            do {
+                vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
+            } while ((vsync_index_2 - vsync_index_1) <= 0);
+
             frames_vsync.enqueue(vsync_index_2);
             frames_buffer.enqueue(frame_counter);
             frames_vsync_indexes.push_back(vsync_index_2);
             frames_held.enqueue((vsync_index_2 - vsync_index_1));
+            vsync_index_1 = vsync_index_2;
 
             unsigned char pixel[3];
             glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
             gl_buffer.enqueue(e16_pixel2value(pixel));
-
-            e16_DrawToScreen(texture, window);
-        }
-        else {  /* Odd capture */
-            ++ping_pong;
             
             /* Wait till previous capture instr has passed */
             while (enable_capture.load(std::memory_order_acquire));
             enable_capture.store(true, std::memory_order_release);
+
+            ++frame_counter;
             while (frame_counter!=capture_count.load(std::memory_order_acquire));
         }
     #endif
