@@ -222,9 +222,7 @@ int e16 () {
     std::vector<uint64_t> frames_vsync_indexes;
 
     while (!WindowShouldClose()) {
-        // on even frames send
-        // on odd frames capture
-
+    #if defined(__APPLE__)
         auto &texture = textures[frame_counter % n_textures];
 
         if (kill_process.load(std::memory_order_acquire))
@@ -258,6 +256,23 @@ int e16 () {
 
         while (frame_counter!=capture_count.load(std::memory_order_acquire));
         e16_DrawToScreen(texture, window);
+    #else
+        /* On Linux, use PingPonging to achieve the same effect */
+        if (frame_counter % 2 == 0) {   /* Even draw */
+            auto &texture = textures[frame_counter % n_textures];
+            ++frame_counter;
+
+            int64_t vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
+            frames_vsync.enqueue(vsync_index_2);
+            frames_buffer.enqueue(frame_counter);
+            frames_vsync_indexes.push_back(vsync_index_2);
+            frames_held.enqueue((vsync_index_2 - vsync_index_1));
+
+        }
+        else {  /* Odd capture */
+
+        }
+    #endif
     }
 
     /* Close threads */
