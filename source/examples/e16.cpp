@@ -45,7 +45,11 @@ int e16 () {
     s3_Window window {};
     window.Height  = 1600;
     window.Width   = 2560;
+    #ifdef __APPLE__
     window.wmode   = BORDERLESS;
+    #else
+    window.wmode   = WINDOWED;
+    #endif
     window.fmode   = NO_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 240;
     window.monitor = 1;
@@ -102,14 +106,6 @@ int e16 () {
     std::atomic<bool> kill_process {false};
     const int n_textures = 2;
     std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
-        /*
-        struct sched_param sched;
-        sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
-        if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sched) != 0) {
-            perror("Failed to set thread priority");
-        }
-        */
-
         int64_t i_c=0;
         bool det_error=false;
         int64_t cp_diff=0;
@@ -118,6 +114,9 @@ int e16 () {
         int64_t err_counter=0;
 	    int64_t fire_kill_process=0;
         uint64_t prev_frame_timestamp=0;
+        uint64_t first_time=0;
+        uint64_t current_time=0;
+        std::cout<<"INFO: [capture_thread] Started...\n";
         while (!end_thread.load(std::memory_order_acquire)) {
             if (capture_pending.load(std::memory_order_acquire) <= 0) continue;
 
@@ -162,6 +161,11 @@ int e16 () {
 
             frame_timestamps_v.push_back(frame_timestamp);
 
+            if (i_c==1)
+                first_time = timestamp;
+            else
+                current_time = timestamp;
+
             int32_t gl_value;
             while (!gl_buffer.try_dequeue(gl_value));
 
@@ -203,6 +207,7 @@ int e16 () {
             else
                 std::cout<<"INFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << '\n';
             std::cout<<"INFO: [capture_thread] Error Ratio: " << 100 * (static_cast<double>(err_counter) / static_cast<double>(capture_count.load(std::memory_order_acquire))) << "%\n";
+            std::cout<<"INFO: [capture_thread] Average Frame Rate: " << static_cast<double>(i_c) / (static_cast<double>(current_time - first_time)/(1'000'000'000)) << '\n';
 
             std::cout<<"2------------------------------------------------------------------\n";
             prev_timestamp = timestamp;
@@ -221,6 +226,7 @@ int e16 () {
     int64_t vsync_index_1 = mvt.vsync_counter.load(std::memory_order_acquire);
     std::vector<uint64_t> frames_vsync_indexes;
 
+    int64_t ping_pong=0;
     while (!WindowShouldClose()) {
     #if defined(__APPLE__)
         auto &texture = textures[frame_counter % n_textures];
@@ -258,9 +264,14 @@ int e16 () {
         e16_DrawToScreen(texture, window);
     #else
         /* On Linux, use PingPonging to achieve the same effect */
-        if (frame_counter % 2 == 0) {   /* Even draw */
+        if (ping_pong % 2 == 0) {   /* Even draw */
             auto &texture = textures[frame_counter % n_textures];
             ++frame_counter;
+            ++ping_pong;
+
+            frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now().time_since_epoch()
+            ).count());
 
             int64_t vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
             frames_vsync.enqueue(vsync_index_2);
@@ -268,9 +279,19 @@ int e16 () {
             frames_vsync_indexes.push_back(vsync_index_2);
             frames_held.enqueue((vsync_index_2 - vsync_index_1));
 
+            unsigned char pixel[3];
+            glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
+            gl_buffer.enqueue(e16_pixel2value(pixel));
+
+            e16_DrawToScreen(texture, window);
         }
         else {  /* Odd capture */
-
+            ++ping_pong;
+            
+            /* Wait till previous capture instr has passed */
+            while (enable_capture.load(std::memory_order_acquire));
+            enable_capture.store(true, std::memory_order_release);
+            while (frame_counter!=capture_count.load(std::memory_order_acquire));
         }
     #endif
     }
