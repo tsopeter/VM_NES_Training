@@ -45,7 +45,11 @@ int e13 () {
     s3_Window window {};
     window.Height  = 1600;
     window.Width   = 2560;
+    #ifdef __linux__
+    window.wmode = WINDOWED;
+    #else
     window.wmode   = BORDERLESS;
+    #endif
     window.fmode   = NO_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 240;
     window.monitor = 1;
