@@ -1,5 +1,10 @@
 #include "e16.hpp"
 
+#ifdef __APPLE__
+#include <mach/mach_init.h>
+#include <mach/thread_policy.h>
+#endif
+
 #include <iostream>
 #include "raylib.h"
 #include "rlgl.h"
@@ -106,6 +111,17 @@ int e16 () {
     std::atomic<bool> kill_process {false};
     const int n_textures = 2;
     std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
+
+        /* Pin to core 0 */
+        #ifdef __APPLE__
+            thread_affinity_policy_data_t policy = {0};  // 0 = core ID
+            thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
+            thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY,
+                            (thread_policy_t)&policy,
+                            THREAD_AFFINITY_POLICY_COUNT);
+        #endif
+
+
         int64_t i_c=0;
         bool det_error=false;
         int64_t cp_diff=0;
@@ -215,6 +231,15 @@ int e16 () {
         }
     };
     std::thread capture_thread {capture_function};
+
+    /* Pin to core 0 */
+    #ifdef __APPLE__
+        thread_affinity_policy_data_t policy = {0};  // 0 = core ID
+        thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
+        thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY,
+                (thread_policy_t)&policy,
+                THREAD_AFFINITY_POLICY_COUNT);
+    #endif
 
     int64_t frame_counter=0;
     uint64_t vsync_count=0;
