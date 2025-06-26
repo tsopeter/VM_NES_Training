@@ -92,8 +92,8 @@ int e7 () {
 
         // Print timing info
         std::cout << "INFO: [e7] First Read Delay: " << first_read_delay * 1e6 << " us\n";
-        std::cout << "INFO: [e7] Capture Time: " << capture_time * 1e6 << " us\n";
-        std::cout << "INFO: [e7] Frame Rate: " << total_elapsed * 1e3 << " ms\n";
+        std::cout << "INFO: [e7] Capture Time: " << capture_time.count() * 1e6 << " us\n";
+        std::cout << "INFO: [e7] Frame Rate: " << total_elapsed.count() * 1e3 << " ms\n";
 
         delays.push_back(first_read_delay * 1e6);
         capture_times.push_back(capture_time.count() * 1e6);

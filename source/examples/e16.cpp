@@ -36,7 +36,7 @@
 #include <future>
 #include <thread>
 
-std::vector<Texture> e16_GenerateSynchronizationTextures (const int64_t n_bits, int Height=1, int Width=1);
+std::vector<Texture> e16_GenerateSynchronizationTextures (const int64_t n_bits, int Height=1, int Width=1, std::vector<int64_t> indexes={});
 int64_t e16_mod(int64_t x, int64_t m);
 int32_t e16_pixel2value(unsigned char pixel[3]);
 
@@ -53,7 +53,7 @@ int e16 () {
     #ifdef __APPLE__
     window.wmode   = BORDERLESS;
     #else
-    window.wmode   = WINDOWED;
+    window.wmode   = FULLSCREEN;
     #endif
     window.fmode   = NO_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 240;
@@ -109,8 +109,9 @@ int e16 () {
     moodycamel::ConcurrentQueue<int32_t> gl_buffer;
     std::atomic<int64_t> capture_count {0};
     std::atomic<bool> kill_process {false};
-    const int n_textures = 2;
-    std::function<void()> capture_function = [&mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
+    std::vector<int64_t> texture_values = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
+    int n_textures = texture_values.size();
+    std::function<void()> capture_function = [&texture_values, &mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
 
         /*
         #ifdef __APPLE__
@@ -174,7 +175,7 @@ int e16 () {
             int64_t frame;
             while (!frames_buffer.try_dequeue(frame));
 
-            int64_t bit = frame % n_textures;
+            int64_t bit = texture_values.at(frame % n_textures);
 
             int64_t fvsync;
             while (!frames_vsync.try_dequeue(fvsync));
@@ -231,8 +232,6 @@ int e16 () {
             std::cout<<"INFO: [capture_thread] Images in Queue: " << camera.image_count.load(std::memory_order_acquire) << '\n';
             std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp/1'000 << " us \n";
             std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us \n";
-            if (i_c > n_bits && (timestamp - prev_timestamp)/1'000 > 33'500)
-                det_error=true; /* Throw error */
             if ((frame_timestamp-prev_frame_timestamp)>18'000)
                 std::cout<<"\033[1;31mINFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << "\033[0m\n";
             else
@@ -272,7 +271,7 @@ int e16 () {
 
     int texHeight = 1600;
     int texWidth  = 2560;
-    auto textures = e16_GenerateSynchronizationTextures(n_textures, texHeight, texWidth);
+    auto textures = e16_GenerateSynchronizationTextures(n_textures, texHeight, texWidth, texture_values);
     int64_t vsync_index_1 = mvt.vsync_counter.load(std::memory_order_acquire);
     std::vector<uint64_t> frames_vsync_indexes;
 
@@ -325,7 +324,7 @@ int e16 () {
         int64_t vsync_index_2;
         do {
             vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
-        } while ((vsync_index_2 - vsync_index_1) <= 0);
+        } while ((vsync_index_2 - vsync_index_1) <= 0 || (vsync_index_2 - vsync_index_1) % 2 != 0);
         
         /* Send enable if possible */
         while (enable_capture.load(std::memory_order_acquire));
@@ -383,11 +382,17 @@ int64_t e16_mod(int64_t x, int64_t m) {
     return (r < 0) ? r + m : r;
 }
 
-std::vector<Texture> e16_GenerateSynchronizationTextures(const int64_t n_bits, int Height, int Width) {
+std::vector<Texture> e16_GenerateSynchronizationTextures(const int64_t n_bits, int Height, int Width, std::vector<int64_t> indexes) {
     std::vector<Texture> textures;
     textures.reserve(n_bits);
 
-    for (int64_t i = 0; i < n_bits; ++i) {
+    if (indexes.size() <= 0) {
+        for (int64_t i = 0; i < n_bits; ++i)
+            indexes.push_back(i);
+    }
+
+    for (int64_t z = 0; z < indexes.size(); ++z) {
+        int i = indexes.at(z);
         int byte_index = i / 8;
         int bit_index  = i % 8;
         unsigned char color[3] = {0, 0, 0};
@@ -422,18 +427,16 @@ std::vector<Texture> e16_GenerateSynchronizationTextures(const int64_t n_bits, i
 }
 
 void e16_DrawToScreen(Texture &texture, s3_Window &window) {
+    glFinish();
     BeginDrawing();
 
         ClearBackground(BLACK);
-        for (int i = 0; i < 1; ++i)
-            DrawTexturePro(
-                texture,
-                {0, 0, 1, 1}, // Source rectangle
-                {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
-                {0, 0}, 0.0f, WHITE
-            );
-        DrawFPS(10,10);
-
+        DrawTexturePro(
+            texture,
+            {0, 0, 1, 1}, // Source rectangle
+            {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
+            {0, 0}, 0.0f, WHITE
+        );
     EndDrawing();
 }
 
