@@ -321,35 +321,42 @@ int e16 () {
         while (frame_counter!=capture_count.load(std::memory_order_acquire));
         e16_DrawToScreen(texture, window);
     #else   // linux 
+        auto &texture = textures[frame_counter % n_textures];
 
         if (kill_process.load(std::memory_order_acquire))
             break;
-
-        /* Draw to screen */
-        auto &texture = textures[frame_counter % n_textures];
-        e16_DrawToScreen(texture, window);
-
-        while (enable_capture.load(std::memory_order_acquire));
-        enable_capture.store(true, std::memory_order_release);
-
-        int64_t vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
-        frames_buffer.enqueue(frame_counter);
-        frames_vsync.enqueue(vsync_index_2);
-        frames_held.enqueue(vsync_index_2 - vsync_index_1);
+        
         frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::high_resolution_clock::now().time_since_epoch()
         ).count());
+
+        int64_t vsync_index_2;
+        do {
+            vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
+        } while ((vsync_index_2 - vsync_index_1) <= 0);
+        
+        /* Send enable if possible */
+        while (enable_capture.load(std::memory_order_acquire));
+        enable_capture.store(true, std::memory_order_release);
+
+        frames_vsync.enqueue(vsync_index_2);
+        frames_buffer.enqueue(frame_counter);
+        frames_vsync_indexes.push_back(vsync_index_2);
+        frames_held.enqueue((vsync_index_2 - vsync_index_1));
+
         ++frame_counter;
         vsync_index_1 = vsync_index_2;
 
-        while (frame_counter != capture_count.load(std::memory_order_acquire)) {
-            std::this_thread::sleep_for(std::chrono::microseconds(50));
-        }
+        unsigned char pixel[3];
+        glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
+
+        //gl_buffer.enqueue(e16_pixel2value(pixel));
+
+        while (frame_counter!=capture_count.load(std::memory_order_acquire));
+        e16_DrawToScreen(texture, window);
+
     #endif
     }
-    #if defined(__linux__)
-        enable_capture.store(false, std::memory_order_release);
-    #endif
 
     /* Close threads */
     while (capture_pending.load(std::memory_order_acquire));
