@@ -57,7 +57,7 @@ int e16 () {
     #endif
     window.fmode   = NO_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
     window.fps     = 30;
-    window.monitor = 1;
+    window.monitor = 0;
     window.load();
 
     #ifdef __linux__
@@ -132,7 +132,7 @@ int e16 () {
 	    int64_t v_diff=0;
         uint64_t prev_timestamp=0;
         int64_t err_counter=0;
-	    int64_t fire_kill_process=0;
+	    int64_t fire_kill_process=2;
         uint64_t prev_frame_timestamp=0;
         uint64_t first_time=0;
         uint64_t current_time=0;
@@ -201,7 +201,8 @@ int e16 () {
             else
                 current_time = timestamp;
 
-            int32_t gl_value = -1;
+            int32_t gl_value;
+            while (!gl_buffer.try_dequeue(gl_value));
 
             int64_t cp_diff_prev = cp_diff;
             v_diff = abs(bit - m_i) % n_bits;
@@ -321,21 +322,76 @@ int e16 () {
         while (frame_counter!=capture_count.load(std::memory_order_acquire));
         e16_DrawToScreen(texture, window);
     #else   // linux 
+        if (kill_process.load(std::memory_order_acquire))
+            break;
+
+        if (ping_pong%3==0) {
+            // Draw
+            auto &texture = textures[frame_counter % n_textures];
+            e16_DrawToScreen(texture, window);
+            glFinish();
+
+            // Store
+            frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now().time_since_epoch()
+            ).count());
+
+            // Wait
+            int64_t vsync_index_2;
+            do {
+                vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
+            } while ((vsync_index_2 - vsync_index_1) <= 0);
+            
+            // Store
+            frames_vsync.enqueue(vsync_index_2);
+            frames_buffer.enqueue(frame_counter);
+            frames_vsync_indexes.push_back(vsync_index_2);
+            frames_held.enqueue((vsync_index_2 - vsync_index_1));
+
+            unsigned char pixel[3];
+            glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
+
+            gl_buffer.enqueue(e16_pixel2value(pixel));
+
+            // Update
+            ++ping_pong;
+            vsync_index_1 = vsync_index_2;
+        }
+        else if (ping_pong%3==2) {
+            // Draw
+            auto &texture = textures[frame_counter % n_textures];
+            e16_DrawToScreen(texture, window);
+            glFinish();
+
+            // Wait
+            int64_t vsync_index_2;
+            do {
+                vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
+            } while ((vsync_index_2 - vsync_index_1) <= 0);
+
+            // Update 
+            ++frame_counter;
+            ++ping_pong;
+        }
+        else if (ping_pong%3==1) {
+            // Read
+            while (enable_capture.load(std::memory_order_acquire));
+            enable_capture.store(true, std::memory_order_release);
+
+            // Update
+            ++ping_pong;
+        }
+        /*
         auto &texture = textures[frame_counter % n_textures];
 
         if (kill_process.load(std::memory_order_acquire))
             break;
-        
-        frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::high_resolution_clock::now().time_since_epoch()
-        ).count());
 
         int64_t vsync_index_2;
         do {
             vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
-        } while ((vsync_index_2 - vsync_index_1) <= 0);
+        } while ((vsync_index_2 - vsync_index_1) <= 1);
         
-        /* Send enable if possible */
         while (enable_capture.load(std::memory_order_acquire));
         enable_capture.store(true, std::memory_order_release);
 
@@ -348,13 +404,13 @@ int e16 () {
         vsync_index_1 = vsync_index_2;
 
         unsigned char pixel[3];
-        glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
+        glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
 
-        //gl_buffer.enqueue(e16_pixel2value(pixel));
+        gl_buffer.enqueue(e16_pixel2value(pixel));
 
         while (frame_counter!=capture_count.load(std::memory_order_acquire));
         e16_DrawToScreen(texture, window);
-
+        */
     #endif
     }
 
