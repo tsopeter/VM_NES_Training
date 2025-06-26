@@ -56,7 +56,7 @@ int e16 () {
     window.wmode   = FULLSCREEN;
     #endif
     window.fmode   = NO_TARGET_FPS; // NO_TARGET_FPS; //SET_TARGET_FPS;
-    window.fps     = 240;
+    window.fps     = 30;
     window.monitor = 1;
     window.load();
 
@@ -97,8 +97,10 @@ int e16 () {
     cam_properties.Height       = 320;
     cam_properties.Width        = 240;
 
+    std::cout<<"INFO: [e16] Starting camera.\n";
     s3_Camera_Reportable camera {cam_properties, &mvt};
     camera.open();
+    std::cout<<"INFO: [e16] Camera opened.\n";
 
     std::vector<uint64_t> frame_timestamps_v;
     std::atomic<bool> end_thread {false};
@@ -148,7 +150,10 @@ int e16 () {
 
         std::cout<<"INFO: [capture_thread] Started...\n";
         while (!end_thread.load(std::memory_order_acquire)) {
-            if (capture_pending.load(std::memory_order_acquire) <= 0) continue;
+            if (capture_pending.load(std::memory_order_acquire) <= 0) {
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+                continue;
+            }
 
             int     image_count=0;
             int64_t m   = 0;
@@ -196,8 +201,7 @@ int e16 () {
             else
                 current_time = timestamp;
 
-            int32_t gl_value;
-            while (!gl_buffer.try_dequeue(gl_value));
+            int32_t gl_value = -1;
 
             int64_t cp_diff_prev = cp_diff;
             v_diff = abs(bit - m_i) % n_bits;
@@ -244,6 +248,8 @@ int e16 () {
             prev_frame_timestamp = frame_timestamp;
         }
     };
+
+    std::cout<<"Created thread...\n";
     std::thread capture_thread {capture_function};
 
     /*
@@ -271,11 +277,14 @@ int e16 () {
 
     int texHeight = 1600;
     int texWidth  = 2560;
+
+    std::cout<<"Generated Textures...\n";
     auto textures = e16_GenerateSynchronizationTextures(n_textures, texHeight, texWidth, texture_values);
     int64_t vsync_index_1 = mvt.vsync_counter.load(std::memory_order_acquire);
     std::vector<uint64_t> frames_vsync_indexes;
 
     int64_t ping_pong=0;
+    std::cout<<"Started...\n";
     while (!WindowShouldClose()) {
     #if defined(__APPLE__)
         auto &texture = textures[frame_counter % n_textures];
@@ -312,44 +321,35 @@ int e16 () {
         while (frame_counter!=capture_count.load(std::memory_order_acquire));
         e16_DrawToScreen(texture, window);
     #else   // linux 
-        auto &texture = textures[frame_counter % n_textures];
 
         if (kill_process.load(std::memory_order_acquire))
             break;
-        
-        frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::high_resolution_clock::now().time_since_epoch()
-        ).count());
 
-        int64_t vsync_index_2;
-        do {
-            vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
-        } while ((vsync_index_2 - vsync_index_1) <= 0 || (vsync_index_2 - vsync_index_1) % 2 != 0);
-        
-        /* Send enable if possible */
+        /* Draw to screen */
+        auto &texture = textures[frame_counter % n_textures];
+        e16_DrawToScreen(texture, window);
+
         while (enable_capture.load(std::memory_order_acquire));
         enable_capture.store(true, std::memory_order_release);
 
-        frames_vsync.enqueue(vsync_index_2);
+        int64_t vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
         frames_buffer.enqueue(frame_counter);
-        frames_vsync_indexes.push_back(vsync_index_2);
-        frames_held.enqueue((vsync_index_2 - vsync_index_1));
-
+        frames_vsync.enqueue(vsync_index_2);
+        frames_held.enqueue(vsync_index_2 - vsync_index_1);
+        frame_timestamps.enqueue(std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::high_resolution_clock::now().time_since_epoch()
+        ).count());
         ++frame_counter;
         vsync_index_1 = vsync_index_2;
 
-        unsigned char pixel[3] = {0, 0, 0};
-        //glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
-
-        gl_buffer.enqueue(e16_pixel2value(pixel));
-
-        while (frame_counter!=capture_count.load(std::memory_order_acquire)) {
-            /* Sleep for a little */
+        while (frame_counter != capture_count.load(std::memory_order_acquire)) {
             std::this_thread::sleep_for(std::chrono::microseconds(50));
         }
-        e16_DrawToScreen(texture, window);
     #endif
     }
+    #if defined(__linux__)
+        enable_capture.store(false, std::memory_order_release);
+    #endif
 
     /* Close threads */
     while (capture_pending.load(std::memory_order_acquire));
@@ -427,7 +427,6 @@ std::vector<Texture> e16_GenerateSynchronizationTextures(const int64_t n_bits, i
 }
 
 void e16_DrawToScreen(Texture &texture, s3_Window &window) {
-    glFinish();
     BeginDrawing();
 
         ClearBackground(BLACK);
@@ -438,6 +437,7 @@ void e16_DrawToScreen(Texture &texture, s3_Window &window) {
             {0, 0}, 0.0f, WHITE
         );
     EndDrawing();
+    //glFinish();
 }
 
 int32_t e16_pixel2value(unsigned char pixel[3]) {
