@@ -216,11 +216,13 @@ int e17 () {
                 err_counter++;
             }
 
+            /*
             if(det_error) {
                 --fire_kill_process;
                 if (fire_kill_process <= 0)
                     kill_process.store(true, std::memory_order_release);
             }
+            */
 
 
             std::cout<<"1------------------------------------------------------------------\n";

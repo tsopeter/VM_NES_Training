@@ -181,17 +181,18 @@ Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
 }
 
 Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
-    int32_t *data_ptr;
+    int32_t *data_ptr = nullptr;
+    torch::Tensor tmp;
     if (x.device() == torch::kCPU)
-        data_ptr  = x.data_ptr<int32_t>();
+        tmp = x;
     else
-        data_ptr  = x.cpu().data_ptr<int32_t>();
+        tmp = x.cpu();
+    data_ptr = tmp.data_ptr<int32_t>();
     auto total_size = x.numel();
     if (!data_ptr) throw std::runtime_error("ERROR: [pencoder::u8MTensor_Image] data pointer is NULL\n");
 
     uint8_t* data = new uint8_t[total_size*sizeof(int32_t)];
 
-    
     std::memcpy(data, data_ptr, total_size*sizeof(int32_t));
 
     Image ret {
