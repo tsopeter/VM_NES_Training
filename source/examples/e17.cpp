@@ -146,6 +146,9 @@ int e17 () {
         uint64_t first_time=0;
         uint64_t current_time=0;
 
+        bool save_images_to_files = false;
+        bool skip_0_1 = true;
+
 
         /*
         #ifdef __linux__
@@ -172,12 +175,14 @@ int e17 () {
             double cvsync=0.f;
             uint64_t cvsync_i=0;
             
-            saved_tensors.push_back({});
+            if (save_images_to_files)
+                saved_tensors.push_back({});
             while(image_count<n_bits) {
                 torch::Tensor image = camera.sread();
 
                 /* Save tensor as png */
-                saved_tensors[i_c].push_back(image);
+                if (save_images_to_files)
+                    saved_tensors[i_c].push_back(image);
 
                 auto sum = image.sum().item<int64_t>();
                 while(!camera.vsync.try_dequeue(cvsync_i));
@@ -224,10 +229,25 @@ int e17 () {
             int64_t cp_diff_prev = cp_diff;
             v_diff = abs(bit - m_i) % n_bits;
 	        v_diff = std::min(v_diff, n_bits - v_diff);
-            cp_diff = v_diff;
+
+            if (skip_0_1) {
+                if (bit != 0 && bit != 1)
+                    cp_diff = v_diff;
+            }
+            else {
+                cp_diff = v_diff;
+            }
+
             if (i_c >= n_bits && cp_diff != cp_diff_prev) {
-                det_error = true;
-                err_counter++;
+                if (skip_0_1) {
+                    if (bit != 0 && bit != 1) {
+                        det_error = true;
+                        err_counter++;
+                    }
+                } else {
+                    det_error = true;
+                    err_counter++;
+                }
             }
 
             
@@ -253,11 +273,17 @@ int e17 () {
 	        std::cout<<"INFO: [capture_thread] Difference: "<< v_diff << '\n';
             std::cout<<"INFO: [capture_thread] Images in Queue: " << camera.image_count.load(std::memory_order_acquire) << '\n';
             std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp/1'000 << " us \n";
-            std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us \n";
-            if ((frame_timestamp-prev_frame_timestamp)>18'000)
+
+            if ((timestamp - prev_timestamp)/1'000>34'000)
+                std::cout<<"\033[1;31mINFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us\033[0m\n";
+            else
+                std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us \n";
+
+            if ((frame_timestamp-prev_frame_timestamp)>34'000)
                 std::cout<<"\033[1;31mINFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << "\033[0m\n";
             else
                 std::cout<<"INFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << '\n';
+
             std::cout<<"INFO: [capture_thread] Error Ratio: " << 100 * (static_cast<double>(err_counter) / static_cast<double>(capture_count.load(std::memory_order_acquire))) << "%\n";
             std::cout<<"INFO: [capture_thread] Average Frame Rate: " << static_cast<double>(i_c) / (static_cast<double>(current_time - first_time)/(1'000'000'000)) << '\n';
 
@@ -265,6 +291,10 @@ int e17 () {
             prev_timestamp = timestamp;
             prev_frame_timestamp = frame_timestamp;
         }
+
+        //return;
+        if (!save_images_to_files)
+            return;
 
         // save images
         // Ensure output directory exists
@@ -367,7 +397,7 @@ int e17 () {
         if (kill_process.load(std::memory_order_acquire))
             break;
 
-        if (ping_pong%3==0) {
+        if (ping_pong%3==1) {
             // Draw
             auto &texture = textures[frame_counter % n_textures];
             e17_DrawToScreen(texture, window, ignoreAlphaShader);
@@ -414,11 +444,17 @@ int e17 () {
             // Update 
             ++frame_counter;
             ++ping_pong;
+
         }
-        else if (ping_pong%3==1) {
+        else if (ping_pong%3==0) {
             // Read
             while (enable_capture.load(std::memory_order_acquire));
             enable_capture.store(true, std::memory_order_release);
+
+            /* Block if not done capturing */
+            
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+            while (capture_pending.load(std::memory_order_acquire) != 0);
 
             // Update
             ++ping_pong;
@@ -471,7 +507,15 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
     PEncoder pen (0, 0, Height, Width);
 
     torch::Device device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
-    torch::Tensor target = torch::ones({Height/2, Width/2}, torch::kFloat32);
+    torch::Tensor target = torch::zeros({Height/2, Width/2}, torch::kFloat32);
+    int box_size = std::min(Height, Width) / 6;
+    int center_y = Height / 4 - box_size / 2;
+    int center_x = Width / 4 - box_size / 2 + box_size; // slight upper right offset
+
+    target.slice(0, center_y, center_y + box_size)
+          .slice(1, center_x, center_x + box_size)
+          .fill_(1.0f);
+    
     torch::Tensor object = e17_gs_algorithm(target, 50);
     torch::Tensor phase  = torch::angle(object).to(device);    /* -pi to pi */
 
@@ -479,7 +523,7 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
         int i = indexes.at(z);
 
         /* Shift phase into correct index */
-        torch::Tensor phase_tensor = torch::zeros({(int64_t)indexes.size(), Height/2, Width/2}, torch::kFloat32).to(device);
+        torch::Tensor phase_tensor = torch::ones({(int64_t)indexes.size(), Height/2, Width/2}, torch::kFloat32).to(device) * (-2.8);
         phase_tensor[i] = phase;
 
         std::cout<<"INFO: [e17] Generated tensor " << z << '\n';
