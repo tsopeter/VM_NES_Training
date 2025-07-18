@@ -24,7 +24,7 @@ public:
                 ids->enqueue(v_raw_data);
                 image_count->fetch_add(1, std::memory_order_release);
                 vsync->enqueue(mvt->vsync_counter.load(std::memory_order_acquire));
-                if ((*count)%24==0)
+                if ((*count)%20==0)
                     timestamps->enqueue(ptrGrabResult->GetTimeStamp());
                 ++(*count);
             }

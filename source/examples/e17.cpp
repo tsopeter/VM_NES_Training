@@ -43,7 +43,7 @@ int64_t e17_mod(int64_t x, int64_t m);
 int32_t e17_pixel2value(unsigned char pixel[3]);
 torch::Tensor e17_gs_algorithm (const torch::Tensor &target, int iterations=50);
 
-void e17_DrawToScreen(Texture&, s3_Window&);
+void e17_DrawToScreen(Texture&, s3_Window&, Shader&);
 
 #if defined(__linux__) || defined(__APPLE__)
 int e17 () {
@@ -62,6 +62,7 @@ int e17 () {
     window.fps     = 30;
     window.monitor = 0;
     window.load();
+    Shader ignoreAlphaShader = LoadShader(nullptr, "source/shaders/alpha_ignore.fs");
 
     #ifdef __linux__
     Serial serial {"/dev/ttyACM0", 115200};
@@ -71,7 +72,7 @@ int e17 () {
     serial.Open();
 
     /* Generate test images */
-    const int64_t n_bits = 24;
+    const int64_t n_bits = 20;
 
     moodycamel::ConcurrentQueue<int64_t> capture_vsync_index;
     std::vector<uint64_t> vsync_timestamps;
@@ -86,6 +87,7 @@ int e17 () {
             serial.Signal();
             capture_pending.fetch_add(1,std::memory_order_release);
             enable_capture.store(false,std::memory_order_release);
+            std::cout<<"INFO: [timer] Sent capture command to camera.\n";
         }
     };
     #ifdef __linux__
@@ -114,7 +116,11 @@ int e17 () {
     moodycamel::ConcurrentQueue<int32_t> gl_buffer;
     std::atomic<int64_t> capture_count {0};
     std::atomic<bool> kill_process {false};
-    std::vector<int64_t> texture_values = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
+    std::vector<int64_t> texture_values = {2 ,4 ,6 ,8 ,
+                                           10 ,12 ,14 ,16 ,
+                                           18 ,1, 3 ,5 ,
+                                           7 ,9 ,11 ,13 ,
+                                           15 ,17 ,19 ,0 };
     int n_textures = texture_values.size();
     std::function<void()> capture_function = [&texture_values, &mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
 
@@ -135,7 +141,7 @@ int e17 () {
 	    int64_t v_diff=0;
         uint64_t prev_timestamp=0;
         int64_t err_counter=0;
-	    int64_t fire_kill_process=2;
+	    int64_t fire_kill_process=20;
         uint64_t prev_frame_timestamp=0;
         uint64_t first_time=0;
         uint64_t current_time=0;
@@ -151,6 +157,8 @@ int e17 () {
         #endif
         */
 
+        std::vector<std::vector<torch::Tensor>> saved_tensors;
+
         std::cout<<"INFO: [capture_thread] Started...\n";
         while (!end_thread.load(std::memory_order_acquire)) {
             if (capture_pending.load(std::memory_order_acquire) <= 0) {
@@ -163,8 +171,14 @@ int e17 () {
             int64_t m_i = INT64_MIN;
             double cvsync=0.f;
             uint64_t cvsync_i=0;
+            
+            saved_tensors.push_back({});
             while(image_count<n_bits) {
                 torch::Tensor image = camera.sread();
+
+                /* Save tensor as png */
+                saved_tensors[i_c].push_back(image);
+
                 auto sum = image.sum().item<int64_t>();
                 while(!camera.vsync.try_dequeue(cvsync_i));
                 cvsync+=cvsync_i;
@@ -209,22 +223,20 @@ int e17 () {
 
             int64_t cp_diff_prev = cp_diff;
             v_diff = abs(bit - m_i) % n_bits;
-	        v_diff = std::min(v_diff, 24 - v_diff);
+	        v_diff = std::min(v_diff, n_bits - v_diff);
             cp_diff = v_diff;
             if (i_c >= n_bits && cp_diff != cp_diff_prev) {
                 det_error = true;
                 err_counter++;
             }
 
-            /*
+            
             if(det_error) {
                 --fire_kill_process;
                 if (fire_kill_process <= 0)
                     kill_process.store(true, std::memory_order_release);
             }
-            */
-
-
+            
             std::cout<<"1------------------------------------------------------------------\n";
             std::cout<<"INFO: [capture_thread] Frame: " << frame << '\n';
             std::cout<<"INFO: [capture_thread] Pending: " << capture_pending.load(std::memory_order_acquire) << '\n';
@@ -253,6 +265,31 @@ int e17 () {
             prev_timestamp = timestamp;
             prev_frame_timestamp = frame_timestamp;
         }
+
+        // save images
+        // Ensure output directory exists
+        system("mkdir -p output_images");
+        int first_index = 0;
+        for (auto &images_per_frame : saved_tensors) {
+            int second_index = 0;
+            for (auto &image : images_per_frame) {
+                /* Save image as grayscale */
+                torch::Tensor image_gray = image.squeeze().contiguous(); // [1,H,W] → [H,W]
+                Image img = {
+                    .data = image_gray.data_ptr(),
+                    .width = image_gray.size(1),
+                    .height = image_gray.size(0),
+                    .mipmaps = 1,
+                    .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
+                };
+                std::string filename = "output_images/frame_" + std::to_string(first_index) + "_" + std::to_string(second_index) + ".png";
+                ExportImage(img, filename.c_str());
+                ++second_index;
+            }
+            ++first_index;
+        }
+
+
     };
 
     std::cout<<"Created thread...\n";
@@ -325,7 +362,7 @@ int e17 () {
         gl_buffer.enqueue(e17_pixel2value(pixel));
 
         while (frame_counter!=capture_count.load(std::memory_order_acquire));
-        e17_DrawToScreen(texture, window);
+        e17_DrawToScreen(texture, window, ignoreAlphaShader);
     #else   // linux 
         if (kill_process.load(std::memory_order_acquire))
             break;
@@ -333,7 +370,7 @@ int e17 () {
         if (ping_pong%3==0) {
             // Draw
             auto &texture = textures[frame_counter % n_textures];
-            e17_DrawToScreen(texture, window);
+            e17_DrawToScreen(texture, window, ignoreAlphaShader);
             glFinish();
 
             // Store
@@ -365,7 +402,7 @@ int e17 () {
         else if (ping_pong%3==2) {
             // Draw
             auto &texture = textures[frame_counter % n_textures];
-            e17_DrawToScreen(texture, window);
+            e17_DrawToScreen(texture, window, ignoreAlphaShader);
             glFinish();
 
             // Wait
@@ -407,6 +444,7 @@ int e17 () {
     for (auto &texture : textures)
         UnloadTexture(texture);
 
+    UnloadShader(ignoreAlphaShader);
     return 0;
 }
 #else
@@ -449,6 +487,10 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
 
         torch::Tensor timage = pen.MEncode_u8Tensor2(phase_tensor).contiguous();
 
+        // Mask in 0xFF as the alpha channel (highest 8 bits) of each int32 pixel
+        //timage = timage.bitwise_or(0xFF000000);
+
+
         std::cout<<"INFO: [e17] Generated quantized tensor: " << z << '\n';
         std::cout<<"INFO: [e17] Tensor size: " << timage.sizes() << '\n';
         std::cout<<"INFO: [e17] Data Type: " << timage.dtype() << '\n';
@@ -462,15 +504,18 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
         SetTextureFilter(tex, TEXTURE_FILTER_POINT); // Use nearest neighbor
         textures.push_back(tex);
 
+        // Save Images to TMP
+        //ExportImage(image, TextFormat("tmp/image_%02lld.png", z));
+
         UnloadImage(image);
     }
 
     return textures;
 }
 
-void e17_DrawToScreen(Texture &texture, s3_Window &window) {
+void e17_DrawToScreen(Texture &texture, s3_Window &window, Shader &shader) {
     BeginDrawing();
-
+        BeginShaderMode(shader);
         ClearBackground(BLACK);
         DrawTexturePro(
             texture,
@@ -478,6 +523,7 @@ void e17_DrawToScreen(Texture &texture, s3_Window &window) {
             {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
             {0, 0}, 0.0f, WHITE
         );
+        EndShaderMode();
     EndDrawing();
     //glFinish();
 }

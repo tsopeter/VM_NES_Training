@@ -68,7 +68,7 @@ int e16 () {
     serial.Open();
 
     /* Generate test images */
-    const int64_t n_bits = 24;
+    const int64_t n_bits = 23;
 
     moodycamel::ConcurrentQueue<int64_t> capture_vsync_index;
     std::vector<uint64_t> vsync_timestamps;
@@ -111,7 +111,7 @@ int e16 () {
     moodycamel::ConcurrentQueue<int32_t> gl_buffer;
     std::atomic<int64_t> capture_count {0};
     std::atomic<bool> kill_process {false};
-    std::vector<int64_t> texture_values = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
+    std::vector<int64_t> texture_values = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22};
     int n_textures = texture_values.size();
     std::function<void()> capture_function = [&texture_values, &mvt, &camera, &end_thread, &frames_buffer, &frames_vsync, &frame_timestamps, &frame_timestamps_v, &frames_held, &capture_pending, &n_bits, &capture_count, &kill_process, &gl_buffer, &n_textures]()->void {
 
@@ -206,7 +206,7 @@ int e16 () {
 
             int64_t cp_diff_prev = cp_diff;
             v_diff = abs(bit - m_i) % n_bits;
-	        v_diff = std::min(v_diff, 24 - v_diff);
+	        v_diff = std::min(v_diff, n_bits - v_diff);
             cp_diff = v_diff;
             if (i_c >= n_bits && cp_diff != cp_diff_prev) {
                 det_error = true;

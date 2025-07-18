@@ -5,6 +5,8 @@
 
 #include "../device.hpp"    /* Includes device macro */
 
+
+/*
 constexpr int32_t shifted_values[24] = 
 {
     static_cast<int32_t>(1u << 31), static_cast<int32_t>(1u << 30),
@@ -20,6 +22,23 @@ constexpr int32_t shifted_values[24] =
     static_cast<int32_t>(1u << 11), static_cast<int32_t>(1u << 10),
     static_cast<int32_t>(1u << 9),  static_cast<int32_t>(1u << 8)
 };
+*/
+constexpr int32_t shifted_values[24] = 
+{
+    static_cast<int32_t>(1u << 0),  static_cast<int32_t>(1u << 1),
+    static_cast<int32_t>(1u << 2),  static_cast<int32_t>(1u << 3),
+    static_cast<int32_t>(1u << 4),  static_cast<int32_t>(1u << 5),
+    static_cast<int32_t>(1u << 6),  static_cast<int32_t>(1u << 7),
+    static_cast<int32_t>(1u << 8),  static_cast<int32_t>(1u << 9),
+    static_cast<int32_t>(1u << 10), static_cast<int32_t>(1u << 11),
+    static_cast<int32_t>(1u << 12), static_cast<int32_t>(1u << 13),
+    static_cast<int32_t>(1u << 14), static_cast<int32_t>(1u << 15),
+    static_cast<int32_t>(1u << 16), static_cast<int32_t>(1u << 17),
+    static_cast<int32_t>(1u << 18), static_cast<int32_t>(1u << 19),
+    static_cast<int32_t>(1u << 20), static_cast<int32_t>(1u << 21),
+    static_cast<int32_t>(1u << 22), static_cast<int32_t>(1u << 23)
+};
+
 
 constexpr uint8_t logical_masks[16][2][2] = {
     {{1, 0}, {1, 0}},  // 0
