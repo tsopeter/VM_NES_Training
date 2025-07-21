@@ -24,6 +24,12 @@ public:
      *
      */
     Serial(const char [], int baud_rate = 115200);
+
+    /**
+     *  @brief Serial is a class wrapper that handles all communication over a serial port. Serial ports on macOS can be found in /dev/. In the Terminal, use `ls -al /dev/tty.usbmodem*` to find all USB serial devices. Use this as the port name. You also must check to make sure that baudrates match up, but it is typically 9600 bps or 115200 bps.
+     *
+     */
+    Serial ();
     
     /**
      *  @brief Handles closing up Serial.
@@ -50,6 +56,11 @@ public:
      */
     int Send(const char *);
     void Signal();
+
+
+    /* Setters */
+    void set_port_name (const std::string&);
+    void set_baud_rate (int);
 private:
     std::string port_name = "";
     int baud_rate;

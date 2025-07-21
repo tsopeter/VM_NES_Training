@@ -12,6 +12,9 @@
 #include <unistd.h>     // UNIX standard function definitions
 #include <cstring>  // For strerror
 
+Serial::Serial () :
+port_name(""), baud_rate(0) {}
+
 Serial::Serial (const std::string port_name, int baud_rate)
 : port_name(port_name), baud_rate(baud_rate) {}
 
@@ -80,4 +83,12 @@ void Serial::Signal() {
     // We can send a test using Send(...) to make sure tho
     static const char newline[] = "\n";
     write(port, newline, 1);
+}
+
+void Serial::set_port_name (const std::string &p_port_name) {
+    port_name = p_port_name;
+}
+
+void Serial::set_baud_rate (int p_baud_rate) {
+    baud_rate = p_baud_rate;
 }
