@@ -54,7 +54,7 @@
 
 struct e18_Image_Processor {
     /* Slicer */
-    s4_Slicer *slicer;
+    s4_Slicer *slicer = nullptr;
 
     std::thread processing_thread;
     moodycamel::ConcurrentQueue<torch::Tensor> input_queue;
@@ -83,10 +83,21 @@ struct e18_Image_Processor {
 
     void process_tensor (torch::Tensor &t) {
         int64_t N = t.size(0);
-        // Tensors are stored as {N, 1, H, W}
+        // Tensors are stored as {N, H, W}
         
         // We want to apply the mask to each tensor
+        auto predictions = slicer->detect(t);    // [N, 10]
 
+        // set the target to be always zero for now
+        torch::Tensor target = torch::zeros({N}, t.options());
+
+        // apply cross entropy loss
+        auto loss = torch::nn::functional::cross_entropy(
+            predictions,
+            target.to(torch::kLong),
+            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+        ); // [N]
+        rewards.push_back(loss);
 
         ++count;
         if (count >= limit) {
@@ -96,7 +107,11 @@ struct e18_Image_Processor {
     }
 
     void CompressAndPlaceOntoOutputQueue () {
-
+        if (rewards.empty()) return;
+        torch::Tensor stacked_rewards = torch::stack(rewards);  // [Q, N]
+        stacked_rewards = -stacked_rewards.view({-1});           // [Q * N]
+        output_queue.enqueue(stacked_rewards);
+        rewards.clear();
     }
 
     torch::Tensor get_rewards () {
@@ -336,7 +351,6 @@ struct e18_Camera_Reader {
 
             /* combine into a single tensor t of shape {n, 1, h, w} */
             torch::Tensor combined = torch::stack(tensors)      // {N, H, W}
-                                .unsqueeze(1)                 // {N, 1, H, W}
                                 .contiguous();                // Ensure memory layout
 
             /* Yield image processing to the processor as processing may interfere 
