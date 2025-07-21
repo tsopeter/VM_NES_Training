@@ -5,6 +5,8 @@
 
 #include "../device.hpp"    /* Includes device macro */
 
+
+/*
 constexpr int32_t shifted_values[24] = 
 {
     static_cast<int32_t>(1u << 31), static_cast<int32_t>(1u << 30),
@@ -20,6 +22,23 @@ constexpr int32_t shifted_values[24] =
     static_cast<int32_t>(1u << 11), static_cast<int32_t>(1u << 10),
     static_cast<int32_t>(1u << 9),  static_cast<int32_t>(1u << 8)
 };
+*/
+constexpr int32_t shifted_values[24] = 
+{
+    static_cast<int32_t>(1u << 0),  static_cast<int32_t>(1u << 1),
+    static_cast<int32_t>(1u << 2),  static_cast<int32_t>(1u << 3),
+    static_cast<int32_t>(1u << 4),  static_cast<int32_t>(1u << 5),
+    static_cast<int32_t>(1u << 6),  static_cast<int32_t>(1u << 7),
+    static_cast<int32_t>(1u << 8),  static_cast<int32_t>(1u << 9),
+    static_cast<int32_t>(1u << 10), static_cast<int32_t>(1u << 11),
+    static_cast<int32_t>(1u << 12), static_cast<int32_t>(1u << 13),
+    static_cast<int32_t>(1u << 14), static_cast<int32_t>(1u << 15),
+    static_cast<int32_t>(1u << 16), static_cast<int32_t>(1u << 17),
+    static_cast<int32_t>(1u << 18), static_cast<int32_t>(1u << 19),
+    static_cast<int32_t>(1u << 20), static_cast<int32_t>(1u << 21),
+    static_cast<int32_t>(1u << 22), static_cast<int32_t>(1u << 23)
+};
+
 
 constexpr uint8_t logical_masks[16][2][2] = {
     {{1, 0}, {1, 0}},  // 0
@@ -181,14 +200,18 @@ Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
 }
 
 Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
-    int32_t *data_ptr;
+    int32_t *data_ptr = nullptr;
+    torch::Tensor tmp;
     if (x.device() == torch::kCPU)
-        data_ptr  = x.data_ptr<int32_t>();
+        tmp = x;
     else
-        data_ptr  = x.cpu().data_ptr<int32_t>();
+        tmp = x.cpu();
+    data_ptr = tmp.data_ptr<int32_t>();
     auto total_size = x.numel();
+    if (!data_ptr) throw std::runtime_error("ERROR: [pencoder::u8MTensor_Image] data pointer is NULL\n");
 
     uint8_t* data = new uint8_t[total_size*sizeof(int32_t)];
+
     std::memcpy(data, data_ptr, total_size*sizeof(int32_t));
 
     Image ret {

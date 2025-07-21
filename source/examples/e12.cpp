@@ -1,4 +1,4 @@
-#include "e11.hpp"
+#include "e12.hpp"
 
 #include <iostream>
 #include "raylib.h"
@@ -11,21 +11,28 @@
 #include "../s4/utils.hpp"
 #include "../s3/Serial.hpp"
 #include "shared.hpp"
-#include <OpenGL/gl.h>
+
+#ifdef __APPLE__
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
+
 #include <chrono>
 #include <future>
 #include <thread>
 
-std::vector<Texture> e11_GenerateSynchronizationTextures (const int64_t n_bits);
+std::vector<Texture> e12_GenerateSynchronizationTextures (const int64_t n_bits);
 
 template<typename T>
-int64_t             e11_argmin(const std::vector<T>&); 
+int64_t             e12_argmin(const std::vector<T>&); 
 
-int64_t e11_time_now_us ();
+int64_t e12_time_now_us ();
 
-int64_t e11_mod(int64_t x, int64_t m);
+int64_t e12_mod(int64_t x, int64_t m);
 
-int e11 () {
+#ifdef __linux__
+int e12 () {
     Pylon::PylonAutoInitTerm init {};
 
     /* Initialize screen */
@@ -38,15 +45,10 @@ int e11 () {
     window.monitor = 1;
     window.load();
 
-    Display* dpy = XOpenDisplay(NULL);
-    if (!dpy) throw std::runtime_error("Failed to open X display.");
-    Window win = glXGetCurrentDrawable();
-    glx_Vsync_timer mvt(dpy, win, timer);
-
     /* Serial connection */
     /* Serial is used to trigger the FPGA board to allow
        synchronization between camera and DLP/PLM */
-    Serial serial {"/dev/tty.usbmodem8326898B1E1E1", 115200};
+    Serial serial {"/dev/ttyACM0", 115200};
     serial.Open();
 
     moodycamel::ConcurrentQueue<int64_t> capture_vsync_index;
@@ -58,8 +60,11 @@ int e11 () {
             capture_pending.fetch_add(1,std::memory_order_release);
             serial.Signal();
             enable_capture.store(false,std::memory_order_release);
+            std::cout<<"INFO: [timer] Signal sent.\n";
         }
     };
+
+    glx_Vsync_timer mvt(0, timer);
 
     /* Create Camera */
     s3_Camera_Properties cam_properties;
@@ -72,7 +77,7 @@ int e11 () {
 
     const int64_t n_bits = 24;
     int64_t frame_counter = 0;
-    auto textures = e11_GenerateSynchronizationTextures(n_bits);
+    auto textures = e12_GenerateSynchronizationTextures(n_bits);
 
     camera.start();
 
@@ -89,7 +94,7 @@ int e11 () {
         int64_t vs_1 = mvt.vsync_counter.load(std::memory_order_acquire);
 
         int64_t skip_amount = 24;
-        int64_t us_1 = e11_time_now_us();
+        int64_t us_1 = e12_time_now_us();
         bool frames_not_behind = false;
         bool frames_not_same   = false;
         int64_t c_diff_prev = 0;
@@ -119,8 +124,8 @@ int e11 () {
             int64_t frame;
             while(!frames.try_dequeue(frame));
 
-            int64_t diff_forward  = e11_mod(m_i - frame, n_bits);
-            int64_t diff_backward = e11_mod(frame - m_i, n_bits);
+            int64_t diff_forward  = e12_mod(m_i - frame, n_bits);
+            int64_t diff_backward = e12_mod(frame - m_i, n_bits);
             int64_t c_diff = std::min(diff_forward, diff_backward);
 
             int64_t sent_index;
@@ -140,12 +145,12 @@ int e11 () {
 
             if (i_c > skip_amount) {
                 if (!frames_not_behind) {
-                    if (m_i != e11_mod(frame-1, n_bits))
+                    if (m_i != e12_mod(frame-1, n_bits))
                         frames_not_behind = true;
                 }
 
                 if (!frames_not_same) {
-                    if (m_i != e11_mod(frame, n_bits))
+                    if (m_i != e12_mod(frame, n_bits))
                         frames_not_same = true;
                 }
 
@@ -176,15 +181,11 @@ int e11 () {
 
     int64_t sent_count = 0;
 
-    int64_t vsync_index_1 = mvt.vsync_counter.load(std::memory_order_acquire);
     while (!WindowShouldClose()) {
         auto &texture = textures[frame_counter % n_bits];
 
         if (end_system.load(std::memory_order_acquire))
             break;
-
-        if (frame_counter == 1)
-            while (sent_count != capture_count.load(std::memory_order_acquire));
 
         /* Draw loop */
         BeginDrawing();
@@ -195,21 +196,31 @@ int e11 () {
             {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
             {0, 0}, 0.0f, WHITE
         );
+        DrawFPS(10, 10);
         EndDrawing();
-
-        int64_t vsync_index_2;
-        do {
-            vsync_index_2 = mvt.vsync_counter.load(std::memory_order_acquire);
-        } while ((vsync_index_2 - vsync_index_1) <= 0);
-        frames.enqueue(frame_counter % n_bits);
-        sent_vsync_index.enqueue(vsync_index_2);
-        while (enable_capture.load(std::memory_order_acquire));
-        enable_capture.store(true, std::memory_order_release);
-
         ++frame_counter;
-        ++sent_count;
-        vsync_index_1 = vsync_index_2;
-  
+        continue;
+
+        /* Skipped :( */
+        serial.Signal();
+        
+        /* Capture */
+        int64_t image_count=0;
+        int64_t m_i = 0;
+        int64_t m   = INT64_MIN;
+        while(image_count<n_bits) {
+            torch::Tensor image = camera.sread();
+            auto sum = image.sum().item<int64_t>();
+
+            if (sum > m) {
+                m_i = image_count;
+                m   = sum;
+            }
+            ++image_count;
+        }
+        std::cout<<"INFO: [e13] Bit Recv: " << m_i << '\n';
+        std::cout<<"INFO: [e13] Bit Sent: " << frame_counter % n_bits << '\n';
+        ++frame_counter;
     }
 
     enable_capture.store(false, std::memory_order_release);
@@ -232,8 +243,14 @@ int e11 () {
 
     return 0;
 }
+#else
+    int e12 () {
+        throw std::runtime_error("Error: [e12] is only implemented for linux machines.");
+        return 0;
+    }
+#endif
 
-std::vector<Texture> e11_GenerateSynchronizationTextures(const int64_t n_bits) {
+std::vector<Texture> e12_GenerateSynchronizationTextures(const int64_t n_bits) {
     std::vector<Texture> textures;
     textures.reserve(n_bits);
 
@@ -263,7 +280,7 @@ std::vector<Texture> e11_GenerateSynchronizationTextures(const int64_t n_bits) {
 }
 
 template<typename T>
-int64_t e11_argmin(const std::vector<T> &v) {
+int64_t e12_argmin(const std::vector<T> &v) {
     int64_t m = INT64_MAX;
     int64_t j = 0;
 
@@ -277,13 +294,13 @@ int64_t e11_argmin(const std::vector<T> &v) {
     return j;    /* return index */
 }
 
-int64_t e11_mod(int64_t x, int64_t m) {
+int64_t e12_mod(int64_t x, int64_t m) {
     int64_t r = x % m;
     return (r < 0) ? r + m : r;
 }
 
 
-int64_t e11_time_now_us () {
+int64_t e12_time_now_us () {
     auto now = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
 }

@@ -9,7 +9,13 @@
 #include "../s4/utils.hpp"
 #include "../s3/Serial.hpp"
 #include "shared.hpp"
-#include <OpenGL/gl.h>
+
+#ifdef __APPLE__
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
+
 #include <thread>
 #include <atomic>
 
@@ -62,7 +68,6 @@ int e7 () {
         ClearBackground(BLACK);
         serial.Signal();
         EndDrawing();
-        glFinish();
 
         int64_t image_count = 0;
         double first_read_delay = 0;
@@ -87,8 +92,8 @@ int e7 () {
 
         // Print timing info
         std::cout << "INFO: [e7] First Read Delay: " << first_read_delay * 1e6 << " us\n";
-        std::cout << "INFO: [e7] Capture Time: " << capture_time * 1e6 << " us\n";
-        std::cout << "INFO: [e7] Frame Rate: " << total_elapsed * 1e3 << " ms\n";
+        std::cout << "INFO: [e7] Capture Time: " << capture_time.count() * 1e6 << " us\n";
+        std::cout << "INFO: [e7] Frame Rate: " << total_elapsed.count() * 1e3 << " ms\n";
 
         delays.push_back(first_read_delay * 1e6);
         capture_times.push_back(capture_time.count() * 1e6);

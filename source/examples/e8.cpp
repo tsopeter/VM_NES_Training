@@ -11,16 +11,22 @@
 #include "../s4/utils.hpp"
 #include "../s3/Serial.hpp"
 #include "shared.hpp"
-#include <OpenGL/gl.h>
+
+#ifdef __APPLE__
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
+
 #include <chrono>
 #include <future>
-
 
 std::vector<Texture> GenerateSynchronizationTextures (const int64_t n_bits);
 
 template<typename T>
 int64_t             argmin(const std::vector<T>&); 
 
+#ifdef __APPLE__
 int e8 () {
     Pylon::PylonAutoInitTerm init {};
 
@@ -42,7 +48,7 @@ int e8 () {
 
     std::atomic<bool> enable_capture {false};
     std::vector<int64_t> vsync_time_stamps;
-    std::function<void()> timer = [&serial,&vsync_time_stamps,&enable_capture]() {
+    std::function<void(std::atomic<uint64_t>&)> timer = [&serial,&vsync_time_stamps,&enable_capture](std::atomic<uint64_t>&_counter) {
         auto now = std::chrono::high_resolution_clock::now();
         int64_t us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
         vsync_time_stamps.push_back(us);
@@ -216,6 +222,12 @@ std::vector<Texture> GenerateSynchronizationTextures(const int64_t n_bits) {
 
     return textures;
 }
+#else
+    int e8 () {
+        throw std::runtime_error("Error: [e8] is only implemented for macOS machines.");
+        return 0;
+    }
+#endif
 
 template<typename T>
 int64_t argmin(const std::vector<T> &v) {

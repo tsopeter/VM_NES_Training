@@ -18,7 +18,9 @@
 #include "examples/e8.hpp"
 #include "examples/e9.hpp"
 #include "examples/e10.hpp"
-#include "examples/e11.hpp"
+#include "examples/e12.hpp"
+#include "examples/e13.hpp"
+#include "examples/e14.hpp"
 
 namespace examples_ {
     /**
@@ -133,7 +135,7 @@ namespace examples_ {
 
     /**
      * @brief
-     *  ## linux GLSync Example (e9)
+     *  ## linux GLSync Example (e12)
      * 
      *      Example of using sync timer classes to synchronize
      *      camera and display.
@@ -141,7 +143,18 @@ namespace examples_ {
      * @param None
      * @return Return value 0 or -1
      */
-    inline auto linuxGLSyncExample  = e11;
+    inline auto linuxGLSyncExample  = e12;
+
+    /**
+     * @brief
+     *  ## linux VSync Example (e13)
+     * 
+     *      Example of using sync timer classes to count vsync signals.
+     * 
+     * @param None
+     * @return Return value 0 or -1
+     */
+    inline auto linuxVsyncExample  = e13;
 
     /**
      * @brief
@@ -154,6 +167,8 @@ namespace examples_ {
      * @return Return value 0 or -1
      */
     inline auto SingleUpdateExample = e10;
+
+    inline auto DisplayToScreenExample = e14;
 }
 
 

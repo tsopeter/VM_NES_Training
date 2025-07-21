@@ -28,7 +28,9 @@ void s3_Window::close () {
 }
 
 void s3_Window::load() {
-    SetConfigFlags(FLAG_VSYNC_HINT);
+    unsigned int flags = FLAG_VSYNC_HINT;
+    if (wmode == FULLSCREEN) flags |= FLAG_FULLSCREEN_MODE;
+    SetConfigFlags(flags);
     InitWindow(Width, Height, title.c_str());
     SetWindowMonitor(monitor);
     if (wmode == BORDERLESS) ToggleBorderlessWindowed();

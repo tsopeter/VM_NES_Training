@@ -3,9 +3,7 @@
 #include <functional>
 #include <chrono>
 
-
 std::atomic<bool> s3_r0_can_read = true;
-
 /**
  * @brief s3_Camera_Reportable_handler should be used to capture the images.
  *        s3_Camera_Reportable is responsible to use it.
@@ -24,13 +22,12 @@ public:
 
             if (s3_r0_can_read.load()) {
                 ids->enqueue(v_raw_data);
+                image_count->fetch_add(1, std::memory_order_release);
+                vsync->enqueue(mvt->vsync_counter.load(std::memory_order_acquire));
+                if ((*count)%20==0)
+                    timestamps->enqueue(ptrGrabResult->GetTimeStamp());
                 ++(*count);
             }
-            
-            auto now = std::chrono::high_resolution_clock::now();
-            auto timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-            std::cout << "INFO : [s3_Camera_Reportable_handler] timestamp (us): " << timestamp_us << '\n';
-            
         }
         else {
             std::cerr<<"Failed to grab image..\n";
@@ -38,7 +35,11 @@ public:
     }
         
     moodycamel::ConcurrentQueue<u8Image> *ids = nullptr;
+    moodycamel::ConcurrentQueue<uint64_t> *vsync = nullptr;
+    moodycamel::ConcurrentQueue<uint64_t> *timestamps = nullptr;
     int *count = nullptr;
+    std::atomic<uint64_t> *image_count = nullptr;
+    s3_Camera_Reportable_VSYNC_Type *mvt = nullptr;
     int  size;
 };
 
@@ -47,6 +48,13 @@ static s3_Camera_Reportable_handler s3_r0_handle {};
 
 s3_Camera_Reportable::s3_Camera_Reportable(s3_Camera_Reportable_Properties p)
 : prop(p)
+{
+    is_open = false;
+    count = 0;
+}
+
+s3_Camera_Reportable::s3_Camera_Reportable(s3_Camera_Reportable_Properties p, s3_Camera_Reportable_VSYNC_Type *p_mvt)
+: prop(p), mvt(p_mvt)
 {
     is_open = false;
     count = 0;
@@ -72,6 +80,10 @@ void s3_Camera_Reportable::open () {
         s3_r0_handle.ids   = &buffer;
         s3_r0_handle.count = &count;
         s3_r0_handle.size  = prop.Height * prop.Width;
+        s3_r0_handle.vsync = &vsync;
+        s3_r0_handle.mvt   = mvt;
+        s3_r0_handle.image_count = &image_count;
+        s3_r0_handle.timestamps = &timestamps;
 
         // attach handle
         attach_read_handle();
@@ -117,6 +129,7 @@ torch::Tensor s3_Camera_Reportable::sread () {
     u8Image image;
     while (true) {
         if (buffer.try_dequeue(image)) {
+            image_count.fetch_sub(1, std::memory_order_release);
             t = torch::from_blob(image.data(),
             {prop.Height, prop.Width},
             torch::kUInt8).clone();
