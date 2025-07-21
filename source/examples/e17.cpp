@@ -307,8 +307,8 @@ int e17 () {
                 torch::Tensor image_gray = image.squeeze().contiguous(); // [1,H,W] → [H,W]
                 Image img = {
                     .data = image_gray.data_ptr(),
-                    .width = image_gray.size(1),
-                    .height = image_gray.size(0),
+                    .width = static_cast<int>(image_gray.size(1)),
+                    .height = static_cast<int>(image_gray.size(0)),
                     .mipmaps = 1,
                     .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
                 };

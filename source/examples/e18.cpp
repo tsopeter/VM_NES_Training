@@ -214,7 +214,7 @@ struct e18_Camera_Reader {
         #if defined(__linux__)
             mvt = new glx_Vsync_timer (0, timer);
         #else
-            mvt = new macOS_Vsync_Timer (window.monitor, timer);
+            mvt = new macOS_Vsync_Timer (0, timer);
         #endif
 
         // Setup image capture thread
@@ -230,7 +230,7 @@ struct e18_Camera_Reader {
             float angle = 2 * M_PI * i / 10 + (9.0  * M_PI / 180.0);
             float x = cx + pattern_radius * std::cos(angle);
             float y = cy + pattern_radius * std::sin(angle);
-            regions.push_back(std::make_shared<s4_Slicer_Circle>(x, y, radius));
+            regions.push_back(std::make_shared<s4_Slicer_Circle>(y, x, radius));
         }
 
         slicer = new s4_Slicer (
