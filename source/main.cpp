@@ -3,7 +3,8 @@
 #include "examples/e13.hpp"
 #include "examples/e16.hpp"
 #include "examples/e17.hpp"
+#include "examples/e3.hpp"
 
 int main () {
-    e17();
+    e3();
 }

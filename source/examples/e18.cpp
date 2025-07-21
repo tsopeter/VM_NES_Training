@@ -214,7 +214,7 @@ struct e18_Camera_Reader {
         #if defined(__linux__)
             mvt = new glx_Vsync_timer (0, timer);
         #else
-            mvt = new macOS_Vsync_Timer (window.monitor, timer);
+            mvt = new macOS_Vsync_Timer (0, timer);
         #endif
 
         // Setup image capture thread

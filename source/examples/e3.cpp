@@ -9,12 +9,14 @@ int e3 () {
     /* Initialize screen */
     s3_Window window {};
     window.wmode   = WINDOWED;
+    window.Height = 240;
+    window.Width  = 320;
     window.monitor = 0;
     window.load();
 
     /* Create slicers */
     s4_Slicer_Region_Vector regions;
-    float cx = 320, cy = 240, radius = 10;
+    float cx = window.Height/2, cy = window.Width/2, radius = 10;
     int pattern_radius = 128;
     for (int i = 0; i < 10; ++i) {
         float angle = 2 * M_PI * i / 10 + (9.0  * M_PI / 180.0);
