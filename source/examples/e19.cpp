@@ -215,7 +215,7 @@ struct e19_Dummy_VSYNC_timer {
         f = b;
         t = std::thread ([this]()->void {
             while (!this->end_thread.load(std::memory_order_acquire)) {
-                std::this_thread::sleep_for(std::chrono::microseconds(33'000));
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
                 this->vsync_counter.fetch_add(1, std::memory_order_release);
                 this->f(this->vsync_counter);
             }
@@ -500,10 +500,13 @@ class e19_Model : public s4_Model {
 public:
     e19_Model (int64_t Height, int64_t Width, int64_t n) :
     m_Height(Height), m_Width(Width), m_n(n) {
-        m_parameter = ((torch::rand({Height, Width}) * 2 * M_PI) - M_PI).to(DEVICE);
+        m_parameter = torch::rand({Height, Width}).to(DEVICE);
         m_parameter.set_requires_grad(true);
 
-        m_dist.set_mu(m_parameter, kappa);
+        //m_dist.set_mu(m_parameter, kappa);
+        m_dist.m_mu = m_parameter;
+        m_dist.m_kappa = torch::ones_like(m_parameter) * kappa;
+        m_dist.m_r = m_dist.m_rejection_r ();
     }
 
     ~e19_Model () override {}

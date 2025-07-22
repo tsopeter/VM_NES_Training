@@ -69,8 +69,7 @@ public:
      * 
      */
     void set_mu (torch::Tensor &mu, double kappa);
-
-private:
+    
     torch::Tensor m_mu, m_kappa;
     torch::Tensor m_r;
     double logp = std::log(2.0 * M_PI);  // using M_PI from cmath

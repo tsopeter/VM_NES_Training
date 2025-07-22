@@ -20,7 +20,7 @@ static int vm_calls = 0;
 using rejection_fn = std::function<torch::Tensor>;
 
 #ifdef __APPLE__
-#define VONMISES_PRECISION torch::kFloat32
+#define VONMISES_PRECISION torch::kFloat64
 #else
 #define VONMISES_PRECISION torch::kFloat64
 #endif
@@ -182,7 +182,7 @@ void VonMises::print_stats () const {
 }
 
 void VonMises::set_mu (torch::Tensor &mu, double kappa) {
-    m_mu    = mu.to(VONMISES_PRECISION);
+    m_mu    = mu; //.to(VONMISES_PRECISION);
     m_kappa = torch::full_like(mu, kappa, VONMISES_PRECISION).to(m_mu.device());
     m_r     = m_rejection_r();  /* precomputed */
 }

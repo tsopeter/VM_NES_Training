@@ -2,9 +2,12 @@
 #include "../s2/dist.hpp"       /* Distribution Virtual Class*/
 #include "../s4/model.hpp"      /* Model Virtual Class  */
 #include "../s4/optimizer.hpp"  /* Black-Box Optimizer */
+#include "../s2/von_mises.hpp"  /* Von Mises distribution */
 
 #include <iostream>
 #include <torch/torch.h>
+
+//#define E2_USE_NORMAL_
 
 class e2_Normal : public Dist {
 public:
@@ -47,11 +50,18 @@ public:
     e2_Model (int64_t m, int64_t n) :
     m_m(m), m_n(n) 
     {
-        m_parameter = torch::rand({m});
+        m_parameter = torch::rand({m}).to(DEVICE);
         m_parameter.set_requires_grad(true);
 
+#if defined(E2_USE_NORMAL_)
         m_normal.m_mu  = m_parameter;
         m_normal.m_std = 0.05f;
+#else
+        m_normal.set_mu(m_parameter, 1.0f/0.05f);
+        //m_normal.m_mu = m_parameter;
+        //m_normal.m_kappa = torch::ones_like(m_parameter) * (1.0f/0.05f);
+        //m_normal.m_r = m_normal.m_rejection_r ();
+#endif
     }
 
     ~e2_Model () override {
@@ -86,13 +96,18 @@ private:
 
     torch::Tensor m_parameter;
     torch::Tensor m_action;
+#if defined(E2_USE_NORMAL_)
     e2_Normal m_normal {};
+#else
+    VonMises m_normal {};
+#endif
+
 };
 
 torch::Tensor env (torch::Tensor &p) {
     // MSE
     torch::NoGradGuard no_grad;
-    auto d = (p - 3.0f);
+    auto d = (p - 0.2f);
     return torch::sum(
         d * d
     ,1);    /*dim=1*/
@@ -111,7 +126,7 @@ int e2 () {
     };
 
     /* Training loop */
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 200; ++i) {
         auto samples = model.sample();  // [N, C]
         auto rewards = -env(samples);   // [N]
 
