@@ -121,7 +121,7 @@ struct e19_Image_Processor {
         std::cout<<"INFO: [e19_Image_Processor] Prediction shape="<<predictions.sizes()<<'\n';
 
         // set the target to be always zero for now
-        torch::Tensor target = torch::zeros({1}, t.options());
+        torch::Tensor target = torch::zeros({1}, t.options()).to(predictions.device());
 
         // apply cross entropy loss
         auto loss = torch::nn::functional::cross_entropy(
@@ -500,7 +500,7 @@ class e19_Model : public s4_Model {
 public:
     e19_Model (int64_t Height, int64_t Width, int64_t n) :
     m_Height(Height), m_Width(Width), m_n(n) {
-        m_parameter = (torch::rand({Height, Width}) * 2 * M_PI) - M_PI;
+        m_parameter = ((torch::rand({Height, Width}) * 2 * M_PI) - M_PI).to(DEVICE);
         m_parameter.set_requires_grad(true);
 
         m_dist.set_mu(m_parameter, kappa);
@@ -785,7 +785,7 @@ int e19 () {
         scheduler.Update();
 
         auto p = scheduler.model->get_parameters();
-        p = torch::abs(torch::fft::ifftshift(torch::fft::ifft2(p))).pow(2);
+        p = torch::fft::ifftshift(torch::fft::ifft2(p)).abs().pow(2);
         Texture texture = scheduler.camera_reader->TensorToTexture(p);
         
         //Image img = scheduler.camera_reader->processor->slicer->visualize();

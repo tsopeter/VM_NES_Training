@@ -48,7 +48,7 @@ torch::Tensor s4_Slicer::detect(torch::Tensor t) {
                 "Input and region spatial dimensions must match");
 
     auto t_expanded = t.unsqueeze(1); // [B, 1, H, W]
-    auto r_expanded = m_regions.unsqueeze(0); // [1, N, H, W]
+    auto r_expanded = m_regions.unsqueeze(0).to(t.device()); // [1, N, H, W]
     auto scores = (t_expanded * r_expanded).sum({2, 3}); // [B, N]
 
     return scores;
