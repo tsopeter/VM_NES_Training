@@ -20,6 +20,10 @@
 #include <pthread.h>
 #include <sched.h>
 #include <array>
+#include <ctime>
+#include <string>
+#include <filesystem>
+#include <fstream>
 
 // Third-Party
 #include "raylib.h"
@@ -257,6 +261,10 @@ struct e18_Camera_Reader {
         if (slicer) delete slicer;
     }
 
+    int64_t GetImageCount () {
+        return image_count.load(std::memory_order_acquire);
+    }
+
     //
     // These two functions make up the basis
     // for synchronizing the camera
@@ -416,6 +424,11 @@ private:
     const double kappa = 1.0f/std;
 };
 
+struct e18_Checkpoint {
+    torch::Tensor parameter;
+    int64_t image_count;
+};
+
 // Scheduler
 struct e18_Scheduler {
     /* This is the number of frames to draw after capturing */
@@ -433,6 +446,9 @@ struct e18_Scheduler {
 
     /* vsync counters */
     uint64_t prev_count;
+
+    /* Vitals information */
+    int64_t  batch_index = 0;
 
     /* Number of samples */
     static constexpr int n_captures_per_frame = 20;
@@ -490,10 +506,47 @@ struct e18_Scheduler {
         return camera_reader->HasCameraExceededTime_us (35'000);
     }
 
+    //  Loads the parameters and accompanying data
+    //
+    e18_Checkpoint LoadCheckpoint (const std::filesystem::path &checkpoint_path) {
+        e18_Checkpoint ckpt;
+
+        torch::load(ckpt.parameter, checkpoint_path / "model.pt");
+        std::ifstream loc_file(checkpoint_path / "loc.txt");
+        loc_file >> ckpt.image_count;
+        loc_file.close();
+        return ckpt;
+    }
+
     // Stores the parameters list as a pt so you
     // can load it later
     void StoreCheckpoint () {
+        //
+        // Create a unique name for the checkpoint based on the name
+        std::time_t now = std::time(nullptr);
+        std::tm *ltm = std::localtime(&now);
+        char buffer[20];
+        std::strftime(buffer, sizeof(buffer), "%Y-%m-%d-%H-%M-%S", ltm);
+        std::string checkpoint_datetime = std::string(buffer);
 
+        //
+        // Create a folder with the timestamp name under CheckPoints/timestamp/...
+        std::string checkpoint_path = "CheckPoints/" + checkpoint_datetime;
+        std::filesystem::create_directories(checkpoint_path);
+
+        //
+        // Store vital information such as capture index (image_count) in a file called loc.txt
+        int64_t image_count = camera_reader->GetImageCount ();
+        std::ofstream loc_file(checkpoint_path + "/loc.txt");
+        loc_file << image_count << std::endl;
+        loc_file.close();
+
+
+        //
+        // Store the parameters of model
+        auto &parameters = model->get_parameters();
+        std::string param_path = checkpoint_path + "/model.pt";
+        torch::save(parameters, param_path);
     }
 
     uint64_t GetCurrentTime_us () {
@@ -528,7 +581,7 @@ struct e18_Scheduler {
         auto splited = actions.view({n_frames_for_n_samples, n_captures_per_frame, window->Height, window->Width});
 
         for (int i = 0; i < n_frames_for_n_samples; ++i) {
-            auto frame = splited[i];
+            auto frame = splited[i];    /* [n_samples, H, W] */
 
             auto timage = pen->MEncode_u8Tensor2(frame).contiguous();
             auto image  = pen->u8MTensor_Image(timage);
@@ -550,10 +603,6 @@ struct e18_Scheduler {
     }
 
     void InitCapture () {
-        /* If not ready, then wait till the required number of 
-           frames has passed */
-        if (frame_counter % number_of_frames != 0) return;
-
         camera_reader->wait_till_capture_enable_is_false();
         camera_reader->send_ready_to_capture();
     }
@@ -586,7 +635,10 @@ struct e18_Scheduler {
         torch::Tensor rewards = processor->get_rewards ();
 
         opt->step(rewards);
+    }
 
+    void UpdateBatchIndex () {
+        ++batch_index;
     }
 };
 
@@ -631,6 +683,7 @@ int e18 () {
 
             if (scheduler.ExceededCameraTime() || scheduler.ExceededFrameTime()) {
                 /**/
+                scheduler.StoreCheckpoint();  /* Store checkpoint of important metadata */
             }
             scheduler.SwapMarkers();
         }
