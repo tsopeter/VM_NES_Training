@@ -41,6 +41,9 @@ torch::Tensor s4_Slicer::detect(torch::Tensor t) {
         t = t.unsqueeze(0);  // convert to [1, H, W]
     }
 
+
+    //
+
     TORCH_CHECK(t.sizes().slice(1) == m_regions.sizes().slice(1),
                 "Input and region spatial dimensions must match");
 
