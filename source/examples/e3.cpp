@@ -16,13 +16,13 @@ int e3 () {
 
     /* Create slicers */
     s4_Slicer_Region_Vector regions;
-    float cx = window.Height/2, cy = window.Width/2, radius = 10;
-    int pattern_radius = 128;
+    float cx = window.Height/2, cy = window.Width/2, radius = 14;
+    int pattern_radius = 96;
     for (int i = 0; i < 10; ++i) {
         float angle = 2 * M_PI * i / 10 + (9.0  * M_PI / 180.0);
         float x = cx + pattern_radius * std::cos(angle);
         float y = cy + pattern_radius * std::sin(angle);
-        regions.push_back(std::make_shared<s4_Slicer_Circle>(x, y, radius));
+        regions.push_back(std::make_shared<s4_Slicer_Circle>(y, x, radius));
     }
     s4_Slicer slicer(regions, window.Height, window.Width);
 
