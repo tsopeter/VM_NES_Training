@@ -121,14 +121,13 @@ struct e19_Image_Processor {
         std::cout<<"INFO: [e19_Image_Processor] Prediction shape="<<predictions.sizes()<<'\n';
 
         // set the target to be always zero for now
-        torch::Tensor target = torch::zeros({1}, t.options()).to(predictions.device());
-
-        // apply cross entropy loss
-        auto loss = torch::nn::functional::cross_entropy(
+        torch::Tensor targets = torch::zeros({1}, torch::kLong).to(t.device());
+ 
+        torch::Tensor loss = torch::nn::functional::cross_entropy(
             predictions,
-            target.to(torch::kLong),
+            targets,
             torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
-        ); // [1]
+        );
         rewards.push_back(loss);
 
         ++count;
@@ -369,20 +368,25 @@ struct e19_Camera_Reader {
         if (slicer) delete slicer;
     }
 
-    Texture TensorToTexture (torch::Tensor &t) {
+    Texture TensorToTexture (torch::Tensor &t, float clamp_limit=0.01f) {
         // Assumes t is a 2D tensor [H, W]
         torch::Tensor t_cpu = t.detach().to(torch::kCPU).contiguous();
 
         int height = t_cpu.size(0);
         int width = t_cpu.size(1);
 
-        // Normalize to max and convert to uint8
-        auto max_val = t_cpu.max().item<float>();
-        if (max_val > 0) {
-            t_cpu = (t_cpu / max_val * 255).clamp(0, 255).to(torch::kUInt8);
-        } else {
-            t_cpu = torch::zeros_like(t_cpu, torch::kUInt8);
+        // Clamp to [0, 1] and scale to 0–255, then convert to uint8
+        
+        /* Re orientate */
+        t_cpu = t_cpu - t_cpu.min();
+
+        if (clamp_limit <= 0) {
+            t_cpu = t_cpu / t_cpu.max();
         }
+        else {
+            t_cpu = t_cpu.clamp(0.0, clamp_limit) / clamp_limit;
+        }
+        t_cpu = (t_cpu * 255).round().to(torch::kUInt8).contiguous();
 
         Image image = {
             .data = (void*)t_cpu.data_ptr(),
@@ -503,10 +507,10 @@ public:
         m_parameter = torch::rand({Height, Width}).to(DEVICE);
         m_parameter.set_requires_grad(true);
 
-        //m_dist.set_mu(m_parameter, kappa);
-        m_dist.m_mu = m_parameter;
-        m_dist.m_kappa = torch::ones_like(m_parameter) * kappa;
-        m_dist.m_r = m_dist.m_rejection_r ();
+        m_dist.set_mu(m_parameter, kappa);
+        //m_dist.m_mu = m_parameter;
+        //m_dist.m_kappa = torch::ones_like(m_parameter) * kappa;
+        //m_dist.m_r = m_dist.m_rejection_r ();
     }
 
     ~e19_Model () override {}
@@ -544,7 +548,7 @@ private:
 
     VonMises m_dist {};
 
-    const double std = 1e-1;
+    const double std = 5e-1;
     const double kappa = 1.0f/std;
 };
 
@@ -585,6 +589,9 @@ struct e19_Scheduler {
 
     uint64_t marker_1, marker_2;
 
+    float power = 10;
+    torch::Tensor rewards;
+
     e19_Scheduler (e19_Window *p_window, e19_Camera_Reader *p_camera_reader, int p_number_of_frames=1) :
     window(p_window),
     camera_reader(p_camera_reader),
@@ -619,7 +626,7 @@ struct e19_Scheduler {
     
     void SwapToTexture (int i) {
         //texture = &textures[i];
-        e19_input_queue.enqueue(textures[i]);
+        e19_input_queue.enqueue(textures[i] * power);
         std::cout<<"INFO: [e19] Enqueued tensor of shape: " << textures[i].sizes() << " onto e19_input_queue\n";
     }
 
@@ -699,10 +706,10 @@ struct e19_Scheduler {
         // split actions into [n_frames_for_n_samples, n_samples, H, W]
         auto splited = actions.view({n_frames_for_n_samples, n_captures_per_frame, window->Height, window->Width});
 
-        
+        // Apply exp(1j * splited)
+        splited = torch::polar(torch::ones_like(splited), splited);  // keep as complex
         for (int i = 0; i < n_frames_for_n_samples; ++i) {
-            auto frame = splited[i];    /* [n_samples, H, W] */
-            textures[i] = frame;
+            textures[i] = splited[i];  // [n_captures_per_frame, H, W] as complex
         }
         
     }
@@ -728,7 +735,7 @@ struct e19_Scheduler {
         if (processor == nullptr) throw std::runtime_error("ERROR: [e19] processor is null.\n");
 
         std::cout<<"INFO: [e19] Obtaining rewards from processing thread.\n";
-        torch::Tensor rewards = processor->get_rewards ();
+        rewards = processor->get_rewards ();
 
         opt->step(rewards);
     }
@@ -763,8 +770,8 @@ int e19 () {
 
     /** Actually init window */
     s3_Window swindow;
-    swindow.Height = 240<<1;
-    swindow.Width  = 320<<1;
+    swindow.Height = 240<<2;
+    swindow.Width  = 320<<2;
 
     swindow.wmode   = WINDOWED;
     swindow.fmode   = NO_TARGET_FPS;
@@ -775,7 +782,8 @@ int e19 () {
 
     int n_steps = 1000;   /* determines the number of frames */
 
-    for (int step = 0; step < n_steps; step += scheduler.n_frames_for_n_samples) {
+    int step=0;
+    while (!WindowShouldClose()) {
         scheduler.GenerateTextures();
         std::cout<<"INFO: [e19] Creating perturbations\n";
 
@@ -786,10 +794,16 @@ int e19 () {
         }
         std::cout<<"INFO: [e19] Calling Update...\n";
         scheduler.Update();
+        auto average_rewards = scheduler.rewards.mean().item<double>();
+        std::string reward_text = "Avg Reward: " + std::to_string(average_rewards);
 
         auto p = scheduler.model->get_parameters();
+        
+        //assert (p.grad().defined());
+        //auto g = p.grad();
+
         p = torch::fft::ifftshift(torch::fft::ifft2(p)).abs().pow(2);
-        Texture texture = scheduler.camera_reader->TensorToTexture(p);
+        Texture texture = scheduler.camera_reader->TensorToTexture(p, 0.001f);
         
         //Image img = scheduler.camera_reader->processor->slicer->visualize();
         //Texture texture = LoadTextureFromImage(img);
@@ -800,9 +814,12 @@ int e19 () {
                 {0, 0, static_cast<float>(window.Width), static_cast<float>(window.Height)}, 
                 {0, 0, static_cast<float>(swindow.Width), static_cast<float>(swindow.Height)},
                  {0, 0}, 0.0f, WHITE);
+            DrawFPS(10,10);
+            DrawText(reward_text.c_str(), 10, 30, 20, RAYWHITE);
         EndDrawing ();
 
         UnloadTexture(texture);
+        step += scheduler.n_frames_for_n_samples;
     }
 
     return 0;

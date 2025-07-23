@@ -7,7 +7,7 @@
 #include <iostream>
 #include <torch/torch.h>
 
-//#define E2_USE_NORMAL_
+# undef E2_USE_NORMAL_
 
 class e2_Normal : public Dist {
 public:
@@ -50,14 +50,15 @@ public:
     e2_Model (int64_t m, int64_t n) :
     m_m(m), m_n(n) 
     {
+        float std = 1e-3;
         m_parameter = torch::rand({m}).to(DEVICE);
         m_parameter.set_requires_grad(true);
 
 #if defined(E2_USE_NORMAL_)
         m_normal.m_mu  = m_parameter;
-        m_normal.m_std = 0.05f;
+        m_normal.m_std = std;
 #else
-        m_normal.set_mu(m_parameter, 1.0f/0.05f);
+        m_normal.set_mu(m_parameter, 1.0f/std);
         //m_normal.m_mu = m_parameter;
         //m_normal.m_kappa = torch::ones_like(m_parameter) * (1.0f/0.05f);
         //m_normal.m_r = m_normal.m_rejection_r ();
@@ -124,6 +125,12 @@ int e2 () {
     s4_Optimizer opt {
         adam, model
     };
+
+#if defined(E2_USE_NORMAL_)
+    std::cout << "Using Normal distribution.\n";
+#else
+    std::cout << "Using Von Mises distribution.\n";
+#endif
 
     /* Training loop */
     for (int i = 0; i < 200; ++i) {
