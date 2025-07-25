@@ -3,7 +3,15 @@
 #include <cstdint>
 #include <stdexcept>
 
+#include "../utils/utils.hpp"
 #include "../device.hpp"    /* Includes device macro */
+
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
+#include <GL/glext.h>
+
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
 
 
 /*
@@ -60,7 +68,8 @@ constexpr uint8_t logical_masks[16][2][2] = {
 };
 
 PEncoder::PEncoder () :
-m_x(-1), m_y(-1), m_h(-1), m_w(-1)
+m_x(-1), m_y(-1), m_h(-1), m_w(-1),
+m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
     /* Loads mask and stores it to reduce memory calls */
     masks = torch::from_blob(
@@ -77,7 +86,8 @@ m_x(-1), m_y(-1), m_h(-1), m_w(-1)
 }
 
 PEncoder::PEncoder (int x, int y, int h, int w) :
-m_x(x), m_y(y), m_h(h), m_w(w)
+m_x(x), m_y(y), m_h(h), m_w(w),
+m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
     assert (m_h % 2 == 0);
     assert (m_w % 2 == 0);
@@ -97,7 +107,21 @@ m_x(x), m_y(y), m_h(h), m_w(w)
 }
 
 PEncoder::~PEncoder () {
-
+    if (m_texture_initialized) {
+        if (m_cuda_pbo_resource) {
+            cudaGraphicsUnregisterResource(m_cuda_pbo_resource);
+            m_cuda_pbo_resource = nullptr;
+        }
+        if (m_pbo) {
+            glDeleteBuffers(1, &m_pbo);
+            m_pbo = 0;
+        }
+        if (m_textureID) {
+            glDeleteTextures(1, &m_textureID);
+            m_textureID = 0;
+        }
+        m_texture_initialized = false;
+    }
 }
 
 u8Image PEncoder::Encode_u8Image (torch::Tensor &x) {
@@ -144,8 +168,9 @@ torch::Tensor PEncoder::MEncode_u8Tensor (torch::Tensor &x) {
     validate_args();    /* Validate input arguments m_* */
     int64_t N = x.size(0);
     if (N > 24) {
-        throw std::runtime_error("PEncoder::MEncode_u8Tensor: x must be [N, H, W], where N <= 24");
+        throw std::runtime_error("PEncoder::MEncode_u8Tensor: x must be [N, H, W], where N <= 24, N given is: " + std::to_string(N) + "\n");
     }
+
 
     torch::Tensor image = torch::zeros(std::vector<int64_t>{m_h, m_w}, x.options()).to(torch::kInt32);
 
@@ -159,13 +184,14 @@ torch::Tensor PEncoder::MEncode_u8Tensor (torch::Tensor &x) {
     return image;
 }
 
-torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
+torch::Tensor PEncoder::MEncode_u8Tensor2 (const torch::Tensor &x) {
     validate_args();
 
     int64_t N = x.size(0);
     if (N > 24) {
-        throw std::runtime_error("PEncoder::MEncode_u8Tensor: x must be [N, H, W], where N <= 24");
+        throw std::runtime_error("PEncoder::MEncode_u8Tensor2: x must be [N, H, W], where N <= 24, N given is: " + std::to_string(N) + "\n");
     }
+
 
     torch::Tensor image = torch::zeros(std::vector<int64_t>{m_h, m_w}, x.options()).to(torch::kInt32);
     torch::Tensor plane = torch::zeros(std::vector<int64_t>{N, m_h >> 1, m_w >> 1}, x.options()).to(torch::kFloat32);
@@ -175,7 +201,11 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
      .copy_(x);
 
     //plane = q(plane, true);
+    auto t1 = Utils::GetCurrentTime_us ();
     plane = q[plane];
+    Utils::SynchronizeCUDADevices();
+    auto t2 = Utils::GetCurrentTime_us ();
+    std::cout<< "INFO: [PEncoder::MEncode_u8Tensor2] Quantization Mapping took: " << (t2 - t1) << " us\n";
 
     torch::Tensor encoded = torch::zeros({N, m_h, m_w}, x.options().dtype(torch::kUInt8));
 
@@ -191,7 +221,88 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
 
     // This encodes [N, H, W] to binary [H, W] for each pixel, it leaves the alpha channel alone (only 24-bits)
     return image.to(torch::kInt32);
+}
 
+torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
+    validate_args();
+
+    int64_t N = x.size(0);
+    if (N > 24) {
+        throw std::runtime_error("PEncoder::MEncode_u8Tensor2: x must be [N, H, W], where N <= 24, N given is: " + std::to_string(N) + "\n");
+    }
+
+    auto t1_b = Utils::GetCurrentTime_us ();
+    torch::Tensor image = torch::zeros(std::vector<int64_t>{m_h, m_w}, x.options()).to(torch::kInt32);
+    torch::Tensor plane = torch::zeros(std::vector<int64_t>{N, m_h >> 1, m_w >> 1}, x.options()).to(torch::kFloat16).to(x.device());
+
+    plane.slice(1, m_x, m_x + x.size(1))
+     .slice(2, m_y, m_y + x.size(2))
+     .copy_(x);
+
+    //plane = q(plane, true);
+    plane = q[plane];
+    Utils::SynchronizeCUDADevices();
+    auto t2_b = Utils::GetCurrentTime_us ();
+    std::cout<< "INFO: [PEncoder::MEncode_u8Tensor2] Quantization Mapping took: " << (t2_b - t1_b) << " us\n";
+
+
+    torch::Tensor encoded = torch::zeros({N, m_h, m_w}, x.options().dtype(torch::kUInt8));
+
+    auto logical = masks.index_select(0, plane.view({-1})).to(x.device());
+    logical = logical.view({N, m_h / 2, m_w / 2, 2, 2});
+    logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
+    encoded = logical.view({N, m_h, m_w});
+
+    // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    encoded = encoded.to(torch::kInt32);
+    image = torch::sum(encoded * shifts_used, 0);
+    Utils::SynchronizeCUDADevices();
+    auto t3_b = Utils::GetCurrentTime_us();
+    std::cout<< "INFO: [PEncoder::MEncode_u8Tensor2] Spatial-bit Mapping took " << (t3_b - t2_b) << " us\n";
+
+    // This encodes [N, H, W] to binary [H, W] for each pixel, it leaves the alpha channel alone (only 24-bits)
+    return image.to(torch::kInt32);
+
+}
+
+torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
+    int64_t N       = x.size(0);
+    int64_t input_h = x.size(1);
+    int64_t input_w = x.size(2);
+
+    // firstly, quantize the input tensor first (which is often much smaller than x)
+    torch::Tensor plane = q[x];
+
+    auto logical = masks.index_select(0, plane.view({-1})).to(x.device());
+    logical = logical.view({N, input_h, input_w, 2, 2});
+    logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
+    torch::Tensor encoded = logical.view({N, input_h * 2, input_w * 2});
+
+    // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    encoded = encoded.to(torch::kInt32);
+    torch::Tensor image = torch::sum(encoded * shifts_used, 0);
+
+    // image: [iH*2, iW*2] — already in block resolution
+    int64_t raw_h = image.size(0);  // iH * 2
+    int64_t raw_w = image.size(1);  // iW * 2
+
+    int64_t scale_h = m_h / raw_h;
+    int64_t scale_w = m_w / raw_w;
+
+    // Sanity check
+    TORCH_CHECK(m_h == raw_h * scale_h && m_w == raw_w * scale_w,
+        "m_h and m_w must be multiples of input image size");
+
+    // Repeat each pixel into KxK block
+    torch::Tensor upscaled = image.unsqueeze(0)                    // [1, raw_h, raw_w]
+                            .repeat_interleave(scale_h, 1)        // [1, m_h, raw_w]
+                            .repeat_interleave(scale_w, 2)        // [1, m_h, m_w]
+                            .squeeze(0);                          // [m_h, m_w]
+
+    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Size: " << upscaled.sizes() << '\n';
+    return upscaled;
 }
 
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
@@ -224,6 +335,39 @@ Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
     return ret;
 }
 
+Texture PEncoder::u8Tensor_Texture (torch::Tensor &encoding) {
+    TORCH_CHECK(encoding.device().is_cuda(), "encoding must be on CUDA");
+    TORCH_CHECK(encoding.is_contiguous(), "encoding must be contiguous");
+
+    int64_t H = encoding.size(0);
+    int64_t W = encoding.size(1);
+
+    if (!m_texture_initialized) {
+        init_pbo();
+    }
+
+    glBindTexture(GL_TEXTURE_2D, m_textureID);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo);
+
+    cudaGraphicsMapResources(1, &m_cuda_pbo_resource, 0);
+    uint8_t* cuda_ptr = nullptr;
+    size_t size;
+    cudaGraphicsResourceGetMappedPointer((void**)&cuda_ptr, &size, m_cuda_pbo_resource);
+    cudaMemcpy(cuda_ptr, encoding.data_ptr(), encoding.numel() * sizeof(int32_t), cudaMemcpyDeviceToDevice);
+    cudaGraphicsUnmapResources(1, &m_cuda_pbo_resource, 0);
+
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+    Texture texture = { 0 };
+    texture.id = m_textureID;
+    texture.width = W;
+    texture.height = H;
+    texture.mipmaps = 1;
+    texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    return texture;
+}
+
 torch::Tensor PEncoder::ImageTensorMap (torch::Tensor &x1, torch::Tensor &i0) {
     auto s1 = x1.sizes();
     auto s2 = i0.sizes();
@@ -250,4 +394,22 @@ torch::Tensor PEncoder::BImageTensorMap (torch::Tensor &x1, torch::Tensor &i0) {
 void PEncoder::validate_args () {
     if (m_x < 0 || m_y < 0 || m_h < 0 || m_w < 0)
         throw std::runtime_error("PEncoder::validate_args: You may not have initialized arguments m_x, m_y, m_h, and m_w");
+}
+
+void PEncoder::init_pbo () {
+    if (m_texture_initialized) return;  /* already init'd */
+
+    glGenTextures(1, &m_textureID);
+    glBindTexture(GL_TEXTURE_2D, m_textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_w, m_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glGenBuffers(1, &m_pbo);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, m_w * m_h * sizeof(uint32_t), nullptr, GL_STREAM_DRAW);
+
+    cudaGraphicsGLRegisterBuffer(&m_cuda_pbo_resource, m_pbo, cudaGraphicsMapFlagsWriteDiscard);
+
+    m_texture_initialized = true;
 }

@@ -52,6 +52,7 @@ public:
      * Inputs are expected to be -pi to pi
      */
     torch::Tensor operator[](const torch::Tensor &x);
+    torch::Tensor CPUOperator(const torch::Tensor &x);
 private:
     torch::Tensor m_table = torch::tensor({
         0.0000, 0.0100, 0.0205, 0.0422,
@@ -59,5 +60,24 @@ private:
         0.3426, 0.3707, 0.4228, 0.4916,
         0.5994, 0.6671, 0.7970, 0.9375
     }, torch::TensorOptions().dtype(torch::kFloat32));  // Or use kFloat32 if needed
+
+    torch::Tensor m_levels = torch::tensor({
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000
+    }, torch::TensorOptions().dtype(torch::kFloat32));
 
 };
