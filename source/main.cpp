@@ -49,6 +49,7 @@ void run_code () {
         int64_t step   = ds.iteration;
         double  reward = ds.total_rewards;
 
+        /*
         Image image {
             .data   = ds.data,
             .height = 240*2,
@@ -56,9 +57,12 @@ void run_code () {
             .mipmaps = 1,
             .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
         };
+        */
 
-        Texture texture = LoadTextureFromImage(image);
+        //Texture texture = LoadTextureFromImage(image);
         BeginDrawing();
+            ClearBackground(BLACK);
+            /*
             DrawTexturePro(
                 texture, 
                 {0, 0, 320, 240},
@@ -67,6 +71,7 @@ void run_code () {
                 0,
                 WHITE
             );
+            */
             DrawText(TextFormat("Step: %d", step), 10, 10, 20, RED);
             DrawText(TextFormat("Reward: %.2f", reward), 10, 40, 20, GREEN);
         EndDrawing();
