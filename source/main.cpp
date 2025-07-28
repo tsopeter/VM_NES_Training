@@ -16,11 +16,11 @@ void run_code () {
     e18();
 #else
     /* Host */
-    s3_IP_host host {9001};
+    s3_IP_Host host {9001};
 
     if (!host.listen_and_accept() && !host.is_connected()) {
         std::cerr << "ERROR: [main] Host was unable to accept client.\n";
-        return -1;
+        return;
     }
 
     int64_t data;

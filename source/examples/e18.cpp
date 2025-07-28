@@ -49,6 +49,7 @@
 #include "../s4/model.hpp"
 #include "../s4/slicer.hpp"
 #include "../s3/IP.hpp"
+#include "../utils/utils.hpp"
 #include "shared.hpp"
 
 // GL
@@ -697,22 +698,18 @@ struct e18_Scheduler {
         marker_1 = marker_t;
     }
 
-    void SynchronizeCUDADevices () {
-        cudaDeviceSynchronize();
-    }
-
     void GenerateTextures_Sequentially () {
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Called...\n";
         auto t1 = GetCurrentTime_us ();
 
         torch::Tensor action = model.sample(n_captures_per_frame);
         auto t3 = GetCurrentTime_us ();
-        SynchronizeCUDADevices();
+        Utils::SynchronizeCUDADevices();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Sampling... Took: " << (t3 - t1) << " us\n";
  
         //auto timage = pen->MEncode_u8Tensor2(action).contiguous();
         auto timage = pen->MEncode_u8Tensor3(action).contiguous();
-        SynchronizeCUDADevices ();
+        Utils::SynchronizeCUDADevices();
 
 
         auto t4 = GetCurrentTime_us ();

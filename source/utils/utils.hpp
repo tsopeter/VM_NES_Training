@@ -6,9 +6,7 @@
 namespace Utils {
     uint64_t GetCurrentTime_us ();
 
-    #ifdef __linux__
     void SynchronizeCUDADevices ();
-    #endif
 };
 
 

@@ -6,14 +6,6 @@
 #include "../utils/utils.hpp"
 #include "../device.hpp"    /* Includes device macro */
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#include <GL/glext.h>
-
-#include <cuda_runtime.h>
-#include <cuda_gl_interop.h>
-
-
 /*
 constexpr int32_t shifted_values[24] = 
 {
@@ -107,6 +99,7 @@ m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(fa
 }
 
 PEncoder::~PEncoder () {
+    #if defined(__linux__)
     if (m_texture_initialized) {
         if (m_cuda_pbo_resource) {
             cudaGraphicsUnregisterResource(m_cuda_pbo_resource);
@@ -122,6 +115,7 @@ PEncoder::~PEncoder () {
         }
         m_texture_initialized = false;
     }
+    #endif
 }
 
 u8Image PEncoder::Encode_u8Image (torch::Tensor &x) {
@@ -335,6 +329,7 @@ Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
     return ret;
 }
 
+#if defined(__linux__)
 Texture PEncoder::u8Tensor_Texture (torch::Tensor &encoding) {
     TORCH_CHECK(encoding.device().is_cuda(), "encoding must be on CUDA");
     TORCH_CHECK(encoding.is_contiguous(), "encoding must be contiguous");
@@ -367,6 +362,14 @@ Texture PEncoder::u8Tensor_Texture (torch::Tensor &encoding) {
     texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
     return texture;
 }
+#else
+Texture PEncoder::u8Tensor_Texture (torch::Tensor &encoding) {
+    Image image = u8Tensor_Image (encoding);
+    Texture texture = LoadTextureFromImage (image);
+    UnloadImage (image);
+    return texture;
+}
+#endif
 
 torch::Tensor PEncoder::ImageTensorMap (torch::Tensor &x1, torch::Tensor &i0) {
     auto s1 = x1.sizes();
@@ -396,6 +399,7 @@ void PEncoder::validate_args () {
         throw std::runtime_error("PEncoder::validate_args: You may not have initialized arguments m_x, m_y, m_h, and m_w");
 }
 
+#if defined(__linux__)
 void PEncoder::init_pbo () {
     if (m_texture_initialized) return;  /* already init'd */
 
@@ -413,3 +417,8 @@ void PEncoder::init_pbo () {
 
     m_texture_initialized = true;
 }
+#else
+void PEncoder::init_pbo () {
+    m_texture_initialized = true;
+}
+#endif

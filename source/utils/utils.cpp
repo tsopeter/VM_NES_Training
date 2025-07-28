@@ -18,4 +18,10 @@ uint64_t Utils::GetCurrentTime_us () {
 void Utils::SynchronizeCUDADevices () {
     cudaDeviceSynchronize();
 }
+#else
+#include <iostream>
+
+void Utils::SynchronizeCUDADevices () {
+    std::cerr << "INFO: [Utils::SynchronizeCUDADevices] Not available on macOS or Windows.\n";
+}
 #endif
