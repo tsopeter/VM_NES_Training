@@ -916,8 +916,11 @@ int e18 () {
         //break;
     }
 
-    step = -1;
-    client.Transmit((void*)(&step), sizeof (step));
+    Utils::data_structure ds {
+        .iteration = -1,
+        .total_rewards = 0
+    };
+    client.Transmit((void*)(&ds), sizeof (ds));
     client.disconnect();
 
     return 0;
