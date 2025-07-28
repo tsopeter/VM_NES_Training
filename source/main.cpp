@@ -11,6 +11,8 @@
 #include "examples/e21.hpp"
 #include "s3/IP.hpp"
 #include "utils/utils.hpp"
+#include "s3/window.hpp"
+#include "raylib.h"
 
 std::ostream& operator<<(std::ostream &os, const Utils::data_structure &ds) {
     return os << "Step: " << ds.iteration << ", Total Rewards: " << ds.total_rewards << '\n';
@@ -20,6 +22,14 @@ void run_code () {
 #ifdef __linux__
     e18();
 #else
+    s3_Window window;
+    window.Height = 240;
+    window.Width  = 320;
+    window.wmode  = WINDOWED;
+    window.fmode  = NO_TARGET_FPS;
+    window.load();
+
+
     /* Host */
     s3_IP_Host host {9001};
 
@@ -34,13 +44,24 @@ void run_code () {
             std::cerr <<"ERROR: [main] Improper data handling.\n";
             return;
         }
-        else {
-            std::cout << "INFO: [main] Received:\n" << ds << '\n';
-        }
 
-        if (ds.iteration < 1) {
-            return;
-        }
+        int64_t step   = ds.iteration;
+        double  reward = ds.total_rewards;
+
+        Image image {
+            .data   = ds.data,
+            .height = 240,
+            .width  = 320,
+            .mipmaps = 1,
+            .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
+        };
+
+        Texture texture = LoadTextureFromImage(image);
+        BeginDrawing();
+            DrawTextureEx(texture, {0, 0}, 0.0, 1.0, WHITE);
+            DrawText(TextFormat("Step: %d", step), 10, 10, 20, RED);
+            DrawText(TextFormat("Reward: %.2f", reward), 10, 40, 20, GREEN);
+        EndDrawing();
     }
 
 #endif
