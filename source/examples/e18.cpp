@@ -252,6 +252,8 @@ struct e18_Camera_Reader {
 
     bool capture_function_started = false;
 
+    moodycamel::ConcurrentQueue<torch::Tensor> images;
+
     e18_Camera_Reader (e18_Image_Processor *p_processor) :
     processor (p_processor) {
         cam_properties.AcqFrameRate = 1800;
@@ -420,6 +422,10 @@ struct e18_Camera_Reader {
 
                 ++image_count_per_frame;
                 processor->collect(image);
+
+                /* For the first image, store onto images queue */
+                if (image_count_per_frame==0)
+                    images.enqueue(image);
             }
             uint64_t timestamp = get_camera_timestamps_us ();
             uint64_t delta_z = timestamp - prev_timestamp;
@@ -839,11 +845,11 @@ int e18 () {
     Pylon::PylonAutoInitTerm init {};    
 
     s3_IP_Client client {"192.168.193.20", 9001};
-    client.connect();
 
-    if (!client.is_connected()) {
+    while (!client.is_connected()) {
+        client.connect();
         std::cerr << "ERROR: [e18] Client was unable to connect.\n";
-        return -1;
+        std::this_thread::sleep_for(std::chrono::seconds(5));
     }
 
     /* Init Window */
@@ -886,7 +892,7 @@ int e18 () {
             //scheduler.SwapToTexture(i);
             scheduler.GenerateTextures_Sequentially ();
             scheduler.DrawTexture();
-            //scheduler.wait_for_n_vsync_pulses(1);
+            scheduler.wait_for_n_vsync_pulses(1);
             scheduler.SetMarker2();
 
             std::cout << "INFO: [e18] Frame Time Delta: " << scheduler.FrameTimeDelta () << " us\n";
@@ -902,12 +908,18 @@ int e18 () {
         }
 
         //scheduler.UnloadTextures();
+        torch::Tensor t;
+        reader.images.try_dequeue(t);
+        t = t.cpu();
+        t = t.contiguous().view(-1);
+
         scheduler.Squash();
         Utils::data_structure ds {
                 .iteration=step,
-                .total_rewards=scheduler.Update()
-        
+                .total_rewards=scheduler.Update(),
         };
+        std::memcpy(ds.data, t.data_ptr(), 320 * 240);
+
         client.Transmit((void*)(&ds), sizeof(ds));
 
 
