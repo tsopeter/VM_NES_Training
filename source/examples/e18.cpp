@@ -826,7 +826,7 @@ struct e18_Scheduler {
         /* Obtain rewards from processor */
         auto *processor = camera_reader->processor;
         torch::Tensor rewards = processor->get_rewards ();
-        double total_rewards = rewards.sum().item<double>();
+        double total_rewards = rewards.mean().item<double>();
 
         opt->step(rewards);
 
