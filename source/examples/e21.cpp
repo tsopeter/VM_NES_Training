@@ -14,7 +14,7 @@ int e21 () {
         }
 
         char buffer[128] = {0};
-        server.Receive(buffer);
+        server.Receive(buffer, sizeof(buffer));
         std::cout << "Received: " << buffer << std::endl;
 
         server.disconnect();

@@ -41,7 +41,7 @@ void run_code () {
 
     Utils::data_structure ds;
     while (true) {
-        if (host.Receive((void*)(&ds)) <= 0) {
+        if (host.Receive((void*)(&ds), sizeof(ds)) <= 0) {
             std::cerr <<"ERROR: [main] Improper data handling.\n";
             break;
         }

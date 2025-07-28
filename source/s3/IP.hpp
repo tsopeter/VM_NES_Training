@@ -34,7 +34,7 @@ public:
     bool listen_and_accept();
     void disconnect();
 
-    int Receive(void* buffer);
+    int Receive(void* buffer, size_t length);
     bool is_connected() const;
 
     uint16_t m_port;
