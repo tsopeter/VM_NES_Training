@@ -9,7 +9,38 @@
 #include "examples/e19.hpp"
 #include "examples/e20.hpp"
 #include "examples/e21.hpp"
+#include "s3/IP.hpp"
+
+void run_code () {
+#ifdef __linux__
+    e18();
+#else
+    /* Host */
+    s3_IP_host host {9001};
+
+    if (!host.listen_and_accept() && !host.is_connected()) {
+        std::cerr << "ERROR: [main] Host was unable to accept client.\n";
+        return -1;
+    }
+
+    int64_t data;
+    while (true) {
+        if (host.Receive((void*)(&data)) != 0) {
+            std::cerr <<"ERROR: [main] Improper data handling.\n";
+            return;
+        }
+        else {
+            std::cout << "INFO: [main] Received: " << data << '\n';
+        }
+
+        if (data < 1) {
+            return;
+        }
+    }
+
+#endif
+}
 
 int main () {
-    e18 ();
+    run_code ();
 }

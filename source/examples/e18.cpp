@@ -48,6 +48,7 @@
 #include "../s4/optimizer.hpp"
 #include "../s4/model.hpp"
 #include "../s4/slicer.hpp"
+#include "../s3/IP.hpp"
 #include "shared.hpp"
 
 // GL
@@ -837,6 +838,14 @@ struct e18_Scheduler {
 int e18 () {
     Pylon::PylonAutoInitTerm init {};    
 
+    s3_IP_Client client {"192.168.193.20", 9001};
+    client.connect();
+
+    if (!client.is_connected()) {
+        std::cerr << "ERROR: [e18] Client was unable to connect.\n";
+        return -1;
+    }
+
     /* Init Window */
     s3_Window window {};
     window.Height = 1600;
@@ -888,17 +897,22 @@ int e18 () {
                 //scheduler.StoreCheckpoint();  /* Store checkpoint of important metadata */
             }
             scheduler.SwapMarkers();
+            ++step;
+
+            // Tell host the step count
+            client.Transmit((void*)(&step), sizeof (step));
         }
 
         //scheduler.UnloadTextures();
         scheduler.Squash();
         scheduler.Update();
-        ++step;
 
         // Save texture as a Image
         //TakeScreenshot("texture.png");
         //break;
     }
+
+    client.disconnect();
 
     return 0;
 }
