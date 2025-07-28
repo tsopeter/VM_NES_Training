@@ -25,7 +25,7 @@ void run_code () {
 
     int64_t data;
     while (true) {
-        if (host.Receive((void*)(&data)) != 0) {
+        if (host.Receive((void*)(&data)) <= 0) {
             std::cerr <<"ERROR: [main] Improper data handling.\n";
             return;
         }
