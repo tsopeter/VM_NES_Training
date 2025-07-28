@@ -23,10 +23,11 @@ void run_code () {
     e18();
 #else
     s3_Window window;
-    window.Height = 240;
-    window.Width  = 320;
-    window.wmode  = WINDOWED;
-    window.fmode  = NO_TARGET_FPS;
+    window.Height  = 240;
+    window.Width   = 320;
+    window.wmode   = WINDOWED;
+    window.fmode   = NO_TARGET_FPS;
+    window.monitor = 0;
     window.load();
 
 
@@ -42,7 +43,7 @@ void run_code () {
     while (true) {
         if (host.Receive((void*)(&ds)) <= 0) {
             std::cerr <<"ERROR: [main] Improper data handling.\n";
-            return;
+            break;
         }
 
         int64_t step   = ds.iteration;
@@ -50,15 +51,22 @@ void run_code () {
 
         Image image {
             .data   = ds.data,
-            .height = 240,
-            .width  = 320,
+            .height = 240*2,
+            .width  = 320*2,
             .mipmaps = 1,
             .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
         };
 
         Texture texture = LoadTextureFromImage(image);
         BeginDrawing();
-            DrawTextureEx(texture, {0, 0}, 0.0, 1.0, WHITE);
+            DrawTexturePro(
+                texture, 
+                {0, 0, 320, 240},
+                {0, 0, 320*2, 240*2},
+                {0, 0},
+                0,
+                WHITE
+            );
             DrawText(TextFormat("Step: %d", step), 10, 10, 20, RED);
             DrawText(TextFormat("Reward: %.2f", reward), 10, 40, 20, GREEN);
         EndDrawing();
