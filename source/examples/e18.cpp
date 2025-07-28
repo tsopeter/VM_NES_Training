@@ -813,18 +813,21 @@ struct e18_Scheduler {
         EndDrawing ();
     }
 
-    void Update () {
+    double Update () {
 // Timing 
         auto t1 = GetCurrentTime_us();
 
         /* Obtain rewards from processor */
         auto *processor = camera_reader->processor;
         torch::Tensor rewards = processor->get_rewards ();
+        double total_rewards = rewards.sum().item<double>();
 
         opt->step(rewards);
 
         auto t2 = GetCurrentTime_us();
         std::cout<<"INFO: [e18_Scheduler::Update] Took " << (t2 - t1) << " us\n";
+
+        return total_rewards;
     }
 
     void UpdateBatchIndex () {
