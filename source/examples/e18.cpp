@@ -907,19 +907,22 @@ int e18 () {
         }
 
         //scheduler.UnloadTextures();
-        torch::Tensor t;
-        while(!reader.images.try_dequeue(t));
-        t = t.cpu();
-        t = t.contiguous().view(-1);
+        //torch::Tensor t;
+        //while(!reader.images.try_dequeue(t));
+        //t = t.cpu();
+        //t = t.contiguous().view(-1);
 
         scheduler.Squash();
-        Utils::data_structure ds {
-                .iteration=step,
-                .total_rewards=scheduler.Update(),
-        };
-        std::memcpy(ds.data, t.data_ptr(), 320 * 240);
+        Utils::data_structure *ds = new Utils::data_structure();
+        
+        
+        ds->iteration=step,
+        ds->total_rewards=scheduler.Update(),
+        //std::memcpy(ds->data, t.data_ptr(), 320 * 240);
 
-        client.Transmit((void*)(&ds), sizeof(ds));
+        client.Transmit((void*)(ds), sizeof(*ds));
+
+        delete ds;  /* Remove ds from heap */
 
 
         // Save texture as a Image

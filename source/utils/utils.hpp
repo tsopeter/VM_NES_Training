@@ -13,7 +13,6 @@ namespace Utils {
     struct data_structure {
         int64_t iteration;
         double  total_rewards;
-        char data[320*240];
     };
 };
 
