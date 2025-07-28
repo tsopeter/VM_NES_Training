@@ -900,7 +900,7 @@ int e18 () {
             ++step;
 
             // Tell host the step count
-            client.Transmit((void*)(step), sizeof (step));
+            client.Transmit((void*)(&step), sizeof (step));
         }
 
         //scheduler.UnloadTextures();
@@ -912,6 +912,8 @@ int e18 () {
         //break;
     }
 
+    step = -1;
+    client.Transmit((void*)(&step), sizeof (step));
     client.disconnect();
 
     return 0;
