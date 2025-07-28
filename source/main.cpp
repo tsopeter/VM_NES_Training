@@ -10,6 +10,11 @@
 #include "examples/e20.hpp"
 #include "examples/e21.hpp"
 #include "s3/IP.hpp"
+#include "utils/utils.hpp"
+
+std::ostream& operator<<(std::ostream &os, const Utils::data_structure &ds) {
+    return os << "Step: " << ds.iteration << ", Total Rewards: " << ds.total_rewards << '\n';
+}
 
 void run_code () {
 #ifdef __linux__
@@ -23,17 +28,17 @@ void run_code () {
         return;
     }
 
-    int64_t data;
+    Utils::data_structure ds;
     while (true) {
-        if (host.Receive((void*)(&data)) <= 0) {
+        if (host.Receive((void*)(&ds)) <= 0) {
             std::cerr <<"ERROR: [main] Improper data handling.\n";
             return;
         }
         else {
-            std::cout << "INFO: [main] Received: " << data << '\n';
+            std::cout << "INFO: [main] Received:\n" << ds << '\n';
         }
 
-        if (data < 1) {
+        if (ds.iteration < 1) {
             return;
         }
     }
