@@ -871,7 +871,7 @@ int e18 () {
     e18_Scheduler scheduler {&window, &reader, 200, 320, 1};
     std::cout<<"INFO: [e18] e18_Scheduler init'd\n";
 
-    int step=0;
+    int64_t step=0;
 
     scheduler.SetMarker1(); /* Set marker 1 time */
     scheduler.InitPBO ();
