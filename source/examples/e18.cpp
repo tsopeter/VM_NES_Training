@@ -420,12 +420,12 @@ struct e18_Camera_Reader {
             while (image_count_per_frame < n_captures_per_frame) {
                 torch::Tensor image = camera->sread();
 
-                ++image_count_per_frame;
-                processor->collect(image);
-
                 /* For the first image, store onto images queue */
                 if (image_count_per_frame==0)
                     images.enqueue(image);
+
+                ++image_count_per_frame;
+                processor->collect(image);
             }
             uint64_t timestamp = get_camera_timestamps_us ();
             uint64_t delta_z = timestamp - prev_timestamp;
@@ -909,7 +909,7 @@ int e18 () {
 
         //scheduler.UnloadTextures();
         torch::Tensor t;
-        reader.images.try_dequeue(t);
+        while(!reader.images.try_dequeue(t));
         t = t.cpu();
         t = t.contiguous().view(-1);
 
