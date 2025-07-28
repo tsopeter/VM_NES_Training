@@ -848,8 +848,7 @@ int e18 () {
 
     while (!client.is_connected()) {
         client.connect();
-        std::cerr << "ERROR: [e18] Client was unable to connect.\n";
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     /* Init Window */
@@ -892,7 +891,7 @@ int e18 () {
             //scheduler.SwapToTexture(i);
             scheduler.GenerateTextures_Sequentially ();
             scheduler.DrawTexture();
-            scheduler.wait_for_n_vsync_pulses(1);
+            scheduler.wait_for_n_vsync_pulses(2);
             scheduler.SetMarker2();
 
             std::cout << "INFO: [e18] Frame Time Delta: " << scheduler.FrameTimeDelta () << " us\n";
