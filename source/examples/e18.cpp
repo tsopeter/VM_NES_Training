@@ -899,13 +899,17 @@ int e18 () {
             scheduler.SwapMarkers();
             ++step;
 
-            // Tell host the step count
-            client.Transmit((void*)(&step), sizeof (step));
         }
 
         //scheduler.UnloadTextures();
         scheduler.Squash();
-        scheduler.Update();
+        Utils::data_structure ds {
+                .iteration=step,
+                .total_rewards=scheduler.Update()
+        
+        };
+        client.Transmit((void*)(&ds), sizeof(ds));
+
 
         // Save texture as a Image
         //TakeScreenshot("texture.png");

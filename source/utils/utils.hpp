@@ -7,6 +7,11 @@ namespace Utils {
     uint64_t GetCurrentTime_us ();
 
     void SynchronizeCUDADevices ();
+
+    struct data_structure {
+        int64_t iteration;
+        double  total_rewards;
+    };
 };
 
 
