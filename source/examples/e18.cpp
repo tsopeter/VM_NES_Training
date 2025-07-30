@@ -59,6 +59,8 @@
     #include <GL/gl.h>
 #endif
 
+torch::Tensor e18_gs_algorithm(const torch::Tensor &target, int iterations);
+
 class e18_Normal : public Dist {
 public:
     e18_Normal () {}
@@ -466,7 +468,15 @@ public:
         std::cout<<"INFO: [e18_Model] Staging model...\n";
         std::cout<<"INFO: [e18_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
 
-        m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
+       // m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
+
+        torch::Tensor target = torch::zeros({Height, Width});
+
+        // Crop the target to 8x8 and ensure float32
+        target.index_put_({torch::indexing::Slice(0, Height/8), torch::indexing::Slice(0, Width/8)}, 1.0);
+
+
+        m_parameter = e18_gs_algorithm(target, 100).to(DEVICE);
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e18_Model] Set parameters...\n";
 
@@ -705,29 +715,51 @@ struct e18_Scheduler {
     }
 
     void GenerateTextures_Sequentially () {
+        static int64_t gts_count = 0;
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Called...\n";
         auto t1 = GetCurrentTime_us ();
 
         torch::Tensor action = model.sample(n_captures_per_frame);
+        //torch::Tensor action = model.get_parameters().unsqueeze(0).repeat({20, 1, 1});
         auto t3 = GetCurrentTime_us ();
         Utils::SynchronizeCUDADevices();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Sampling... Took: " << (t3 - t1) << " us\n";
  
+        // Save model.get_parameters() as tensor.pt
+        torch::save({model.get_parameters().cpu()}, "tensor.pt");
+
         //auto timage = pen->MEncode_u8Tensor2(action).contiguous();
-        auto timage = pen->MEncode_u8Tensor3(action).contiguous();
+        auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
         Utils::SynchronizeCUDADevices();
 
 
         auto t4 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Encoding... Took: " << (t4 - t3) << " us\n";
         
-
         texture = pen->u8Tensor_Texture(timage);    /* Reuse same texture id, basically... */
         auto t5 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Generating Textures... Took: " << (t5 - t4) << " us\n";
 
+        // Save texture as an Image
+        
+
         auto t2 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Took: " << (t2 - t1) << " us\n";
+
+        if (gts_count==0) {
+            // Export texture as Image to disk
+            Image image = LoadImageFromTexture(texture);
+            ExportImage(image, "example_gpu.png");
+            UnloadImage(image);
+
+            timage = timage.to(torch::kInt32).cpu().contiguous() & 0x00FF;
+            timage = timage.to(torch::kUInt8);
+            
+            auto t = s4_Utils::TensorToImage(timage);
+            ExportImage(t, "example_cpu.png");
+
+            ++gts_count;
+        }
     }
 
     void Squentially_Unload () {
@@ -873,10 +905,12 @@ int e18 () {
     e18_Camera_Reader reader {&processor};
     std::cout<<"INFO: [e18] e18_Camera_Reader init'd\n";
     
-    e18_Scheduler scheduler {&window, &reader, 200, 320, 1};
+    e18_Scheduler scheduler {&window, &reader, 200*2, 320*2, 1};
+    //e18_Scheduler scheduler {&window, &reader, 250, 400, 1};
     std::cout<<"INFO: [e18] e18_Scheduler init'd\n";
 
     int64_t step=0;
+    torch::Tensor t;
 
     scheduler.SetMarker1(); /* Set marker 1 time */
     scheduler.InitPBO ();
@@ -891,7 +925,7 @@ int e18 () {
             //scheduler.SwapToTexture(i);
             scheduler.GenerateTextures_Sequentially ();
             scheduler.DrawTexture();
-            scheduler.wait_for_n_vsync_pulses(2);
+            scheduler.wait_for_n_vsync_pulses(1);
             scheduler.SetMarker2();
 
             std::cout << "INFO: [e18] Frame Time Delta: " << scheduler.FrameTimeDelta () << " us\n";
@@ -903,27 +937,25 @@ int e18 () {
             }
             scheduler.SwapMarkers();
             ++step;
+            while(!reader.images.try_dequeue(t));
 
         }
 
         //scheduler.UnloadTextures();
-        //torch::Tensor t;
-        //while(!reader.images.try_dequeue(t));
-        //t = t.cpu();
-        //t = t.contiguous().view(-1);
+        t = t.cpu();
+        t = t.contiguous().view(-1);
 
         scheduler.Squash();
         Utils::data_structure *ds = new Utils::data_structure();
         
-        
         ds->iteration=step,
         ds->total_rewards=scheduler.Update(),
-        //std::memcpy(ds->data, t.data_ptr(), 320 * 240);
 
         client.Transmit((void*)(ds), sizeof(*ds));
 
-        delete ds;  /* Remove ds from heap */
+        client.Transmit((void*)(t.data_ptr<uint8_t>()), t.numel());
 
+        delete ds;  /* Remove ds from heap */
 
         // Save texture as a Image
         //TakeScreenshot("texture.png");
@@ -938,4 +970,33 @@ int e18 () {
     client.disconnect();
 
     return 0;
+}
+
+torch::Tensor e18_gs_algorithm(const torch::Tensor &target, int iterations) {
+    using namespace torch::indexing;
+
+    // Ensure target is float32
+    torch::Tensor Target = target.to(torch::kFloat32);
+
+    int Height = Target.size(0);
+    int Width  = Target.size(1);
+
+    // Define phase-normalization function
+    auto phase = [](const torch::Tensor& p) {
+        return p / (p.abs() + 1e-8);
+    };
+
+    // Initialize with random phase
+    auto rand_phase = torch::rand({Height, Width}, torch::kFloat32) * 2 * M_PI;
+    rand_phase = rand_phase.to(Target.device());
+    auto Object = torch::polar(torch::ones_like(rand_phase), rand_phase); // magnitude 1, phase = rand_phase
+
+    for (int i = 0; i < iterations; ++i) {
+        auto U  = torch::fft::ifft2(torch::fft::ifftshift(Object));
+        auto Up = Target * phase(U);
+        auto D  = torch::fft::fft2(torch::fft::fftshift(Up));
+        Object  = phase(D);
+    }
+
+    return torch::angle(Object);
 }

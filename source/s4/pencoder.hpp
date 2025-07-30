@@ -125,6 +125,8 @@ public:
      */
     torch::Tensor BImageTensorMap (torch::Tensor &x1, torch::Tensor &i0);
 
+    torch::Tensor upscale_ (const torch::Tensor &x, int scale_h, int scale_w);
+
     void init_pbo ();
 
 private:

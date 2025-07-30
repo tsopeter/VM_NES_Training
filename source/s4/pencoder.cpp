@@ -260,6 +260,14 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
 
 }
 
+torch::Tensor PEncoder::upscale_ (const torch::Tensor &x, int scale_h, int scale_w) {
+    int64_t H = x.size(0) * scale_h;
+    int64_t W = x.size(1) * scale_w;
+
+    auto x_blocks = x.unfold(0, 2, 2).unfold(1, 2, 2); // [N, H/2, W/2, 2, 2]
+    x_blocks = x_blocks.repeat_interleave(scale_h, 0).repeat_interleave(scale_w, 1);
+    return x_blocks.permute({0,2,1,3}).reshape({H, W}).contiguous();
+}
 torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
     int64_t N       = x.size(0);
     int64_t input_h = x.size(1);
@@ -268,10 +276,16 @@ torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
     // firstly, quantize the input tensor first (which is often much smaller than x)
     torch::Tensor plane = q[x];
 
-    auto logical = masks.index_select(0, plane.view({-1})).to(x.device());
+    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Generating encoding...\n";
+    if (masks.device() != x.device())
+        masks = masks.to(x.device());
+
+    auto logical = masks.index_select(0, plane.view({-1}));
     logical = logical.view({N, input_h, input_w, 2, 2});
     logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
     torch::Tensor encoded = logical.view({N, input_h * 2, input_w * 2});
+
+    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Generating bit representation...\n";
 
     // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
     torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
@@ -289,14 +303,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
     TORCH_CHECK(m_h == raw_h * scale_h && m_w == raw_w * scale_w,
         "m_h and m_w must be multiples of input image size");
 
-    // Repeat each pixel into KxK block
-    torch::Tensor upscaled = image.unsqueeze(0)                    // [1, raw_h, raw_w]
-                            .repeat_interleave(scale_h, 1)        // [1, m_h, raw_w]
-                            .repeat_interleave(scale_w, 2)        // [1, m_h, m_w]
-                            .squeeze(0);                          // [m_h, m_w]
-
-    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Size: " << upscaled.sizes() << '\n';
-    return upscaled;
+    return upscale_(image, scale_h, scale_w).to(torch::kInt32);
 }
 
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
