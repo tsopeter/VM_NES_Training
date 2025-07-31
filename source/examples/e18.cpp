@@ -949,7 +949,7 @@ int e18 () {
         Utils::data_structure *ds = new Utils::data_structure();
         
         ds->iteration=step,
-        ds->total_rewards=scheduler.Update(),
+        ds->total_rewards=0;//scheduler.Update(),
 
         client.Transmit((void*)(ds), sizeof(*ds));
 
