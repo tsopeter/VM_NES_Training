@@ -103,6 +103,39 @@ public:
 
 };
 
+struct e18_Reporter {
+    std::string &m_ip;
+    int m_port;
+    moodycamel::ConcurrentQueue<torch::Tensor> &m_queue;
+
+    std::atomic<bool> end_thread {false};
+    std::thread t;
+
+    e18_Reporter (std::string &ip, int port, moodycamel::ConcurrentQueue<torch::Tensor> &queue) :
+    m_ip(ip), m_port(port), m_queue(queue) {
+        // Start up thread
+        t = std::thread([this]()->void{this->report();});
+    }
+
+    ~e18_Reporter () {
+        end_thread.store(true, std::memory_order_release);
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+    void report () {
+        while (!end_thread.load(std::memory_order_acquire)) {
+            torch::Tensor image;
+            while (!m_queue.try_dequeue(image));
+
+            /* Send over ip */
+
+
+        }
+    }
+};
+
 struct e18_Image_Processor {
     /* Slicer */
     s4_Slicer *slicer = nullptr;
@@ -729,9 +762,9 @@ struct e18_Scheduler {
         torch::save({model.get_parameters().cpu()}, "tensor.pt");
 
         //auto timage = pen->MEncode_u8Tensor2(action).contiguous();
-        auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
+        //auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
+        auto timage = pen->MEncode_u8Tensor4(action).contiguous().to(torch::kInt32);
         Utils::SynchronizeCUDADevices();
-
 
         auto t4 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Encoding... Took: " << (t4 - t3) << " us\n";
@@ -742,7 +775,6 @@ struct e18_Scheduler {
 
         // Save texture as an Image
         
-
         auto t2 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Took: " << (t2 - t1) << " us\n";
 
@@ -992,9 +1024,9 @@ torch::Tensor e18_gs_algorithm(const torch::Tensor &target, int iterations) {
     auto Object = torch::polar(torch::ones_like(rand_phase), rand_phase); // magnitude 1, phase = rand_phase
 
     for (int i = 0; i < iterations; ++i) {
-        auto U  = torch::fft::ifft2(torch::fft::ifftshift(Object));
+        auto U  = torch::fft::ifft2(Object);
         auto Up = Target * phase(U);
-        auto D  = torch::fft::fft2(torch::fft::fftshift(Up));
+        auto D  = torch::fft::fft2(Up);
         Object  = phase(D);
     }
 

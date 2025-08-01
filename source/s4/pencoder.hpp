@@ -91,6 +91,8 @@ public:
     
     torch::Tensor MEncode_u8Tensor3 (const torch::Tensor &x);
 
+    torch::Tensor MEncode_u8Tensor4 (const torch::Tensor &x);
+
     int m_x, m_y; // Used for placing the phase mask on (x,y), assuming that the phase
                   // mask is smaller than the image plane
     int m_h, m_w;

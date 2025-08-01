@@ -306,6 +306,30 @@ torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
     return upscale_(image, scale_h, scale_w).to(torch::kInt32);
 }
 
+torch::Tensor PEncoder::MEncode_u8Tensor4 (const torch::Tensor &x) {
+    int64_t N       = x.size(0);
+    int64_t input_h = x.size(1);
+    int64_t input_w = x.size(2);
+
+    /* Apply normalization */
+    auto norm_x = (x + M_PI) / (2 * M_PI); // Normalize to [0, 1]
+    auto mean_x = norm_x.mean();
+    auto binary_x = (norm_x > mean_x/*0.3197875,0.5*/).to(torch::kInt32); // Convert to binary [0, 1]
+
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    torch::Tensor down_image = torch::sum(binary_x * shifts_used, 0).to(torch::kFloat64);
+
+    /* Upscale x using torchvision */
+    auto image = torch::nn::functional::interpolate(
+        down_image.unsqueeze(0).unsqueeze(0),    // Add batch dimension [1, 1, H, W]
+        torch::nn::functional::InterpolateFuncOptions()
+            .size(std::vector<int64_t>{static_cast<int64_t>(m_h), static_cast<int64_t>(m_w)})   // Scale to [H, W]
+            .mode(torch::kNearest)
+    ).squeeze().to(torch::kInt32);   // [N, H, W]  
+
+    return image;
+}
+
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
     torch::Tensor encoding = MEncode_u8Tensor(x).contiguous();
     return u8MTensor_Image (encoding);
