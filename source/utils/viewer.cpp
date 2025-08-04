@@ -24,6 +24,8 @@ Viewer::~Viewer() {
 void Viewer::run() {
     std::cout << "INFO: [Viewer] Running viewer...\n";
 
+    bool first_time_texture = true;
+
     double reward = 0.0;
     int64_t step  = 0;
     while (!WindowShouldClose()) {
@@ -53,9 +55,10 @@ void Viewer::run() {
             case COMMS_IMAGE: {
                 Texture texture = comms.ReceiveImageAsTexture();
                 // Unload the previous texture if it exists 
-                if (m_texture.id != 0) {
+                if (!first_time_texture) {
                     UnloadTexture(m_texture);
                 }
+                first_time_texture = false;
                 m_texture = texture;
                 std::cout << "INFO: [Viewer] Received image texture.\n";
                 break;
