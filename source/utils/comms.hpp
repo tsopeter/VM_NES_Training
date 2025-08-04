@@ -23,7 +23,7 @@ public:
 
     void SetParameters (
         int port,
-        const std::string ip=""
+        const std::string ip="" /* Necessary for client, not host */
     );
 
     void Connect();
