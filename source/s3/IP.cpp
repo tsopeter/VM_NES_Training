@@ -140,6 +140,10 @@ int s3_IP_Host::Receive(void* buffer, size_t length) {
             std::cerr << "Failed to receive full data\n";
             return -1;
         }
+        // Exit if we received all the data, i.e., no more data to read
+        if (received == 0) {
+            break;
+        }
         total_received += received;
     }
 
