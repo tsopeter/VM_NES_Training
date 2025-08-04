@@ -45,10 +45,12 @@ void Viewer::run() {
         CommsType type = comms.Receive();
         switch (type) {
             case COMMS_INT64: {
+                std::cout << "INFO: [Viewer] Received step count.\n";
                 step = comms.ReceiveInt64();
                 break;
             }
             case COMMS_DOUBLE: {
+                std::cout << "INFO: [Viewer] Received reward value.\n";
                 reward = comms.ReceiveDouble();
                 break;
             }
