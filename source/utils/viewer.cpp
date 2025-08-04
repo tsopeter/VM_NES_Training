@@ -42,10 +42,8 @@ void Viewer::run() {
         DrawText(TextFormat("Step: %d", step), 10, 10, 20, RED);
         DrawText(TextFormat("Reward: %.2f", reward), 10, 40, 20, GREEN);
         EndDrawing();
-
-        // Obtain data
-        std::cout << "INFO: [Viewer] Waiting for data...\n";
         CommsType type = comms.Receive();
+        std::cout << "INFO: [Viewer] Received communication type: " << static_cast<int>(type) << "\n";
         switch (type) {
             case COMMS_INT64: {
                 std::cout << "INFO: [Viewer] Received step count.\n";

@@ -145,6 +145,8 @@ CommsType Comms::Receive() {
         throw std::runtime_error("Failed to receive data.");
     }
 
+    std::cout<<"INFO: [Comms] Received "<<bytes_received<<" bytes of data.\n";
+
     // First byte indicates type
     CommsType type = static_cast<CommsType>(m_staging_buffer[0]);
     return type;

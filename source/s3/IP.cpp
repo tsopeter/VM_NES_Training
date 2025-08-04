@@ -127,27 +127,17 @@ void s3_IP_Host::disconnect() {
     }
     m_connected = false;
 }
-
 int s3_IP_Host::Receive(void* buffer, size_t length) {
     if (!m_connected || m_client_fd == -1) return -1;
 
-    size_t total_received = 0;
     char* buf = reinterpret_cast<char*>(buffer);
-
-    while (total_received < length) {
-        ssize_t received = recv(m_client_fd, buf + total_received, length - total_received, 0);
-        if (received <= 0) {
-            std::cerr << "Failed to receive full data\n";
-            return -1;
-        }
-        // Exit if we received all the data, i.e., no more data to read
-        if (received == 0) {
-            break;
-        }
-        total_received += received;
+    ssize_t received = recv(m_client_fd, buf, length, 0);
+    if (received < 0) {
+        std::cerr << "Failed to receive data\n";
+        return -1;
     }
-
-    return static_cast<int>(total_received);
+    // received may be less than length, that's fine
+    return static_cast<int>(received);
 }
 
 /*
