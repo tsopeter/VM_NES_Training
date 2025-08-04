@@ -31,12 +31,14 @@ void Viewer::run() {
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(BLACK);
-        DrawTexturePro(
-            m_texture,
-            {0, 0, (float)m_texture.width, (float)m_texture.height}, // Source rectangle
-            {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
-            {0, 0}, 0.0f, WHITE
-        );
+        if (!first_time_texture) {
+            DrawTexturePro(
+                m_texture,
+                {0, 0, (float)m_texture.width, (float)m_texture.height}, // Source rectangle
+                {0, 0, (float)window.Width, (float)window.Height}, // Destination rectangle (full screen)
+                {0, 0}, 0.0f, WHITE
+            );
+        }
         DrawText(TextFormat("Step: %d", step), 10, 10, 20, RED);
         DrawText(TextFormat("Reward: %.2f", reward), 10, 40, 20, GREEN);
         EndDrawing();
