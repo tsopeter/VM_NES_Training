@@ -522,7 +522,7 @@ public:
     //VonMises m_dist {};
     e18_Normal m_dist {};
 
-    const double std = 1e-1;
+    const double std = 2;
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -891,7 +891,7 @@ int e18 () {
             //scheduler.SwapToTexture(i);
             scheduler.GenerateTextures_Sequentially ();
             scheduler.DrawTexture();
-            scheduler.wait_for_n_vsync_pulses(2);
+            //scheduler.wait_for_n_vsync_pulses(2);
             scheduler.SetMarker2();
 
             std::cout << "INFO: [e18] Frame Time Delta: " << scheduler.FrameTimeDelta () << " us\n";

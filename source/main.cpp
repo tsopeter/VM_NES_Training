@@ -23,8 +23,8 @@ void run_code () {
     e18();
 #else
     s3_Window window;
-    window.Height  = 240;
-    window.Width   = 320;
+    window.Height  = 320*2;
+    window.Width   = 240*2;
     window.wmode   = WINDOWED;
     window.fmode   = NO_TARGET_FPS;
     window.monitor = 0;
@@ -40,41 +40,47 @@ void run_code () {
     }
 
     Utils::data_structure ds;
+
+    uint8_t data[320*240]={};
     while (true) {
         if (host.Receive((void*)(&ds), sizeof(ds)) <= 0) {
             std::cerr <<"ERROR: [main] Improper data handling.\n";
             break;
         }
 
+        if (host.Receive((void*)(data), sizeof(data)) <= 0) {
+            std::cerr <<"ERROR: [main] Improper data handling.\n";
+            break;
+        }
+
         int64_t step   = ds.iteration;
         double  reward = ds.total_rewards;
-
-        /*
+        
         Image image {
-            .data   = ds.data,
-            .height = 240*2,
-            .width  = 320*2,
+            .data   = data,
+            .height = 320,
+            .width  = 240,
             .mipmaps = 1,
             .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
         };
-        */
+        Texture texture = LoadTextureFromImage(image);
 
-        //Texture texture = LoadTextureFromImage(image);
         BeginDrawing();
             ClearBackground(BLACK);
-            /*
+            
             DrawTexturePro(
                 texture, 
-                {0, 0, 320, 240},
-                {0, 0, 320*2, 240*2},
+                {0, 0, 240, 320},
+                {0, 0, 240*2, 320*2},
                 {0, 0},
                 0,
                 WHITE
             );
-            */
+            
             DrawText(TextFormat("Step: %d", step), 10, 10, 20, RED);
             DrawText(TextFormat("Reward: %.2f", reward), 10, 40, 20, GREEN);
         EndDrawing();
+        UnloadTexture(texture);
     }
 
 #endif
