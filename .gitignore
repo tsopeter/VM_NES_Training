@@ -9,3 +9,6 @@ Instruments.Profile/
 Instruments.Profile.trace/
 output_images/
 tmp/
+__pycache__/phasecreator.cpython-310.pyc
+__pycache__/
+tensor.pt

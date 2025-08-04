@@ -272,12 +272,12 @@ int e17 () {
                 std::cout<<"INFO: [capture_thread] Detected Error: false\n";
 	        std::cout<<"INFO: [capture_thread] Difference: "<< v_diff << '\n';
             std::cout<<"INFO: [capture_thread] Images in Queue: " << camera.image_count.load(std::memory_order_acquire) << '\n';
-            std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp/1'000 << " us \n";
+            std::cout<<"INFO: [capture_thread] Capture Timestamp: " << timestamp << " us \n";
 
-            if ((timestamp - prev_timestamp)/1'000>34'000)
-                std::cout<<"\033[1;31mINFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us\033[0m\n";
+            if ((timestamp - prev_timestamp)>34'000)
+                std::cout<<"\033[1;31mINFO: [capture_thread] Delta: " << (timestamp - prev_timestamp) << " us\033[0m\n";
             else
-                std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp)/1'000 << " us \n";
+                std::cout<<"INFO: [capture_thread] Delta: " << (timestamp - prev_timestamp) << " us \n";
 
             if ((frame_timestamp-prev_frame_timestamp)>34'000)
                 std::cout<<"\033[1;31mINFO: [capture_thread] Frame Delta: " << (frame_timestamp-prev_frame_timestamp) << "\033[0m\n";

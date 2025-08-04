@@ -91,6 +91,8 @@ public:
     
     torch::Tensor MEncode_u8Tensor3 (const torch::Tensor &x);
 
+    torch::Tensor MEncode_u8Tensor4 (const torch::Tensor &x);
+
     int m_x, m_y; // Used for placing the phase mask on (x,y), assuming that the phase
                   // mask is smaller than the image plane
     int m_h, m_w;
@@ -124,6 +126,8 @@ public:
      * 
      */
     torch::Tensor BImageTensorMap (torch::Tensor &x1, torch::Tensor &i0);
+
+    torch::Tensor upscale_ (const torch::Tensor &x, int scale_h, int scale_w);
 
     void init_pbo ();
 

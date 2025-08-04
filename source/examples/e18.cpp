@@ -59,6 +59,52 @@
     #include <GL/gl.h>
 #endif
 
+torch::Tensor e18_gs_algorithm(const torch::Tensor &target, int iterations);
+
+struct e18_Slicer {
+
+    torch::Tensor m_regions; // [N, H, W]
+    /* Set the region based on a line on the middle row */
+    e18_Slicer (int h, int w) {
+
+        torch::Tensor t0 = torch::zeros({h, w}, torch::kFloat64);
+        // Set center row+/-8 to 1.0
+        //t0.index_put_({torch::indexing::Slice(h/2-8, h/2+8), torch::indexing::Slice()}, 1.0f);
+
+        // Set the center column+/-8 to 1.0
+        t0.index_put_({torch::indexing::Slice(), torch::indexing::Slice(w/2-8, w/2+8)}, 1.0f);
+
+        torch::Tensor t1 = 1.0 - t0; // Invert the tensor
+
+        m_regions = torch::stack({t0, t1}); // Stack the tensors
+        // Dimension [2, H, W]
+    }
+
+    torch::Tensor detect (torch::Tensor t) {
+        // t would have shape [N, H, W]
+
+        if (t.dim() == 2) {
+            t = t.unsqueeze(0);  // convert to [1, H, W] 
+        }
+
+        auto t_expanded = t.unsqueeze(1); // [B, 1, H, W]
+        auto m_regions_expanded = m_regions.unsqueeze(0).to(t.device()); // [1, N, H, W]
+        auto scores = (t_expanded * m_regions_expanded).sum({2, 3}); // [B, N]
+
+        //std::cout<<"INFO: [e18_Slicer::detect] Scores: "<<scores<<'\n';
+
+        return scores;
+    }
+
+    void device (torch::Device device) {
+        m_regions = m_regions.to(device);
+    }
+
+    ~e18_Slicer () {
+
+    }
+};
+
 class e18_Normal : public Dist {
 public:
     e18_Normal () {}
@@ -101,9 +147,42 @@ public:
 
 };
 
+struct e18_Reporter {
+    std::string &m_ip;
+    int m_port;
+    moodycamel::ConcurrentQueue<torch::Tensor> &m_queue;
+
+    std::atomic<bool> end_thread {false};
+    std::thread t;
+
+    e18_Reporter (std::string &ip, int port, moodycamel::ConcurrentQueue<torch::Tensor> &queue) :
+    m_ip(ip), m_port(port), m_queue(queue) {
+        // Start up thread
+        t = std::thread([this]()->void{this->report();});
+    }
+
+    ~e18_Reporter () {
+        end_thread.store(true, std::memory_order_release);
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+    void report () {
+        while (!end_thread.load(std::memory_order_acquire)) {
+            torch::Tensor image;
+            while (!m_queue.try_dequeue(image));
+
+            /* Send over ip */
+
+
+        }
+    }
+};
+
 struct e18_Image_Processor {
     /* Slicer */
-    s4_Slicer *slicer = nullptr;
+    e18_Slicer *slicer = nullptr;
 
     std::thread processing_thread;
     moodycamel::ConcurrentQueue<torch::Tensor> input_queue;
@@ -121,7 +200,7 @@ struct e18_Image_Processor {
         processing_thread = std::thread ([this]()->void{this->processor();});
     }
 
-    void set_slicer (s4_Slicer *p_slicer) {
+    void set_slicer (e18_Slicer *p_slicer) {
         slicer = p_slicer;
     }
 
@@ -237,6 +316,7 @@ struct e18_Camera_Reader {
 
     // Capture thread externals
     std::atomic<uint64_t> delta {0};
+    std::atomic<uint64_t> capture_timestamp {0};
     std::atomic<uint64_t> image_count {0};
 
     /* Capture mutexes */
@@ -245,7 +325,7 @@ struct e18_Camera_Reader {
     /* Capture parameters */
     const int n_captures_per_frame = 20;
 
-    s4_Slicer *slicer = nullptr;
+    e18_Slicer *slicer = nullptr;
 
     std::function<void(std::atomic<uint64_t>&)> timer;
     std::function<void()> capture_function;
@@ -303,8 +383,8 @@ struct e18_Camera_Reader {
             regions.push_back(std::make_shared<s4_Slicer_Circle>(y, x, radius));
         }
 
-        slicer = new s4_Slicer (
-          regions, cam_properties.Height, cam_properties.Width  
+        slicer = new e18_Slicer (
+          cam_properties.Height, cam_properties.Width  
         );
         processor->set_slicer(slicer);
         
@@ -350,10 +430,20 @@ struct e18_Camera_Reader {
         return mvt->vsync_counter.load(std::memory_order_acquire);
     }
 
+    void wait_till_capture_pending_is_zero () {
+        while (captures_pending.load(std::memory_order_acquire) != 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
+    }
+
     uint64_t get_camera_timestamps_us () {
         uint64_t timestamp;
         while (!camera->timestamps.try_dequeue(timestamp));
-        return timestamp / 1'000;   /* ns -> us */
+        return timestamp; // / 1'000;   /* ns -> us */
+    }
+
+    uint64_t GetCameraTimeStamp () {
+        return capture_timestamp.load(std::memory_order_acquire);
     }
 
     uint64_t CameraDelta () {
@@ -430,6 +520,7 @@ struct e18_Camera_Reader {
             uint64_t timestamp = get_camera_timestamps_us ();
             uint64_t delta_z = timestamp - prev_timestamp;
             delta.store(delta_z, std::memory_order_release);
+            capture_timestamp.store(timestamp, std::memory_order_release);
             prev_timestamp = timestamp;
 
             image_count.fetch_add(1, std::memory_order_release);
@@ -467,6 +558,15 @@ public:
         std::cout<<"INFO: [e18_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
 
         m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
+
+        /*
+        torch::Tensor target = torch::zeros({Height, Width});
+
+        // Crop the target to 8x8 and ensure float32
+        target.index_put_({torch::indexing::Slice(0, Height/8), torch::indexing::Slice(0, Width/8)}, 1.0);
+
+        m_parameter = e18_gs_algorithm(target, 100).to(DEVICE);
+        */
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e18_Model] Set parameters...\n";
 
@@ -522,7 +622,7 @@ public:
     //VonMises m_dist {};
     e18_Normal m_dist {};
 
-    const double std = 2;
+    const double std = 1e-0;
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -549,6 +649,8 @@ struct e18_Scheduler {
 
     /* vsync counters */
     uint64_t prev_count;
+
+    std::atomic<uint64_t> frame_timestamp {0};
 
     /* Vitals information */
     int64_t  batch_index = 0;
@@ -677,7 +779,7 @@ struct e18_Scheduler {
         // Store the parameters of model
         auto &parameters = model.get_parameters();
         std::string param_path = checkpoint_path + "/model.pt";
-        torch::save(parameters, param_path);
+        torch::save({parameters}, param_path);
     }
 
     uint64_t GetCurrentTime_us () {
@@ -705,33 +807,58 @@ struct e18_Scheduler {
     }
 
     void GenerateTextures_Sequentially () {
+        static int64_t gts_count = 0;
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Called...\n";
         auto t1 = GetCurrentTime_us ();
 
         torch::Tensor action = model.sample(n_captures_per_frame);
+        //torch::Tensor action = model.get_parameters().unsqueeze(0).repeat({20, 1, 1});
         auto t3 = GetCurrentTime_us ();
         Utils::SynchronizeCUDADevices();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Sampling... Took: " << (t3 - t1) << " us\n";
  
-        //auto timage = pen->MEncode_u8Tensor2(action).contiguous();
-        auto timage = pen->MEncode_u8Tensor3(action).contiguous();
-        Utils::SynchronizeCUDADevices();
+        // Save model.get_parameters() as tensor.pt
+        torch::save({model.get_parameters().cpu()}, "tensor.pt");
 
+        //auto timage = pen->MEncode_u8Tensor2(action).contiguous();
+        //auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
+        auto timage = pen->MEncode_u8Tensor4(action).contiguous().to(torch::kInt32);
+        Utils::SynchronizeCUDADevices();
 
         auto t4 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Encoding... Took: " << (t4 - t3) << " us\n";
         
-
         texture = pen->u8Tensor_Texture(timage);    /* Reuse same texture id, basically... */
         auto t5 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Generating Textures... Took: " << (t5 - t4) << " us\n";
 
+        // Save texture as an Image
+        
         auto t2 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Took: " << (t2 - t1) << " us\n";
+
+        if (gts_count==0) {
+            // Export texture as Image to disk
+            Image image = LoadImageFromTexture(texture);
+            ExportImage(image, "example_gpu.png");
+            UnloadImage(image);
+
+            timage = timage.to(torch::kInt32).cpu().contiguous() & 0x00FF;
+            timage = timage.to(torch::kUInt8);
+            
+            auto t = s4_Utils::TensorToImage(timage);
+            ExportImage(t, "example_cpu.png");
+
+            ++gts_count;
+        }
     }
 
     void Squentially_Unload () {
         UnloadTexture (texture);
+    }
+
+    int64_t GetFrameTimeStamp () {
+        return frame_timestamp.load(std::memory_order_acquire);
     }
 
     /* Create Textures */
@@ -794,6 +921,7 @@ struct e18_Scheduler {
     void InitCapture () {
         camera_reader->wait_till_capture_enable_is_false();
         camera_reader->send_ready_to_capture();
+        camera_reader->wait_till_capture_pending_is_zero();
     }
 
     /**
@@ -817,6 +945,7 @@ struct e18_Scheduler {
             );
             EndShaderMode ();
         EndDrawing ();
+        frame_timestamp.store(GetCurrentTime_us(), std::memory_order_release);
     }
 
     double Update () {
@@ -873,13 +1002,16 @@ int e18 () {
     e18_Camera_Reader reader {&processor};
     std::cout<<"INFO: [e18] e18_Camera_Reader init'd\n";
     
-    e18_Scheduler scheduler {&window, &reader, 200, 320, 1};
+    e18_Scheduler scheduler {&window, &reader, 200*2, 320*2, 1};
+    //e18_Scheduler scheduler {&window, &reader, 250, 400, 1};
     std::cout<<"INFO: [e18] e18_Scheduler init'd\n";
 
     int64_t step=0;
+    torch::Tensor t;
 
     scheduler.SetMarker1(); /* Set marker 1 time */
     scheduler.InitPBO ();
+    
     while (!WindowShouldClose()) {
         //scheduler.GenerateTextures();
 
@@ -887,15 +1019,24 @@ int e18 () {
         if (step == 0)
             scheduler.prev_count = scheduler.get_vsync_count ();
         for (int i = 0; i < scheduler.n_frames_for_n_samples; ++i) {
-            scheduler.InitCapture();
+            //scheduler.InitCapture();
             //scheduler.SwapToTexture(i);
             scheduler.GenerateTextures_Sequentially ();
-            scheduler.DrawTexture();
-            //scheduler.wait_for_n_vsync_pulses(2);
+            scheduler.DrawTexture();    /* Draw the frame */
+            scheduler.DrawTexture();    /* Draw the frame */
+            //scheduler.wait_for_n_vsync_pulses(3);
+            scheduler.InitCapture();
             scheduler.SetMarker2();
+
+            auto camera_timestamp = reader.GetCameraTimeStamp();
+            auto frame_timestamp  = scheduler.GetFrameTimeStamp ();
 
             std::cout << "INFO: [e18] Frame Time Delta: " << scheduler.FrameTimeDelta () << " us\n";
             std::cout << "INFO: [e18] Capture Time Delta: " << reader.CameraDelta() << " us\n";
+            std::cout << "INFO: [e18] Vsync Count: " << scheduler.get_vsync_count() << '\n';
+            std::cout << "INFO: [e18] Camera Timestamp: " << camera_timestamp << " us\n";
+            std::cout << "INFO: [e18] Frame Timestamp: " << frame_timestamp << " us\n";
+            std::cout << "INFO: [e18] Difference: " << (frame_timestamp - camera_timestamp) << " us\n";
 
             if (scheduler.ExceededCameraTime() || scheduler.ExceededFrameTime()) {
                 /**/
@@ -903,27 +1044,25 @@ int e18 () {
             }
             scheduler.SwapMarkers();
             ++step;
+            while(!reader.images.try_dequeue(t));
 
         }
 
         //scheduler.UnloadTextures();
-        //torch::Tensor t;
-        //while(!reader.images.try_dequeue(t));
-        //t = t.cpu();
-        //t = t.contiguous().view(-1);
+        t = t.cpu();
+        t = t.contiguous().view(-1);
 
         scheduler.Squash();
         Utils::data_structure *ds = new Utils::data_structure();
         
-        
         ds->iteration=step,
         ds->total_rewards=scheduler.Update(),
-        //std::memcpy(ds->data, t.data_ptr(), 320 * 240);
 
         client.Transmit((void*)(ds), sizeof(*ds));
 
-        delete ds;  /* Remove ds from heap */
+        client.Transmit((void*)(t.data_ptr<uint8_t>()), t.numel());
 
+        delete ds;  /* Remove ds from heap */
 
         // Save texture as a Image
         //TakeScreenshot("texture.png");
@@ -937,5 +1076,37 @@ int e18 () {
     client.Transmit((void*)(&ds), sizeof (ds));
     client.disconnect();
 
+    // Save Checkpoint
+    scheduler.StoreCheckpoint();
+
     return 0;
+}
+
+torch::Tensor e18_gs_algorithm(const torch::Tensor &target, int iterations) {
+    using namespace torch::indexing;
+
+    // Ensure target is float32
+    torch::Tensor Target = target.to(torch::kFloat32);
+
+    int Height = Target.size(0);
+    int Width  = Target.size(1);
+
+    // Define phase-normalization function
+    auto phase = [](const torch::Tensor& p) {
+        return p / (p.abs() + 1e-8);
+    };
+
+    // Initialize with random phase
+    auto rand_phase = torch::rand({Height, Width}, torch::kFloat32) * 2 * M_PI;
+    rand_phase = rand_phase.to(Target.device());
+    auto Object = torch::polar(torch::ones_like(rand_phase), rand_phase); // magnitude 1, phase = rand_phase
+
+    for (int i = 0; i < iterations; ++i) {
+        auto U  = torch::fft::ifft2(Object);
+        auto Up = Target * phase(U);
+        auto D  = torch::fft::fft2(Up);
+        Object  = phase(D);
+    }
+
+    return torch::angle(Object);
 }
