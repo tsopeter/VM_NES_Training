@@ -8,6 +8,35 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+/**
+ * @brief  Handles adding headers to the communication overhead
+ * 
+ */
+class s3_Communication_Handler {
+public:
+
+    // Field information structure
+    struct FieldInfo {
+        size_t   length;
+        uint32_t id;
+    };
+
+    s3_Communication_Handler();
+    ~s3_Communication_Handler();
+
+    void  CommitData (size_t size);
+    std::pair<size_t, char*> AddHeader(char *data, size_t size);
+
+    FieldInfo GetHeader (char *data);
+
+private:
+    size_t m_header_size = sizeof(FieldInfo);
+    char  *m_commit_data  = nullptr;
+    size_t m_commit_size = 0;
+    uint32_t m_id = 0;
+
+};
+
 class s3_IP_Client {
 public:
     s3_IP_Client(const std::string& ip, uint16_t port);
@@ -24,6 +53,8 @@ public:
     uint16_t    m_port;
     bool        m_connected;
     int         m_socket_fd = -1;
+
+    s3_Communication_Handler m_handler {};
 };
 
 class s3_IP_Host {
@@ -41,6 +72,8 @@ public:
     bool     m_connected;
     int      m_server_fd = -1;
     int      m_client_fd = -1;
+
+    s3_Communication_Handler m_handler {};
 };
 
 #endif

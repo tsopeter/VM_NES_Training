@@ -2,6 +2,55 @@
 #include <cstring> // for memset
 
 // -----------------------
+// s3_Communication_Handler
+// -----------------------
+s3_Communication_Handler::s3_Communication_Handler() {
+    m_header_size = sizeof(FieldInfo);
+}
+
+s3_Communication_Handler::~s3_Communication_Handler() {
+    if (m_commit_data) {
+        delete[] m_commit_data;
+    }
+}
+
+void s3_Communication_Handler::CommitData(size_t size) {
+    if (m_commit_data) delete[] m_commit_data;
+
+    m_commit_size = size + m_header_size;
+    m_commit_data = new char[m_commit_size];
+    memset(m_commit_data, 0, m_commit_size);
+}
+
+std::pair<size_t, char*> s3_Communication_Handler::AddHeader(char *data, size_t size) {
+    if (!m_commit_data || size + m_header_size > m_commit_size) {
+        throw std::runtime_error("Commit data not initialized or size exceeds limit.");
+    }
+
+    // Construct header
+    FieldInfo info {
+        .length = static_cast<uint32_t>(size),
+        .id = m_id++
+    };
+
+    // Copy header into header section
+    std::memcpy(m_commit_data, &info, sizeof(FieldInfo));
+    
+    // Copy the actual data after the header
+    std::memcpy(m_commit_data + m_header_size, data, size);
+
+    return {static_cast<size_t>(size + m_header_size), m_commit_data}; // Return the pointer to the commit data
+}
+
+s3_Communication_Handler::FieldInfo s3_Communication_Handler::GetHeader(char *data) {
+    FieldInfo info;
+    std::memcpy(&info, data, sizeof(FieldInfo));
+    return info;
+}
+
+
+
+// -----------------------
 // s3_IP_Client
 // -----------------------
 
@@ -51,7 +100,11 @@ void s3_IP_Client::disconnect() {
 void s3_IP_Client::Transmit(void* data, size_t length) {
     if (!m_connected || m_socket_fd == -1) return;
 
-    ssize_t sent = send(m_socket_fd, data, length, 0);
+    m_handler.CommitData(length);
+    auto [packet_size, packet] = m_handler.AddHeader(static_cast<char*>(data), length);
+
+
+    ssize_t sent = send(m_socket_fd, packet, packet_size, 0);
     if (sent < 0) {
         std::cerr << "Failed to send data\n";
     }
@@ -131,12 +184,32 @@ int s3_IP_Host::Receive(void* buffer, size_t length) {
     if (!m_connected || m_client_fd == -1) return -1;
 
     char* buf = reinterpret_cast<char*>(buffer);
+    size_t total_received = 0;
+
+    // The first packet should *always* contain the header
     ssize_t received = recv(m_client_fd, buf, length, 0);
-    if (received < 0) {
-        std::cerr << "Failed to receive data\n";
-        return -1;
+
+    // Read the first buffer to get the header
+    auto field_info = m_handler.GetHeader(buf);
+
+    ssize_t total_read_required = sizeof(field_info) + field_info.length;
+    ssize_t remaining_data = total_read_required - received;
+    
+    // read until remaining data is received
+    while (remaining_data > 0) {
+        ssize_t chunk_size = recv(m_client_fd, buf + received, remaining_data, 0);
+        if (chunk_size < 0) {
+            std::cerr << "Failed to receive data\n";
+            return -1;
+        }
+        if (chunk_size == 0) {
+            // Connection closed or no more data
+            break;
+        }
+        received += chunk_size;
+        remaining_data -= chunk_size;
     }
-    // received may be less than length, that's fine
+    buf += sizeof(field_info); // Move buffer pointer past header
     return static_cast<int>(received);
 }
 

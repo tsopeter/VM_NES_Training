@@ -25,7 +25,7 @@ void run_code () {
     //e17();
     e18();
 #else   // everything else is used as the machine to display results
-    Viewer viewer(240*2, 320*2, 9001);
+    Viewer viewer(320*2, 240*2, 9001);
     viewer.run();
 #endif
 }
