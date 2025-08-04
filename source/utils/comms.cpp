@@ -207,7 +207,6 @@ Texture Comms::ReceiveImageAsTexture() {
 
     // Create texture from image
     Texture texture = LoadTextureFromImage(image);
-    UnloadImage(image); // Unload image to free memory
     return texture;
 }
 
