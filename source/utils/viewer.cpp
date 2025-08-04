@@ -44,6 +44,7 @@ void Viewer::run() {
         EndDrawing();
 
         // Obtain data
+        std::cout << "INFO: [Viewer] Waiting for data...\n";
         CommsType type = comms.Receive();
         switch (type) {
             case COMMS_INT64: {
