@@ -50,6 +50,8 @@
 #include "../s4/slicer.hpp"
 #include "../s3/IP.hpp"
 #include "../utils/utils.hpp"
+#include "../utils/comms.hpp"
+#include "../device.hpp"
 #include "shared.hpp"
 
 // GL
@@ -145,39 +147,6 @@ public:
     double m_std;
 
 
-};
-
-struct e18_Reporter {
-    std::string &m_ip;
-    int m_port;
-    moodycamel::ConcurrentQueue<torch::Tensor> &m_queue;
-
-    std::atomic<bool> end_thread {false};
-    std::thread t;
-
-    e18_Reporter (std::string &ip, int port, moodycamel::ConcurrentQueue<torch::Tensor> &queue) :
-    m_ip(ip), m_port(port), m_queue(queue) {
-        // Start up thread
-        t = std::thread([this]()->void{this->report();});
-    }
-
-    ~e18_Reporter () {
-        end_thread.store(true, std::memory_order_release);
-        if (t.joinable()) {
-            t.join();
-        }
-    }
-
-    void report () {
-        while (!end_thread.load(std::memory_order_acquire)) {
-            torch::Tensor image;
-            while (!m_queue.try_dequeue(image));
-
-            /* Send over ip */
-
-
-        }
-    }
 };
 
 struct e18_Image_Processor {
