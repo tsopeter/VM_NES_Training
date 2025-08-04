@@ -21,6 +21,8 @@
 #include "examples/e12.hpp"
 #include "examples/e13.hpp"
 #include "examples/e14.hpp"
+#include "examples/e17.hpp"
+#include "examples/e18.hpp"
 
 namespace examples_ {
     /**
@@ -169,6 +171,28 @@ namespace examples_ {
     inline auto SingleUpdateExample = e10;
 
     inline auto DisplayToScreenExample = e14;
+
+    /**
+     *  @brief
+     *  ## Example Synchronization (e17)
+     *
+     *      Example of how to synchronize camera and display using
+     *      a series of frame aligned textures.
+     */
+    inline auto ExampleSynchronization = e17;
+
+    /**
+     *  @brief
+     *  ## Example Mask Update (e18)
+     *
+     *      Example of how to update a mask using a camera and
+     *      and Normal Distribution using Natural Evolution Strategies.
+     *
+     *      This example is a simple task of training a single mask
+     *      to produce a certain mask on the camera.
+     *  
+     */
+    inline auto ExampleMaskUpdate = e18;
 }
 
 

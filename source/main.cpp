@@ -9,6 +9,7 @@
 #include "examples/e19.hpp"
 #include "examples/e20.hpp"
 #include "examples/e21.hpp"
+#include "examples/e22.hpp"
 #include "s3/IP.hpp"
 #include "utils/utils.hpp"
 #include "s3/window.hpp"
@@ -19,9 +20,10 @@ std::ostream& operator<<(std::ostream &os, const Utils::data_structure &ds) {
 }
 
 void run_code () {
-#ifdef __linux__
+#ifdef __linux__    // Linux is used as the machine for running the system
+    //e17();
     e18();
-#else
+#else   // everything else is used as the machine to display results
     s3_Window window;
     window.Height  = 240;
     window.Width   = 320;

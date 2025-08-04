@@ -1,4 +1,4 @@
-#include "e17.hpp"
+#include "e22.hpp"
 
 #ifdef __APPLE__
 #include <mach/mach_init.h>
@@ -38,15 +38,15 @@
 #include <future>
 #include <thread>
 
-std::vector<Texture> e17_GenerateSynchronizationTextures (const int64_t n_bits, int Height=1, int Width=1, std::vector<int64_t> indexes={});
-int64_t e17_mod(int64_t x, int64_t m);
-int32_t e17_pixel2value(unsigned char pixel[3]);
-torch::Tensor e17_gs_algorithm (const torch::Tensor &target, int iterations=50);
+std::vector<Texture> e22_GenerateSynchronizationTextures (const int64_t n_bits, int Height=1, int Width=1, std::vector<int64_t> indexes={});
+int64_t e22_mod(int64_t x, int64_t m);
+int32_t e22_pixel2value(unsigned char pixel[3]);
+torch::Tensor e22_gs_algorithm (const torch::Tensor &target, int iterations=50);
 
-void e17_DrawToScreen(Texture&, s3_Window&, Shader&);
+void e22_DrawToScreen(Texture&, s3_Window&, Shader&);
 
 #if defined(__linux__) || defined(__APPLE__)
-int e17 () {
+int e22 () {
 
     Pylon::PylonAutoInitTerm init {};
     /* Initialize screen */
@@ -102,10 +102,10 @@ int e17 () {
     cam_properties.Height       = 320;
     cam_properties.Width        = 240;
 
-    std::cout<<"INFO: [e17] Starting camera.\n";
+    std::cout<<"INFO: [e22] Starting camera.\n";
     s3_Camera_Reportable camera {cam_properties, &mvt};
     camera.open();
-    std::cout<<"INFO: [e17] Camera opened.\n";
+    std::cout<<"INFO: [e22] Camera opened.\n";
 
     std::vector<uint64_t> frame_timestamps_v;
     std::atomic<bool> end_thread {false};
@@ -352,7 +352,7 @@ int e17 () {
     int texWidth  = 2560;
 
     std::cout<<"Generated Textures...\n";
-    auto textures = e17_GenerateSynchronizationTextures(n_textures, texHeight, texWidth, texture_values);
+    auto textures = e22_GenerateSynchronizationTextures(n_textures, texHeight, texWidth, texture_values);
     int64_t vsync_index_1 = mvt.vsync_counter.load(std::memory_order_acquire);
     std::vector<uint64_t> frames_vsync_indexes;
 
@@ -389,18 +389,18 @@ int e17 () {
         unsigned char pixel[3];
         glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &pixel);
 
-        gl_buffer.enqueue(e17_pixel2value(pixel));
+        gl_buffer.enqueue(e22_pixel2value(pixel));
 
         while (frame_counter!=capture_count.load(std::memory_order_acquire));
-        e17_DrawToScreen(texture, window, ignoreAlphaShader);
+        e22_DrawToScreen(texture, window, ignoreAlphaShader);
     #else   // linux 
         if (kill_process.load(std::memory_order_acquire))
             break;
 
-        if (ping_pong%3==1) {
+        if (ping_pong%3==0) {
             // Draw
             auto &texture = textures[frame_counter % n_textures];
-            e17_DrawToScreen(texture, window, ignoreAlphaShader);
+            e22_DrawToScreen(texture, window, ignoreAlphaShader);
             glFinish();
 
             // Store
@@ -423,16 +423,16 @@ int e17 () {
             unsigned char pixel[3];
             glReadPixels(0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
 
-            gl_buffer.enqueue(e17_pixel2value(pixel));
+            gl_buffer.enqueue(e22_pixel2value(pixel));
 
             // Update
             ++ping_pong;
             vsync_index_1 = vsync_index_2;
         }
-        else if (ping_pong%3==2) {
+        else if (ping_pong%3==1) {
             // Draw
             auto &texture = textures[frame_counter % n_textures];
-            e17_DrawToScreen(texture, window, ignoreAlphaShader);
+            e22_DrawToScreen(texture, window, ignoreAlphaShader);
             glFinish();
 
             // Wait
@@ -446,7 +446,7 @@ int e17 () {
             ++ping_pong;
 
         }
-        else if (ping_pong%3==0) {
+        else if (ping_pong%3==2) {
             // Read
             while (enable_capture.load(std::memory_order_acquire));
             enable_capture.store(true, std::memory_order_release);
@@ -467,11 +467,11 @@ int e17 () {
     end_thread.store(true, std::memory_order_release);
     capture_thread.join();
 
-    //std::cout<<"INFO: [e17] Saving files...\n";
+    //std::cout<<"INFO: [e22] Saving files...\n";
     //cnpy::npy_save("TimingData/frame_timestamps.npy", frame_timestamps_v, "w");
     //cnpy::npy_save("TimingData/frame_vsync_index.npy", frames_vsync_indexes, "w");
     //cnpy::npy_save("TimingData/vsync_timestamps.npy", vsync_timestamps, "w");
-    //std::cout<<"INFO: [e17] Saved files.\n";
+    //std::cout<<"INFO: [e22] Saved files.\n";
 
     serial.Close();
     camera.close();
@@ -484,18 +484,18 @@ int e17 () {
     return 0;
 }
 #else
-    int e17 () {
+    int e22 () {
         throw std::runtime_error("ERROR: Not supported.\n");
     }
 #endif
 
-int64_t e17_mod(int64_t x, int64_t m) {
+int64_t e22_mod(int64_t x, int64_t m) {
     int64_t r = x % m;
     return (r < 0) ? r + m : r;
 }
 
 
-std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, int Height, int Width, std::vector<int64_t> indexes) {
+std::vector<Texture> e22_GenerateSynchronizationTextures(const int64_t n_bits, int Height, int Width, std::vector<int64_t> indexes) {
     std::vector<Texture> textures;
     textures.reserve(n_bits);
 
@@ -516,7 +516,7 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
           .slice(1, center_x, center_x + box_size)
           .fill_(1.0f);
     
-    torch::Tensor object = e17_gs_algorithm(target, 50);
+    torch::Tensor object = e22_gs_algorithm(target, 50);
     torch::Tensor phase  = torch::angle(object).to(device);    /* -pi to pi */
 
     for (int64_t z = 0; z < indexes.size(); ++z) {
@@ -526,8 +526,8 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
         torch::Tensor phase_tensor = torch::ones({(int64_t)indexes.size(), Height/2, Width/2}, torch::kFloat32).to(device) * (-2.8);
         phase_tensor[i] = phase;
 
-        std::cout<<"INFO: [e17] Generated tensor " << z << '\n';
-        std::cout<<"INFO: [e17] Tensor size: " << phase_tensor.sizes() << '\n';
+        std::cout<<"INFO: [e22] Generated tensor " << z << '\n';
+        std::cout<<"INFO: [e22] Tensor size: " << phase_tensor.sizes() << '\n';
 
         torch::Tensor timage = pen.MEncode_u8Tensor2(phase_tensor).contiguous();
 
@@ -535,14 +535,14 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
         //timage = timage.bitwise_or(0xFF000000);
 
 
-        std::cout<<"INFO: [e17] Generated quantized tensor: " << z << '\n';
-        std::cout<<"INFO: [e17] Tensor size: " << timage.sizes() << '\n';
-        std::cout<<"INFO: [e17] Data Type: " << timage.dtype() << '\n';
-        std::cout<<"IFNO: [e17] Device: " << timage.device() << '\n';
+        std::cout<<"INFO: [e22] Generated quantized tensor: " << z << '\n';
+        std::cout<<"INFO: [e22] Tensor size: " << timage.sizes() << '\n';
+        std::cout<<"INFO: [e22] Data Type: " << timage.dtype() << '\n';
+        std::cout<<"IFNO: [e22] Device: " << timage.device() << '\n';
 
         Image image  = pen.u8MTensor_Image(timage);
 
-        std::cout<<"INFO: [e17] Generated image " << z << '\n';
+        std::cout<<"INFO: [e22] Generated image " << z << '\n';
 
         Texture tex = LoadTextureFromImage(image);
         SetTextureFilter(tex, TEXTURE_FILTER_POINT); // Use nearest neighbor
@@ -557,7 +557,7 @@ std::vector<Texture> e17_GenerateSynchronizationTextures(const int64_t n_bits, i
     return textures;
 }
 
-void e17_DrawToScreen(Texture &texture, s3_Window &window, Shader &shader) {
+void e22_DrawToScreen(Texture &texture, s3_Window &window, Shader &shader) {
     BeginDrawing();
         BeginShaderMode(shader);
         ClearBackground(BLACK);
@@ -572,7 +572,7 @@ void e17_DrawToScreen(Texture &texture, s3_Window &window, Shader &shader) {
     //glFinish();
 }
 
-int32_t e17_pixel2value(unsigned char pixel[3]) {
+int32_t e22_pixel2value(unsigned char pixel[3]) {
     int32_t value = -1;
 
     for (int i = 0; i < 24; ++i) {
@@ -591,7 +591,7 @@ int32_t e17_pixel2value(unsigned char pixel[3]) {
     return value;
 }
 
-torch::Tensor e17_gs_algorithm(const torch::Tensor &target, int iterations) {
+torch::Tensor e22_gs_algorithm(const torch::Tensor &target, int iterations) {
     using namespace torch::indexing;
 
     // Ensure target is float32

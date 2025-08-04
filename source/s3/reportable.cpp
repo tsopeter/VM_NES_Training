@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <functional>
 #include <chrono>
+#include "../utils/utils.hpp"
 
 std::atomic<bool> s3_r0_can_read = true;
 /**
@@ -24,8 +25,10 @@ public:
                 ids->enqueue(v_raw_data);
                 image_count->fetch_add(1, std::memory_order_release);
                 vsync->enqueue(mvt->vsync_counter.load(std::memory_order_acquire));
-                if ((*count)%20==0)
-                    timestamps->enqueue(ptrGrabResult->GetTimeStamp());
+                if ((*count)%20==0) {
+                    //timestamps->enqueue(ptrGrabResult->GetTimeStamp());
+                    timestamps->enqueue(Utils::GetCurrentTime_us());
+                }
                 ++(*count);
             }
         }
