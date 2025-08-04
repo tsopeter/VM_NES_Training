@@ -11,6 +11,7 @@ Comms::Comms(CommsType type) : m_connection_type(type) {
         if (!m_staging_buffer) {
             throw std::runtime_error("Failed to allocate staging buffer.");
         }
+        std::cout<<"INFO: [Comms] Staging buffer of size "<<m_staging_buffer_size<<" bytes allocated.\n";
     }
 }
 
@@ -137,6 +138,7 @@ CommsType Comms::Receive() {
     }
 
     // Receive data packet into staging buffer
+    std::cout<<"INFO: [Comms] Waiting to receive data...\n";
     int bytes_received = host->Receive(m_staging_buffer, m_staging_buffer_size);
 
     if (bytes_received <= 0) {
