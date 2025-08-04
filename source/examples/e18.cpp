@@ -942,12 +942,9 @@ struct e18_Scheduler {
 int e18 () {
     Pylon::PylonAutoInitTerm init {};    
 
-    s3_IP_Client client {"192.168.193.20", 9001};
-
-    while (!client.is_connected()) {
-        client.connect();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    Comms comms {CommsType::COMMS_CLIENT};
+    comms.SetParameters(9001, "192.168.193.20");
+    comms.Connect();
 
     /* Init Window */
     s3_Window window {};
@@ -988,12 +985,9 @@ int e18 () {
         if (step == 0)
             scheduler.prev_count = scheduler.get_vsync_count ();
         for (int i = 0; i < scheduler.n_frames_for_n_samples; ++i) {
-            //scheduler.InitCapture();
-            //scheduler.SwapToTexture(i);
             scheduler.GenerateTextures_Sequentially ();
             scheduler.DrawTexture();    /* Draw the frame */
             scheduler.DrawTexture();    /* Draw the frame */
-            //scheduler.wait_for_n_vsync_pulses(3);
             scheduler.InitCapture();
             scheduler.SetMarker2();
 
@@ -1014,6 +1008,7 @@ int e18 () {
             scheduler.SwapMarkers();
             ++step;
             while(!reader.images.try_dequeue(t));
+            comms.TransmitImage(t);
 
         }
 
@@ -1022,31 +1017,16 @@ int e18 () {
         t = t.contiguous().view(-1);
 
         scheduler.Squash();
-        Utils::data_structure *ds = new Utils::data_structure();
-        
-        ds->iteration=step,
-        ds->total_rewards=scheduler.Update(),
+        double rewards = scheduler.Update();
 
-        client.Transmit((void*)(ds), sizeof(*ds));
-
-        client.Transmit((void*)(t.data_ptr<uint8_t>()), t.numel());
-
-        delete ds;  /* Remove ds from heap */
-
-        // Save texture as a Image
-        //TakeScreenshot("texture.png");
-        //break;
+        comms.TransmitDouble(rewards);
+        comms.TransmitInt(step);
     }
 
-    Utils::data_structure ds {
-        .iteration = -1,
-        .total_rewards = 0
-    };
-    client.Transmit((void*)(&ds), sizeof (ds));
-    client.disconnect();
 
+    comms.TransmitDisconnect();
     // Save Checkpoint
-    scheduler.StoreCheckpoint();
+    //scheduler.StoreCheckpoint();
 
     return 0;
 }

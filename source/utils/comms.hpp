@@ -6,6 +6,7 @@
 #include <memory>
 #include <torch/torch.h>
 #include <cstdint>
+#include "raylib.h"
 #include "../s3/IP.hpp"
 
 enum CommsType : uint8_t {
@@ -13,7 +14,10 @@ enum CommsType : uint8_t {
     COMMS_CLIENT,
     COMMS_DOUBLE,
     COMMS_INT,
-    COMMS_IMAGE
+    COMMS_INT64,
+    COMMS_IMAGE,
+    COMMS_DISCONNECT,
+    COMMS_UNKNOWN_TYPE
 };
 
 class Comms {
@@ -27,15 +31,20 @@ public:
     );
 
     void Connect();
+    void Transmit(char *data, size_t size);
     void TransmitDouble (double value);
     void TransmitInt (int value);
-    void TransmitImage (const torch::Tensor&);
+    void TransmitInt64 (int64_t value);
+    void TransmitImage (torch::Tensor);
+    void TransmitDisconnect();
 
     CommsType Receive();
 
     double ReceiveDouble();
     int ReceiveInt();
+    int64_t ReceiveInt64();
     torch::Tensor ReceiveImage();
+    Texture ReceiveImageAsTexture();
 
 private:
     s3_IP_Client *client = nullptr;
