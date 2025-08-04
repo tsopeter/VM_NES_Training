@@ -10,14 +10,14 @@
 #include "../s3/IP.hpp"
 
 enum CommsType : uint8_t {
-    COMMS_HOST,
-    COMMS_CLIENT,
-    COMMS_DOUBLE,
-    COMMS_INT,
-    COMMS_INT64,
-    COMMS_IMAGE,
-    COMMS_DISCONNECT,
-    COMMS_UNKNOWN_TYPE
+    COMMS_HOST         = 0,
+    COMMS_CLIENT       = 1,
+    COMMS_DOUBLE       = 2,
+    COMMS_INT          = 3,
+    COMMS_INT64        = 4,
+    COMMS_IMAGE        = 5,
+    COMMS_DISCONNECT   = 6,
+    COMMS_UNKNOWN_TYPE = 7
 };
 
 class Comms {
