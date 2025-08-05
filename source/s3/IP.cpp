@@ -234,8 +234,7 @@ s3_IP_Packet s3_IP_Host::Receive(s3_IP_Packet packet) {
     s3_IP_Packet p {
         .data = packet.data,
         .length = packet.length,
-        .header_length = sizeof(s3_Communication_Handler::FieldInfo),
-        .received = static_cast<size_t>(received)
+        .received = static_cast<size_t>(received),.header_length = sizeof(s3_Communication_Handler::FieldInfo)
     };
     return p;
 }
