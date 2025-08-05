@@ -26,7 +26,7 @@ public:
 
     // Field information structure
     struct FieldInfo {
-        size_t   length;
+        int64_t   length;
         uint32_t id;
         const uint64_t magic_number_0 = 0x1234567890ABCDEF;
         const uint64_t magic_number_1 = 0xDEADBEEF12345678;

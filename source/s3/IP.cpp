@@ -217,10 +217,10 @@ int s3_IP_Host::Receive(void* buffer, size_t length) {
 
     ssize_t total_read_required = sizeof(field_info) + field_info.length;
 
-    if (total_read_required > static_cast<ssize_t>(length)) {
+    if (total_read_required < static_cast<ssize_t>(length)) {
         throw std::runtime_error("Buffer too small for incoming packet\n");
     }
-
+ 
     ssize_t remaining_data = total_read_required - received;
     std::cout<<"INFO: [s3_IP_HOST] Total Read Required: "<<total_read_required<<"\n";
     std::cout<<"INFO: [s3_IP_HOST] Remaining Data: "<<remaining_data<<"\n";
