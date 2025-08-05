@@ -1008,13 +1008,10 @@ int e18 () {
             scheduler.SwapMarkers();
             ++step;
             while(!reader.images.try_dequeue(t));
-            comms.TransmitImage(t);
-
         }
 
         //scheduler.UnloadTextures();
-        t = t.cpu();
-        t = t.contiguous().view(-1);
+        comms.TransmitImage(t);
 
         comms.TransmitInt64(step);
 
