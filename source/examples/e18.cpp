@@ -1020,7 +1020,7 @@ int e18 () {
         double rewards = scheduler.Update();
 
         comms.TransmitDouble(rewards);
-        comms.TransmitInt(step);
+        comms.TransmitInt64(step);
     }
 
 

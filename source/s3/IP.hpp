@@ -28,6 +28,9 @@ public:
     struct FieldInfo {
         size_t   length;
         uint32_t id;
+        uint64_t magic_number_0 = 0x1234567890ABCDEF;
+        uint64_t magic_number_1 = 0xDEADBEEF12345678;
+        uint64_t magic_number_2 = 0xBEEFBEEFDEADBEEF;
     };
 
     s3_Communication_Handler();
@@ -37,6 +40,8 @@ public:
     std::pair<size_t, char*> AddHeader(char *data, size_t size);
 
     FieldInfo GetHeader (char *data);
+
+    bool ValidateHeader (FieldInfo &info);
 
 private:
     size_t m_header_size = sizeof(FieldInfo);

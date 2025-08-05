@@ -61,6 +61,12 @@ s3_Communication_Handler::FieldInfo s3_Communication_Handler::GetHeader(char *da
     return info;
 }
 
+bool s3_Communication_Handler::ValidateHeader(FieldInfo &info) {
+    return (info.magic_number_0 == 0x1234567890ABCDEF) &&
+           (info.magic_number_1 == 0xDEADBEEF12345678) &&
+           (info.magic_number_2 == 0xBEEFBEEFDEADBEEF);
+}
+
 
 
 // -----------------------
@@ -236,6 +242,12 @@ s3_IP_Packet s3_IP_Host::Receive(s3_IP_Packet packet) {
         .length = packet.length,
         .received = static_cast<size_t>(received),.header_length = sizeof(s3_Communication_Handler::FieldInfo)
     };
+
+    auto header = m_handler.GetHeader(p.data);
+    if (!m_handler.ValidateHeader(header)) {
+        throw std::runtime_error("Invalid header received.");
+    }
+
     return p;
 }
 

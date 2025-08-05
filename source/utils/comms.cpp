@@ -110,8 +110,8 @@ void Comms::TransmitImage(torch::Tensor image) {
     if (m_connection_type != COMMS_CLIENT) {
         throw std::runtime_error("Comms is not a client.");
     }
-    if (image.device() != torch::kCPU)  // Ensure image is on CPU
-        image = image.to(torch::kCPU).contiguous();
+
+    image = image.to(torch::kCPU).contiguous().to(torch::kUInt8);
 
     // Set data packet (first byte is type)
     // Get the size of image, assume tensor is uint8_t of H,W
