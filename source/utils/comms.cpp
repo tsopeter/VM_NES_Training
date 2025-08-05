@@ -482,8 +482,7 @@ Texture Comms::DP_ReceiveImageAsTexture() {
     std::cout<<"INFO: [Comms] Image height: " << image.height << ", width: " << image.width << ", size: " << size << "\n";
 
     // Create texture from image
-    Texture texture;
-    ExportImage(image, "debug_image.png"); // Export for debugging
+    Texture texture = LoadTextureFromImage(image);
     m_dp_offset += size + 2 * sizeof(size_t); // Move past the image data
     return texture;
 }

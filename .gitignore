@@ -12,3 +12,4 @@ tmp/
 __pycache__/phasecreator.cpython-310.pyc
 __pycache__/
 tensor.pt
+debug_image.png
