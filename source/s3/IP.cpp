@@ -98,14 +98,6 @@ bool s3_IP_Client::connect() {
         return false;
     }
 
-    // Enable TCP_NODELAY to disable Nagle's algorithm
-    int flag = 1;
-    if (setsockopt(m_socket_fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag)) < 0) {
-        std::cerr << "Failed to set TCP_NODELAY\n";
-        close(m_socket_fd);
-        return false;
-    }
-
     // Connect to the server
 
     if (::connect(m_socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {

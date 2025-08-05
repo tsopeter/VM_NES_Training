@@ -1016,11 +1016,11 @@ int e18 () {
         t = t.cpu();
         t = t.contiguous().view(-1);
 
+        comms.TransmitInt64(step);
+
         scheduler.Squash();
         double rewards = scheduler.Update();
-
         comms.TransmitDouble(rewards);
-        comms.TransmitInt64(step);
     }
 
 
