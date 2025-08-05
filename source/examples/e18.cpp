@@ -37,6 +37,7 @@
 #endif
 
 // Modules
+#include "../s2/dataloader.hpp"
 #include "../s3/reportable.hpp"
 #include "../s3/window.hpp"
 #include "../s4/utils.hpp"
@@ -591,7 +592,7 @@ public:
     //VonMises m_dist {};
     e18_Normal m_dist {};
 
-    const double std = 1e-0;
+    const double std = 0.5;//1e-0;
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -775,23 +776,52 @@ struct e18_Scheduler {
         marker_1 = marker_t;
     }
 
-    void GenerateTextures_Sequentially () {
+    torch::Tensor GetAction () {
+        torch::Tensor action = model.sample(n_captures_per_frame);
+        return action;
+    }
+
+    torch::Tensor ApplyMask (torch::Tensor &action, torch::Tensor &mask) {
+        // apply the tensor mask to the action.
+        // Tensor mask is in shape [H, W] and consists of 1.0 and 0.0, and action is in shape [N, H, W]
+        // We need to expand the mask to match the action shape.
+        auto mask_expanded = mask.unsqueeze(0).expand({action.size(0), -1, -1});
+        return action * mask_expanded;
+    }
+
+    void GenerateTextures_Sequentially_Without_Action (torch::Tensor &mask) {
+        auto timage = pen->MEncode_u8Tensor4(mask).contiguous().to(torch::kInt32);
+        texture = pen->u8Tensor_Texture(timage);
+    }
+
+    void GenerateTextures_Sequentially (torch::Tensor *mask=nullptr) {
         static int64_t gts_count = 0;
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Called...\n";
         auto t1 = GetCurrentTime_us ();
 
         torch::Tensor action = model.sample(n_captures_per_frame);
+
+
+        if (mask) {
+            // apply the tensor mask to the action.
+            // Tensor mask is in shape [H, W] and consists of 1.0 and 0.0, and action is in shape [N, H, W]
+            // We need to expand the mask to match the action shape.
+            auto mask_expanded = mask->unsqueeze(0).expand({action.size(0), -1, -1});
+            action = action * mask_expanded;
+        }
+
         //torch::Tensor action = model.get_parameters().unsqueeze(0).repeat({20, 1, 1});
         auto t3 = GetCurrentTime_us ();
         Utils::SynchronizeCUDADevices();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Sampling... Took: " << (t3 - t1) << " us\n";
  
         // Save model.get_parameters() as tensor.pt
-        torch::save({model.get_parameters().cpu()}, "tensor.pt");
+        //torch::save({model.get_parameters().cpu()}, "tensor.pt");
 
         //auto timage = pen->MEncode_u8Tensor2(action).contiguous();
-        auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
-        //auto timage = pen->MEncode_u8Tensor4(action).contiguous().to(torch::kInt32);
+        //auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
+        auto timage = pen->MEncode_u8Tensor4(action).contiguous().to(torch::kInt32);
+
         Utils::SynchronizeCUDADevices();
 
         auto t4 = GetCurrentTime_us ();
@@ -801,7 +831,7 @@ struct e18_Scheduler {
         auto t5 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Generating Textures... Took: " << (t5 - t4) << " us\n";
 
-        // Save texture as an Image
+
         
         auto t2 = GetCurrentTime_us ();
         std::cout << "INFO: [e18_Scheduler::GenerateTextures_Sequentially] Took: " << (t2 - t1) << " us\n";
@@ -830,52 +860,6 @@ struct e18_Scheduler {
         return frame_timestamp.load(std::memory_order_acquire);
     }
 
-    /* Create Textures */
-    void GenerateTextures () {
-        auto t1 = GetCurrentTime_us();
-        tex_counter = 0;    /* reset counter */
-
-        /* get actions */
-        auto t3 = GetCurrentTime_us();
-        torch::Tensor actions = model.sample();
-        auto t4 = GetCurrentTime_us();
-
-        std::cout << "INFO: [e18_Scheduler::GenerateTextures] Sampling took " << (t4 - t3) << " us\n";
-
-        // Reshape and interpolate actions outside the loop
-        auto t5 = GetCurrentTime_us ();
-        auto reshaped = actions.view({n_frames_for_n_samples, n_captures_per_frame, model_Height, model_Width});
-        auto splited = torch::nn::functional::interpolate(
-            reshaped,
-            torch::nn::functional::InterpolateFuncOptions()
-                .size(std::vector<int64_t>({window->Height/2, window->Width/2}))
-                .mode(torch::kNearest)
-        );
-        auto t6 = GetCurrentTime_us();
-        std::cout << "INFO: [e18_Scheduler::GenerateTextures] Resizing took " << (t6 - t5) << " us\n";
-
-        for (int i = 0; i < n_frames_for_n_samples; ++i) {
-            auto t7 = GetCurrentTime_us();
-            const auto &frame = splited[i];    /* [n_samples, H, W] */
-
-            auto timage = pen->MEncode_u8Tensor2(frame).contiguous();
-            auto t10 = GetCurrentTime_us();
-            //auto image  = pen->u8MTensor_Image(timage);
-            Texture tex = pen->u8Tensor_Texture(timage);
-            auto t11 = GetCurrentTime_us();
-            //Texture tex = LoadTextureFromImage(image);
-
-            //UnloadImage(image);
-            textures[i] = tex;
-            auto t8 = GetCurrentTime_us();
-            std::cout<<"INFO: [e18_Scheduler::GenerateTextuers] Mapping phase -> bit representation took " << (t10 - t7) << " us\n";
-            std::cout<<"INFO: [e18_Scheduler::GenerateTextuers] Mapping from Tensor -> Image took " << (t11 - t10) << " us\n";
-            std::cout<<"INFO: [e18_Scheduler::GenerateTextuers] Loading Image to Texture took " << (t8 - t11) << " us\n";
-            std::cout<<"INFO: [e18_Scheduler::GenerateTextuers] Mapping from Tensor -> Texture took " << (t8 - t7) << " us\n";
-        }
-        auto t2 = GetCurrentTime_us();
-        std::cout<<"INFO: [e18_Scheduler::GenerateTextures] Took " << (t2 - t1) << " us\n";
-    }
 
     uint64_t get_vsync_count () {
         return camera_reader->get_vsync_count();
@@ -977,6 +961,23 @@ int e18 () {
 
     scheduler.SetMarker1(); /* Set marker 1 time */
     scheduler.InitPBO ();
+
+    // Create the mask here. This will dictate which regions are active
+    s2_Dataloader dataloader {"Datasets"};
+    s2_Data dl = dataloader.load(TRAIN, 1);
+    dl.device(DEVICE);
+
+    auto [number, label] = dl[0];
+    number = number.squeeze().to(torch::kFloat32); // [28, 28]
+
+    // Resize the number to match the height and width of the model
+    // which is 400 * 640
+    number = torch::nn::functional::interpolate(
+        number.unsqueeze(0).unsqueeze(0), 
+        torch::nn::functional::InterpolateFuncOptions()
+            .size(std::vector<int64_t>{scheduler.model_Height, scheduler.model_Width})
+            .mode(torch::kBilinear)
+    ).squeeze(); // [H, W]
     
     while (!WindowShouldClose()) {
         //scheduler.GenerateTextures();
@@ -985,9 +986,9 @@ int e18 () {
         if (step == 0)
             scheduler.prev_count = scheduler.get_vsync_count ();
         for (int i = 0; i < scheduler.n_frames_for_n_samples; ++i) {
-            scheduler.GenerateTextures_Sequentially ();
+            scheduler.GenerateTextures_Sequentially (&number);
             scheduler.DrawTexture();    /* Draw the frame */
-            //scheduler.DrawTexture();    /* Draw the frame */
+            scheduler.DrawTexture();    /* Draw the frame */
             scheduler.InitCapture();
             scheduler.SetMarker2();
 
