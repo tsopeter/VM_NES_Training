@@ -4,14 +4,16 @@ Comms::Comms(CommsType type) : m_connection_type(type) {
     if (type == COMMS_CLIENT) {
         client = new s3_IP_Client("", 0);
     } else if (type == COMMS_HOST) {
-        host = new s3_IP_Host(0);
+        host = new s3_IP_Host(0); 
 
         // set up the staging buffer
         m_staging_buffer = new char[m_staging_buffer_size];
+        std::cout<<"INFO: [Comms] Pointer @ "<<static_cast<void*>(m_staging_buffer)<<"\n";
         if (!m_staging_buffer) {
             throw std::runtime_error("Failed to allocate staging buffer.");
         }
         std::cout<<"INFO: [Comms] Staging buffer of size "<<m_staging_buffer_size<<" bytes allocated.\n";
+        ResetStagingPacket();
     }
 }
 
@@ -37,6 +39,12 @@ void Comms::SetParameters(int port, const std::string ip) {
     } else if (host) {
         host->m_port = port;
     }
+}
+
+void Comms::ResetStagingPacket() {
+    m_staging_packet.data = m_staging_buffer;
+    m_staging_packet.length = m_staging_buffer_size;
+    m_staging_packet.received = 0;
 }
 
 Comms::~Comms() {
@@ -131,6 +139,20 @@ void Comms::TransmitDisconnect() {
     client->Transmit(data, sizeof(data));
 }
 
+void Comms::TransmitString(const std::string &str) {
+    if (m_connection_type != COMMS_CLIENT) {
+        throw std::runtime_error("Comms is not a client.");
+    }
+
+    size_t size = str.size();
+    char data[size + 1];
+    data[0] = COMMS_STRING; // First byte indicates type
+    std::memcpy(data + 1, str.data(), size);
+
+    std::cout<<"INFO: [Comms] Transmitting string of size "<<size<<" bytes.\n";
+    client->Transmit(data, sizeof(data));
+}
+
 // Receive methods (host only)
 CommsType Comms::Receive() {
     if (m_connection_type != COMMS_HOST) {
@@ -138,17 +160,21 @@ CommsType Comms::Receive() {
     }
 
     // Receive data packet into staging buffer
-    std::cout<<"INFO: [Comms] Waiting to receive data...\n";
-    int bytes_received = host->Receive(m_staging_buffer, m_staging_buffer_size);
+    s3_IP_Packet packet {
+        .data = m_staging_buffer,
+        .length = m_staging_buffer_size,
+        .received = 0,
+        .header_length = sizeof(s3_Communication_Handler::FieldInfo)
+    };
 
-    if (bytes_received <= 0) {
+    std::cout<<"INFO: [Comms] Waiting to receive data...\n";
+    m_staging_packet = host->Receive(packet); 
+
+    if (m_staging_packet.received <= 0) {
         throw std::runtime_error("Failed to receive data.");
     }
 
-    std::cout<<"INFO: [Comms] Received "<<bytes_received<<" bytes of data.\n";
-
-    // First byte indicates type
-    CommsType type = static_cast<CommsType>(m_staging_buffer[0]);
+    CommsType type = static_cast<CommsType>(m_staging_packet[0]);
     return type;
 }
 
@@ -156,11 +182,8 @@ double Comms::ReceiveDouble() {
     if (m_connection_type != COMMS_HOST) {
         throw std::runtime_error("Comms is not a host.");
     }
-
-    // Read the data in the staging buffer (read by Receive())
-    char *staging_buffer = m_staging_buffer + 1;
     double value;
-    std::memcpy(&value, staging_buffer, sizeof(double));
+    std::memcpy(&value, &(m_staging_packet[0])+1, sizeof(double));
     return value;
 }
 
@@ -170,9 +193,8 @@ int Comms::ReceiveInt() {
     }
 
     // Read the data in the staging buffer (read by Receive())
-    char *staging_buffer = m_staging_buffer + 1;
     int value;
-    std::memcpy(&value, staging_buffer, sizeof(int));
+    std::memcpy(&value, &(m_staging_packet[0])+1, sizeof(int));
     return value;
 }
 
@@ -182,9 +204,8 @@ int64_t Comms::ReceiveInt64() {
     }
 
     // Read the data in the staging buffer (read by Receive())
-    char *staging_buffer = m_staging_buffer + 1;
     int64_t value;
-    std::memcpy(&value, staging_buffer, sizeof(int64_t));
+    std::memcpy(&value, &(m_staging_packet[0])+1, sizeof(int64_t));
     return value;
 }
 
@@ -193,7 +214,7 @@ Texture Comms::ReceiveImageAsTexture() {
         throw std::runtime_error("Comms is not a host.");
     }
 
-    char *staging_buffer = m_staging_buffer + 1;
+    char *staging_buffer = &(m_staging_packet[0])+1;
     size_t Height, Width;
     std::memcpy(&Height, staging_buffer, sizeof(size_t));
     std::memcpy(&Width, staging_buffer + sizeof(size_t), sizeof(size_t));
@@ -218,7 +239,7 @@ torch::Tensor Comms::ReceiveImage() {
     }
 
     // Read the data in the staging buffer (read by Receive())
-    char *staging_buffer = m_staging_buffer + 1;
+    char *staging_buffer = &(m_staging_packet[0]) + 1;
     size_t Height, Width;
     std::memcpy(&Height, staging_buffer, sizeof(size_t));
     std::memcpy(&Width, staging_buffer + sizeof(size_t), sizeof(size_t));
@@ -232,4 +253,17 @@ torch::Tensor Comms::ReceiveImage() {
     ).clone(); // Clone to ensure tensor owns its data
 
     return image_tensor;
+}
+
+std::string Comms::ReceiveString() {
+    if (m_connection_type != COMMS_HOST) {
+        throw std::runtime_error("Comms is not a host.");
+    }
+
+    // Read the data in the staging buffer (read by Receive())
+    char *staging_buffer = &(m_staging_packet[0]) + 1;
+    size_t size = m_staging_packet.received - 1 - m_staging_packet.header_length; // Exclude type byte and header
+
+    std::string str(staging_buffer, size);
+    return str;
 }

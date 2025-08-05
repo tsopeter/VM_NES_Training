@@ -17,7 +17,8 @@ enum CommsType : uint8_t {
     COMMS_INT64        = 4,
     COMMS_IMAGE        = 5,
     COMMS_DISCONNECT   = 6,
-    COMMS_UNKNOWN_TYPE = 7
+    COMMS_STRING       = 7,
+    COMMS_UNKNOWN_TYPE = 8
 };
 
 class Comms {
@@ -37,12 +38,15 @@ public:
     void TransmitInt64 (int64_t value);
     void TransmitImage (torch::Tensor);
     void TransmitDisconnect();
+    void TransmitString (const std::string &str);
 
     CommsType Receive();
 
     double ReceiveDouble();
     int ReceiveInt();
     int64_t ReceiveInt64();
+    std::string ReceiveString();
+
     torch::Tensor ReceiveImage();
     Texture ReceiveImageAsTexture();
 
@@ -54,6 +58,10 @@ private:
 
     const size_t m_staging_buffer_size = 1024 * 1024; // 1 MB
     char *m_staging_buffer = nullptr;
+
+    void ResetStagingPacket();
+
+    s3_IP_Packet m_staging_packet {};
 };
 
 

@@ -8,6 +8,15 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+struct s3_IP_Packet {
+    char *data;         // pointer to the data buffer
+    size_t length;      // length of the data buffer
+    size_t received;    // number of bytes received
+    size_t header_length;   // number of bytes in the header
+
+    char &operator[](size_t);
+};
+
 /**
  * @brief  Handles adding headers to the communication overhead
  * 
@@ -66,6 +75,7 @@ public:
     void disconnect();
 
     int Receive(void* buffer, size_t length);
+    s3_IP_Packet Receive(s3_IP_Packet packet);
     bool is_connected() const;
 
     uint16_t m_port;

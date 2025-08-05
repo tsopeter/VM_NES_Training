@@ -2,6 +2,19 @@
 #include <cstring> // for memset
 
 // -----------------------
+// s3_IP_Packet
+// -----------------------
+char &s3_IP_Packet::operator[](size_t index) {
+    size_t data_index = index + header_length; // Adjust index to account for header length
+
+    if (data_index >= received) {
+        throw std::out_of_range("Index out of range in s3_IP_Packet");
+    }
+    return data[data_index];
+}
+
+
+// -----------------------
 // s3_Communication_Handler
 // -----------------------
 s3_Communication_Handler::s3_Communication_Handler() {
@@ -187,13 +200,16 @@ int s3_IP_Host::Receive(void* buffer, size_t length) {
     size_t total_received = 0;
 
     // The first packet should *always* contain the header
+    std::cout<<"INFO: [s3_IP_HOST] Buffer Pointer: "<<static_cast<void*>(buf)<<"\n";
+    std::cout<<"INFO: [s3_IP_HOST] Buffer Length: "<<length<<"\n";
     ssize_t received = recv(m_client_fd, buf, length, 0);
-
     // Read the first buffer to get the header
-    auto field_info = m_handler.GetHeader(buf);
+    auto field_info = m_handler.GetHeader(buf); 
 
     ssize_t total_read_required = sizeof(field_info) + field_info.length;
     ssize_t remaining_data = total_read_required - received;
+    std::cout<<"INFO: [s3_IP_HOST] Total Read Required: "<<total_read_required<<"\n";
+    std::cout<<"INFO: [s3_IP_HOST] Remaining Data: "<<remaining_data<<"\n";
     
     // read until remaining data is received
     while (remaining_data > 0) {
@@ -209,22 +225,21 @@ int s3_IP_Host::Receive(void* buffer, size_t length) {
         received += chunk_size;
         remaining_data -= chunk_size;
     }
-    buf += sizeof(field_info); // Move buffer pointer past header
+    //buf += sizeof(field_info); // Move buffer pointer past header
     return static_cast<int>(received);
 }
 
-/*
-int s3_IP_Host::Receive(void* buffer) {
-    if (!m_connected || m_client_fd == -1) return -1;
-
-    constexpr size_t MAX_RECV_SIZE = 1024;
-    int received = recv(m_client_fd, buffer, MAX_RECV_SIZE, 0);
-    if (received < 0) {
-        std::cerr << "Receive failed\n";
-    }
-    return received;
+s3_IP_Packet s3_IP_Host::Receive(s3_IP_Packet packet) {
+    int received = Receive(packet.data, packet.length);
+    s3_IP_Packet p {
+        .data = packet.data,
+        .length = packet.length,
+        .header_length = sizeof(s3_Communication_Handler::FieldInfo),
+        .received = static_cast<size_t>(received)
+    };
+    return p;
 }
-*/
+
 
 bool s3_IP_Host::is_connected() const {
     return m_connected;
