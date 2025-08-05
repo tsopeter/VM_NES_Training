@@ -1,5 +1,113 @@
 #include "comms.hpp"
 
+
+size_t CommsNode::GetSize() {
+    switch (type) {
+        case COMMS_CLIENT:
+        case COMMS_HOST:
+        case COMMS_UNKNOWN_TYPE:
+            return 0;
+        
+        case COMMS_INT:
+            return sizeof(int) + 1; // 1 byte for type + sizeof(int)
+        case COMMS_INT64:
+            return sizeof(int64_t) + 1; // 1 byte for type + sizeof(int64_t)
+        case COMMS_DOUBLE:
+            return sizeof(double) + 1; // 1 byte for type + sizeof(double)
+        case COMMS_STRING:
+            return std::strlen(data) + 1 + 1; // 1 byte for type + strlen(data)
+        case COMMS_IMAGE: {
+            // Assuming data is a pointer to a tensor, we need to know the size of the tensor
+            auto *tensor = reinterpret_cast<torch::Tensor*>(data);
+            int64_t Height = tensor->size(1);
+            int64_t Width = tensor->size(2);
+
+            // Single channel image, so we need to account for the size of the tensor
+            return (Height * Width) + 2 * sizeof(size_t) + 1; // 1 byte for type + 2 * sizeof(size_t) for Height and Width
+        }
+        default:
+            return 0;
+    }
+}
+
+CommsDataPacket::CommsDataPacket() {
+    for (size_t i = 0; i < max_size; ++i) {
+        nodes[i].type = COMMS_UNKNOWN_TYPE;
+        nodes[i].data = nullptr;
+    }
+}
+
+CommsNode &CommsDataPacket::operator[](size_t index) {
+    if (index < max_size) {
+        return nodes[index];
+    }
+    throw std::out_of_range("Index out of range");
+}
+
+char *CommsDataPacket::CreatePacket(size_t &size) {
+    size = 0;
+    // Iterate through the nodes and calculate the required size
+    for (size_t i = 0; i < max_size; ++i) {
+        size += nodes[i].GetSize();
+    }
+
+    // allocate memory for the packet
+    char *packet = new char[size + 1];
+
+    // Populate the packet with data from nodes
+    size_t offset = 0;
+    packet[0] = COMMS_DP;
+    offset += 1; // Move past the type byte
+
+    for (size_t i = 0; i < max_size; ++i) {
+        if (nodes[i].type == COMMS_UNKNOWN_TYPE)
+            continue; // Skip nodes that are not set
+
+
+        packet[offset] = static_cast<char>(nodes[i].type);
+        offset += 1; // Move past the type byte
+        switch (nodes[i].type) {
+            case COMMS_INT: {
+                std::memcpy(packet + offset, nodes[i].data, sizeof(int));
+                offset += sizeof(int);
+                break;
+            }
+            case COMMS_INT64: {
+                std::memcpy(packet + offset, nodes[i].data, sizeof(int64_t));
+                offset += sizeof(int64_t);
+                break;
+            }
+            case COMMS_DOUBLE: {
+                std::memcpy(packet + offset, nodes[i].data, sizeof(double));
+                offset += sizeof(double);
+                break;
+            }
+            case COMMS_STRING: {
+                size_t str_length = std::strlen(nodes[i].data);
+                std::memcpy(packet + offset, nodes[i].data, str_length);
+                offset += str_length;
+                break;
+            }
+            case COMMS_IMAGE: {
+                auto *tensor = reinterpret_cast<torch::Tensor*>(nodes[i].data);
+                int64_t Height = tensor->size(1);
+                int64_t Width = tensor->size(2);
+                std::memcpy(packet + offset, &Height, sizeof(size_t));
+                offset += sizeof(size_t);
+                std::memcpy(packet + offset, &Width, sizeof(size_t));
+                offset += sizeof(size_t);
+                std::memcpy(packet + offset, tensor->data_ptr<uint8_t>(), Height * Width);
+                offset += Height * Width;
+                break;
+            }
+        }
+    }
+    return packet;
+}
+
+
+
+
 Comms::Comms(CommsType type) : m_connection_type(type) {
     if (type == COMMS_CLIENT) {
         client = new s3_IP_Client("", 0);
@@ -153,6 +261,24 @@ void Comms::TransmitString(const std::string &str) {
     client->Transmit(data, sizeof(data));
 }
 
+void Comms::TransmitDataPacket(CommsDataPacket &packet) {
+    if (m_connection_type != COMMS_CLIENT) {
+        throw std::runtime_error("Comms is not a client.");
+    }
+
+    size_t size = 0;
+    char *data = packet.CreatePacket(size);
+    if (size == 0) {
+        std::cerr << "ERROR: [Comms] No data to transmit.\n";
+        delete[] data;
+        return;
+    }
+
+    client->Transmit(data, size);
+    delete[] data; // Clean up the allocated memory
+
+}
+
 // Receive methods (host only)
 CommsType Comms::Receive() {
     if (m_connection_type != COMMS_HOST) {
@@ -175,6 +301,10 @@ CommsType Comms::Receive() {
     }
 
     CommsType type = static_cast<CommsType>(m_staging_packet[0]);
+    if (type == COMMS_DP) {
+        std::cout<<"INFO: [Comms] Received data packet of type COMMS_DP.\n";
+        m_dp_offset = 0; // Reset offset for data packet reading
+    }
     return type;
 }
 
@@ -266,4 +396,80 @@ std::string Comms::ReceiveString() {
 
     std::string str(staging_buffer, size);
     return str;
+}
+
+CommsType Comms::ReceiveDataPacket() {
+    if (m_connection_type != COMMS_HOST) {
+        throw std::runtime_error("Comms is not a host.");
+    }
+
+    // Read the data in the staging buffer (read by Receive())
+    s3_IP_Packet packet = m_staging_packet;
+
+    if (packet.received <= 0) {
+        throw std::runtime_error("Failed to receive data packet.");
+    }
+
+    CommsType type = static_cast<CommsType>(packet[0]);
+    if (type != COMMS_DP) {
+        throw std::runtime_error("Received data packet is not of type COMMS_DP.");
+    }
+    m_dp_offset += 1;
+
+    // Read the first field of the CommsDataPacket
+    CommsType field_0 = static_cast<CommsType>(packet[m_dp_offset]);
+    m_dp_offset += 1; // Move to the next field
+    return field_0;
+}
+
+CommsType Comms::DP_ReadField() {
+    CommsType type = static_cast<CommsType>(m_staging_packet[m_dp_offset]);
+    m_dp_offset += 1; // Move to the next field
+    return type;
+}
+
+double Comms::DP_ReceiveDouble() {
+    // Read the double value from the packet
+    double value;
+    std::memcpy(&value, &(m_staging_packet[m_dp_offset]), sizeof(double));
+    m_dp_offset += sizeof(double);  // move past the double value
+    return value;
+}
+
+int Comms::DP_ReceiveInt() {
+    // Read the int value from the packet
+    int value;
+    std::memcpy(&value, &(m_staging_packet[m_dp_offset]), sizeof(int));
+    m_dp_offset += sizeof(int);  // move past the int value
+    return value;
+}
+
+int64_t Comms::DP_ReceiveInt64() {
+    // Read the int64_t value from the packet
+    int64_t value;
+    std::memcpy(&value, &(m_staging_packet[m_dp_offset]), sizeof(int64_t));
+    m_dp_offset += sizeof(int64_t);  // move past the int64_t value
+    return value;
+}
+
+Texture Comms::DP_ReceiveImageAsTexture() {
+    // Read the image data from the packet
+    char *staging_buffer = &(m_staging_packet[m_dp_offset]);
+    size_t Height, Width;
+    std::memcpy(&Height, staging_buffer, sizeof(size_t));
+    std::memcpy(&Width, staging_buffer + sizeof(size_t), sizeof(size_t));
+    size_t size = Height * Width * sizeof(uint8_t);
+
+    Image image {
+        .data = staging_buffer + 2 * sizeof(size_t),
+        .width = static_cast<int>(Width),
+        .height = static_cast<int>(Height),
+        .mipmaps = 1,
+        .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
+    };
+
+    // Create texture from image
+    Texture texture = LoadTextureFromImage(image);
+    m_dp_offset += size + 2 * sizeof(size_t); // Move past the image data
+    return texture;
 }

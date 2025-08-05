@@ -18,8 +18,28 @@ enum CommsType : uint8_t {
     COMMS_IMAGE        = 5,
     COMMS_DISCONNECT   = 6,
     COMMS_STRING       = 7,
-    COMMS_UNKNOWN_TYPE = 8
+    COMMS_DP           = 8,
+    COMMS_UNKNOWN_TYPE = 9
 };
+
+struct CommsNode {
+    CommsType type;
+    char *data;
+
+    size_t GetSize();
+};
+
+struct CommsDataPacket {
+    static const size_t max_size = 10;
+    CommsNode nodes[max_size];
+
+    CommsDataPacket();
+    
+    CommsNode &operator[](size_t index);
+    char *CreatePacket(size_t &size);
+};
+
+
 
 class Comms {
 public:
@@ -37,8 +57,10 @@ public:
     void TransmitInt (int value);
     void TransmitInt64 (int64_t value);
     void TransmitImage (torch::Tensor);
+    void TransmitDataPacket (CommsDataPacket &packet);
     void TransmitDisconnect();
     void TransmitString (const std::string &str);
+
 
     CommsType Receive();
 
@@ -49,6 +71,13 @@ public:
 
     torch::Tensor ReceiveImage();
     Texture ReceiveImageAsTexture();
+    
+    CommsType ReceiveDataPacket ();
+    CommsType DP_ReadField ();
+    double DP_ReceiveDouble();
+    int DP_ReceiveInt();
+    int64_t DP_ReceiveInt64();
+    Texture DP_ReceiveImageAsTexture();
 
 private:
     s3_IP_Client *client = nullptr;
@@ -62,6 +91,8 @@ private:
     void ResetStagingPacket();
 
     s3_IP_Packet m_staging_packet {};
+
+    int64_t m_dp_offset = 0; // Offset for data packet reading
 };
 
 

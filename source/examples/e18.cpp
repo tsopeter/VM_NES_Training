@@ -790,8 +790,8 @@ struct e18_Scheduler {
         torch::save({model.get_parameters().cpu()}, "tensor.pt");
 
         //auto timage = pen->MEncode_u8Tensor2(action).contiguous();
-        //auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
-        auto timage = pen->MEncode_u8Tensor4(action).contiguous().to(torch::kInt32);
+        auto timage = pen->MEncode_u8Tensor3(action).contiguous().to(torch::kInt32);
+        //auto timage = pen->MEncode_u8Tensor4(action).contiguous().to(torch::kInt32);
         Utils::SynchronizeCUDADevices();
 
         auto t4 = GetCurrentTime_us ();
@@ -987,7 +987,7 @@ int e18 () {
         for (int i = 0; i < scheduler.n_frames_for_n_samples; ++i) {
             scheduler.GenerateTextures_Sequentially ();
             scheduler.DrawTexture();    /* Draw the frame */
-            scheduler.DrawTexture();    /* Draw the frame */
+            //scheduler.DrawTexture();    /* Draw the frame */
             scheduler.InitCapture();
             scheduler.SetMarker2();
 
@@ -1013,9 +1013,8 @@ int e18 () {
         //scheduler.UnloadTextures();
         comms.TransmitImage(t);
 
-        comms.TransmitInt64(step);
-
         scheduler.Squash();
+        comms.TransmitInt64(step);
         double rewards = scheduler.Update();
         comms.TransmitDouble(rewards);
     }
