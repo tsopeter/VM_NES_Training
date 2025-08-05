@@ -1,5 +1,6 @@
 #include "IP.hpp"
 #include <cstring> // for memset
+#include <netinet/tcp.h>  // for TCP_NODELAY
 
 // -----------------------
 // s3_IP_Packet
@@ -96,6 +97,16 @@ bool s3_IP_Client::connect() {
         std::cerr << "Invalid address or address not supported\n";
         return false;
     }
+
+    // Enable TCP_NODELAY to disable Nagle's algorithm
+    int flag = 1;
+    if (setsockopt(m_socket_fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag)) < 0) {
+        std::cerr << "Failed to set TCP_NODELAY\n";
+        close(m_socket_fd);
+        return false;
+    }
+
+    // Connect to the server
 
     if (::connect(m_socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         std::cerr << "Connection to " << m_ip << ":" << m_port << " failed\n";
