@@ -217,7 +217,18 @@ int s3_IP_Host::Receive(void* buffer, size_t length) {
 
     ssize_t total_read_required = sizeof(field_info) + field_info.length;
 
-    if (total_read_required < static_cast<ssize_t>(length)) {
+    if (total_read_required >= static_cast<ssize_t>(length)) {
+        std::cerr << "ERROR: [s3_IP_HOST] Buffer too small for incoming packet\n";
+        std::cerr << "Required: " << total_read_required << ", Provided: " << length << "\n";
+
+        // Print out the field info for debugging
+        std::cerr << "Field Info Length: " << field_info.length << "\n";
+        std::cerr << "Field Info ID: " << field_info.id << "\n";
+        std::cerr << "Field Info Magic Numbers: "
+                  << std::hex << field_info.magic_number_0 << ", "
+                  << field_info.magic_number_1 << ", "
+                  << field_info.magic_number_2 << "\n";
+
         throw std::runtime_error("Buffer too small for incoming packet\n");
     }
  

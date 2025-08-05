@@ -23,16 +23,6 @@ private:
     s3_Window window;
 
     int port_number = 9001;
-
-    std::thread m_thread;
-    std::atomic<bool> end_thread {false};
-    std::atomic<bool> end_program {false};
-
-    moodycamel::ConcurrentQueue<Texture> texture_queue;
-    moodycamel::ConcurrentQueue<int64_t> step_queue;
-    moodycamel::ConcurrentQueue<double> reward_queue;
-
-    void thread_function ();
 };
 
 

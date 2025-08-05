@@ -15,51 +15,14 @@ Viewer::Viewer(int height, int width, int port_number) {
     window.monitor = 0;
     window.load();
     std::cout << "INFO: [Viewer] Window loaded with dimensions: " << height << "x" << width << "\n";
-
-
-    // Start the thread for receiving data
-    m_thread = std::thread(&Viewer::thread_function, this);
 }
 
 Viewer::~Viewer() {
     std::cout << "INFO: [Viewer] Destroying viewer...\n";
 
-    end_thread.store(true, std::memory_order_release);
-    m_thread.join();
 }
 
-void Viewer::thread_function() {
-    while (!end_thread.load(std::memory_order_acquire)) {
-        CommsType type = comms.Receive();
-        std::cout << "INFO: [Viewer] Received communication type: " << static_cast<int>(type) << "\n";
-        switch (type) {
-            case COMMS_INT64: {
-                int64_t step = comms.ReceiveInt64();
-                step_queue.enqueue(step);
-                std::cout << "INFO: [Viewer] Received step count: " << step << "\n";
-                break;
-            }
-            case COMMS_DOUBLE: {
-                double reward = comms.ReceiveDouble();
-                reward_queue.enqueue(reward);
-                std::cout << "INFO: [Viewer] Received reward value: " << reward << "\n";
-                break;
-            }
-            case COMMS_IMAGE: {
-                Texture texture = comms.ReceiveImageAsTexture();
-                texture_queue.enqueue(texture);
-                std::cout << "INFO: [Viewer] Received image texture with dimensions: " << texture.width << "x" << texture.height << "\n";
-                break;
-            }
-            case COMMS_DISCONNECT: {
-                std::cout << "INFO: [Viewer] Disconnecting...\n";
-                end_program.store(true, std::memory_order_release);
-                end_thread.store(true, std::memory_order_release);
-                return;
-            }
-        }
-    }
-}
+
 
 void Viewer::run() {
 
