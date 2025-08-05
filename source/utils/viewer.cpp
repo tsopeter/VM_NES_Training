@@ -64,6 +64,7 @@ void Viewer::run() {
                 first_time_texture = false;
                 m_texture = texture;
                 std::cout << "INFO: [Viewer] Received image texture.\n";
+                std::cout << "INFO: [Viewer] Texture dimensions: " << m_texture.width << "x" << m_texture.height << "\n";
                 break;
             }
             case COMMS_DISCONNECT: {
