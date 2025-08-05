@@ -10,7 +10,7 @@ char &s3_IP_Packet::operator[](size_t index) {
     if (data_index >= received) {
         throw std::out_of_range("Index out of range in s3_IP_Packet");
     }
-    return data[data_index];
+    return data[data_index]; 
 }
 
 
