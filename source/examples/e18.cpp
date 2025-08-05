@@ -1011,16 +1011,25 @@ int e18 () {
         }
 
         //scheduler.UnloadTextures();
-        comms.TransmitImage(t);
-
+        // 
         scheduler.Squash();
-        comms.TransmitInt64(step);
         double rewards = scheduler.Update();
-        comms.TransmitDouble(rewards);
+        CommsDataPacket packet;
+
+        packet[0].type = COMMS_INT64;
+        packet[0].data = reinterpret_cast<char*>(&step);
+
+        packet[1].type = COMMS_DOUBLE;
+        packet[1].data = reinterpret_cast<char*>(&rewards);
+
+        packet[2].type = COMMS_IMAGE;
+        packet[2].data = reinterpret_cast<char*>(&t);
+
+        comms.TransmitDataPacket(packet);
+
     }
 
 
-    comms.TransmitDisconnect();
     // Save Checkpoint
     //scheduler.StoreCheckpoint();
 

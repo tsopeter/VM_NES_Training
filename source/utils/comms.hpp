@@ -88,11 +88,10 @@ private:
     const size_t m_staging_buffer_size = 1024 * 1024; // 1 MB
     char *m_staging_buffer = nullptr;
 
+    size_t m_dp_offset = 0; // Offset for data packet reading
     void ResetStagingPacket();
 
     s3_IP_Packet m_staging_packet {};
-
-    int64_t m_dp_offset = 0; // Offset for data packet reading
 };
 
 

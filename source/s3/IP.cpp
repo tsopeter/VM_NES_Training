@@ -125,6 +125,7 @@ void s3_IP_Client::Transmit(void* data, size_t length) {
     m_handler.CommitData(length);
     auto [packet_size, packet] = m_handler.AddHeader(static_cast<char*>(data), length);
 
+    std::cout<<"INFO: [s3_IP_CLIENT] Transmitting data of size: " << packet_size << " bytes.\n";
 
     ssize_t sent = send(m_socket_fd, packet, packet_size, 0);
     if (sent < 0) {
@@ -235,6 +236,7 @@ int s3_IP_Host::Receive(void* buffer, size_t length) {
     ssize_t remaining_data = total_read_required - received;
     std::cout<<"INFO: [s3_IP_HOST] Total Read Required: "<<total_read_required<<"\n";
     std::cout<<"INFO: [s3_IP_HOST] Remaining Data: "<<remaining_data<<"\n";
+    std::cout<<"INFO: [s3_IP_HOST] Received: "<<received<<"\n";
     
     // read until remaining data is received
     while (remaining_data > 0) {

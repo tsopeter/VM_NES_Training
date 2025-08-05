@@ -19,8 +19,9 @@ size_t CommsNode::GetSize() {
         case COMMS_IMAGE: {
             // Assuming data is a pointer to a tensor, we need to know the size of the tensor
             auto *tensor = reinterpret_cast<torch::Tensor*>(data);
-            int64_t Height = tensor->size(1);
-            int64_t Width = tensor->size(2);
+            *tensor = tensor->to(torch::kCPU).contiguous().to(torch::kUInt8);
+            int64_t Height = tensor->size(0);
+            int64_t Width = tensor->size(1);
 
             // Single channel image, so we need to account for the size of the tensor
             return (Height * Width) + 2 * sizeof(size_t) + 1; // 1 byte for type + 2 * sizeof(size_t) for Height and Width
@@ -53,6 +54,7 @@ char *CommsDataPacket::CreatePacket(size_t &size) {
 
     // allocate memory for the packet
     char *packet = new char[size + 1];
+    size += 1; // +1 for the type byte
 
     // Populate the packet with data from nodes
     size_t offset = 0;
@@ -90,8 +92,8 @@ char *CommsDataPacket::CreatePacket(size_t &size) {
             }
             case COMMS_IMAGE: {
                 auto *tensor = reinterpret_cast<torch::Tensor*>(nodes[i].data);
-                int64_t Height = tensor->size(1);
-                int64_t Width = tensor->size(2);
+                int64_t Height = tensor->size(0);
+                int64_t Width = tensor->size(1);
                 std::memcpy(packet + offset, &Height, sizeof(size_t));
                 offset += sizeof(size_t);
                 std::memcpy(packet + offset, &Width, sizeof(size_t));
@@ -304,6 +306,9 @@ CommsType Comms::Receive() {
     if (type == COMMS_DP) {
         std::cout<<"INFO: [Comms] Received data packet of type COMMS_DP.\n";
         m_dp_offset = 0; // Reset offset for data packet reading
+    
+        std::cout<<"INFO: [Comms] Data packet packet pointer: "<<static_cast<void*>(&m_staging_packet[0])<<"\n";
+        std::cout<<"INFO: [Comms] Data packet received with size: "<<m_staging_packet.received<<" bytes.\n"; 
     }
     return type;
 }
@@ -438,8 +443,11 @@ double Comms::DP_ReceiveDouble() {
 
 int Comms::DP_ReceiveInt() {
     // Read the int value from the packet
-    int value;
-    std::memcpy(&value, &(m_staging_packet[m_dp_offset]), sizeof(int));
+    int value; 
+
+    char *pointer = &(m_staging_packet[m_dp_offset]);
+    std::cout<<"INFO: [Comms] DP_ReceiveInt pointer: "<<static_cast<void*>(pointer)<<"\n";
+    std::memcpy(&value, pointer, sizeof(int));
     m_dp_offset += sizeof(int);  // move past the int value
     return value;
 }
@@ -460,6 +468,9 @@ Texture Comms::DP_ReceiveImageAsTexture() {
     std::memcpy(&Width, staging_buffer + sizeof(size_t), sizeof(size_t));
     size_t size = Height * Width * sizeof(uint8_t);
 
+    std::cout<<"INFO: [Comms] Offset: " << m_dp_offset << ", Height: " << Height << ", Width: " << Width << ", Size: " << size << "\n";
+    std::cout<<"INFO: [Comms] Expected offset after: " << m_dp_offset + size + 2 * sizeof(size_t) << "\n";
+
     Image image {
         .data = staging_buffer + 2 * sizeof(size_t),
         .width = static_cast<int>(Width),
@@ -468,8 +479,11 @@ Texture Comms::DP_ReceiveImageAsTexture() {
         .format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
     };
 
+    std::cout<<"INFO: [Comms] Image height: " << image.height << ", width: " << image.width << ", size: " << size << "\n";
+
     // Create texture from image
-    Texture texture = LoadTextureFromImage(image);
+    Texture texture;
+    ExportImage(image, "debug_image.png"); // Export for debugging
     m_dp_offset += size + 2 * sizeof(size_t); // Move past the image data
     return texture;
 }
