@@ -178,6 +178,20 @@ void s3_Camera_Reportable::p_open () {
     camera.ExposureTime.SetValue(prop.ExposureTime);
     camera.Height.SetValue(prop.Height);
     camera.Width.SetValue(prop.Width);
+    camera.BinningHorizontal.SetValue(prop.BinningHorizontal);
+    camera.BinningVertical.SetValue(prop.BinningVertical);
+    
+    switch (prop.BinningMode) {
+        case s3_Camera_Reportable_Properties::BinningSelectorEnums::BinningSelector_Average:
+            camera.BinningHorizontalMode.SetValue(Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Average);
+            camera.BinningVerticalMode.SetValue(Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Average);
+            break;
+        case s3_Camera_Reportable_Properties::BinningSelectorEnums::BinningSelector_Sum:
+            camera.BinningHorizontalMode.SetValue(Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Sum);
+            camera.BinningVerticalMode.SetValue(Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Sum);
+            break;
+    }
+
 
     camera.TriggerSelector.SetValue(prop.TriggerSelect);
     camera.TriggerMode.SetValue(prop.TriggerMode);
@@ -194,6 +208,7 @@ void s3_Camera_Reportable::p_open () {
     camera.SensorReadoutMode.SetValue(prop.SenReadoutMode);
 
     camera.AcquisitionStatusSelector.SetValue(prop.AcqStatSel);
+
 }
 
 void s3_Camera_Reportable::properties() const {

@@ -25,9 +25,22 @@
 using u8Image = std::vector<uint8_t>;
 
 struct s3_Camera_Reportable_Properties {
+
+    enum BinningSelectorEnums {
+        BinningSelector_Average = 0,
+        BinningSelector_Sum = 1
+    };
+
 // Dimensional
-    int   Height        = 480;
-    int   Width         = 640;
+    int   Height            = 480;
+    int   Width             = 640;
+
+// Binning
+    int   BinningHorizontal = 1;
+    int   BinningVertical   = 1;
+    const BinningSelectorEnums BinningMode = BinningSelectorEnums::BinningSelector_Average;
+
+
 
 // Exposure
     float ExposureTime  = 59.0f; // us
