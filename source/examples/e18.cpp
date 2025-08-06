@@ -309,8 +309,12 @@ struct e18_Camera_Reader {
         cam_properties.AcqFrameRate = 1800;
         cam_properties.Height       = 240;
         cam_properties.Width        = 320;
+        cam_properties.ExposureTime = 59.0f;
         cam_properties.BinningHorizontal = 2;
         cam_properties.BinningVertical   = 2;
+        cam_properties.TriggerDelay = 0.0f;
+        cam_properties.AcqBurstCount = 1;
+        cam_properties.AcqFREnable = true;
 
         // Setup serial port to communicate
         // to FPGA (which handles communication between DLP/PLM + Camera)

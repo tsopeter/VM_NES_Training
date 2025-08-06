@@ -99,8 +99,9 @@ int e22 () {
     /* Create Camera */
     s3_Camera_Reportable_Properties cam_properties;
     cam_properties.AcqFrameRate = 1800;
-    cam_properties.Height       = 320;
-    cam_properties.Width        = 240;
+    cam_properties.Height       = 240;
+    cam_properties.Width        = 320;
+    cam_properties.ExposureTime = 59.0f;
 
     std::cout<<"INFO: [e22] Starting camera.\n";
     s3_Camera_Reportable camera {cam_properties, &mvt};
