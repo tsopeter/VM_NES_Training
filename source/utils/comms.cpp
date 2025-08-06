@@ -19,7 +19,6 @@ size_t CommsNode::GetSize() {
         case COMMS_IMAGE: {
             // Assuming data is a pointer to a tensor, we need to know the size of the tensor
             auto *tensor = reinterpret_cast<torch::Tensor*>(data);
-            *tensor = tensor->to(torch::kCPU).contiguous().to(torch::kUInt8);
             int64_t Height = tensor->size(0);
             int64_t Width = tensor->size(1);
 

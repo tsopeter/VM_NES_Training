@@ -3,6 +3,7 @@
 #include <functional>
 #include <chrono>
 #include "../utils/utils.hpp"
+#include <raylib.h>
 
 std::atomic<bool> s3_r0_can_read = true;
 /**
@@ -20,6 +21,12 @@ public:
         if (ptrGrabResult->GrabSucceeded()) {      
             const uint8_t *raw_data = static_cast<uint8_t*>(ptrGrabResult->GetBuffer());
             u8Image v_raw_data(raw_data, raw_data+size);
+
+            std::cout<<"INFO: [s3_Camera_Reportable_handler::OnImageGrabbed] Image grabbed of size "
+                        <<ptrGrabResult->GetWidth()<<"x"<<ptrGrabResult->GetHeight()
+                        <<", buffer size: "<<ptrGrabResult->GetBufferSize()
+                        <<", timestamp: "<<ptrGrabResult->GetTimeStamp() <<
+                        ", skipped images: "<<ptrGrabResult->GetNumberOfSkippedImages()<<'\n';
 
             if (s3_r0_can_read.load()) {
                 ids->enqueue(v_raw_data);
@@ -175,11 +182,12 @@ void s3_Camera_Reportable::p_open () {
 
     camera.Open();
 
+    std::cout<<"Setting exposure time to "<<prop.ExposureTime<<" us.\n";
     camera.ExposureTime.SetValue(prop.ExposureTime);
     camera.Height.SetValue(prop.Height);
     camera.Width.SetValue(prop.Width);
     camera.BinningHorizontal.SetValue(prop.BinningHorizontal);
-    camera.BinningVertical.SetValue(prop.BinningVertical);
+    camera.BinningVertical.SetValue(prop.BinningVertical); 
     
     switch (prop.BinningMode) {
         case s3_Camera_Reportable_Properties::BinningSelectorEnums::BinningSelector_Average:

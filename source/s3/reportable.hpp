@@ -38,9 +38,6 @@ struct s3_Camera_Reportable_Properties {
 // Binning
     int   BinningHorizontal = 1;
     int   BinningVertical   = 1;
-    const BinningSelectorEnums BinningMode = BinningSelectorEnums::BinningSelector_Average;
-
-
 
 // Exposure
     float ExposureTime  = 59.0f; // us
@@ -57,6 +54,7 @@ struct s3_Camera_Reportable_Properties {
     //const Basler_UsbCameraParams::TriggerSelectorEnums TriggerSelect = Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameStart;
     const Basler_UsbCameraParams::SensorReadoutModeEnums SenReadoutMode = Basler_UsbCameraParams::SensorReadoutModeEnums::SensorReadoutMode_Fast;
     const Basler_UsbCameraParams::AcquisitionStatusSelectorEnums AcqStatSel = Basler_UsbCameraParams::AcquisitionStatusSelectorEnums::AcquisitionStatusSelector_FrameBurstTriggerWait;
+    const BinningSelectorEnums BinningMode = BinningSelectorEnums::BinningSelector_Average;
 };
 
 class s3_Camera_Reportable {

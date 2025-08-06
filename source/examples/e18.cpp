@@ -335,6 +335,8 @@ struct e18_Camera_Reader {
         camera->open();
         camera->start();
 
+        std::cout << *camera << '\n';
+
 
         // Setup image capture thread
         capture_function = [this]()->void{this->capture_handler();};
@@ -466,6 +468,7 @@ struct e18_Camera_Reader {
         std::cout<<"INFO: [e18_Camera_Reader::capture_handler] Init'd.\n";
 
         /* Capture loop */
+
         while (!end_capture.load(std::memory_order_acquire)) {
             int image_count_per_frame = 0;    /* This is per frame  */
 
@@ -481,6 +484,13 @@ struct e18_Camera_Reader {
             std::cout<<"INFO: [e18_Camera_Reader::capture_handler] Reading images...\n";
             while (image_count_per_frame < n_captures_per_frame) {
                 torch::Tensor image = camera->sread();
+
+                std::cout<<"INFO: [e18_Camera_Reader::capture_handler] Image index: "
+                            <<image_count.load(std::memory_order_acquire)<<"\n";
+                std::cout<<"INFO: [e18_Camera_Reader::capture_handler] Image count per frame: "
+                            <<image_count_per_frame<<"\n";
+                std::cout<<"INFO: [e18_Camera_Reader::capture_handler] Image received of size: "
+                         <<image.sizes()<<"\n";
 
                 /* For the first image, store onto images queue */
                 if (image_count_per_frame==0)
