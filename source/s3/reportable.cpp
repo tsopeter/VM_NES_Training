@@ -190,11 +190,11 @@ void s3_Camera_Reportable::p_open () {
     camera.BinningVertical.SetValue(prop.BinningVertical); 
     
     switch (prop.BinningMode) {
-        case s3_Camera_Reportable_Properties::BinningSelectorEnums::BinningSelector_Average:
+        case s3_Camera_Reportable_Properties_BinningSelectorEnums::BinningSelector_Average:
             camera.BinningHorizontalMode.SetValue(Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Average);
             camera.BinningVerticalMode.SetValue(Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Average);
             break;
-        case s3_Camera_Reportable_Properties::BinningSelectorEnums::BinningSelector_Sum:
+        case s3_Camera_Reportable_Properties_BinningSelectorEnums::BinningSelector_Sum:
             camera.BinningHorizontalMode.SetValue(Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Sum);
             camera.BinningVerticalMode.SetValue(Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Sum);
             break;

@@ -24,12 +24,12 @@
  */
 using u8Image = std::vector<uint8_t>;
 
-struct s3_Camera_Reportable_Properties {
+enum s3_Camera_Reportable_Properties_BinningSelectorEnums : int {
+    BinningSelector_Average = 0,
+    BinningSelector_Sum = 1
+};
 
-    enum BinningSelectorEnums {
-        BinningSelector_Average = 0,
-        BinningSelector_Sum = 1
-    };
+struct s3_Camera_Reportable_Properties {
 
 // Dimensional
     int   Height            = 480;
@@ -54,7 +54,7 @@ struct s3_Camera_Reportable_Properties {
     //const Basler_UsbCameraParams::TriggerSelectorEnums TriggerSelect = Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameStart;
     const Basler_UsbCameraParams::SensorReadoutModeEnums SenReadoutMode = Basler_UsbCameraParams::SensorReadoutModeEnums::SensorReadoutMode_Fast;
     const Basler_UsbCameraParams::AcquisitionStatusSelectorEnums AcqStatSel = Basler_UsbCameraParams::AcquisitionStatusSelectorEnums::AcquisitionStatusSelector_FrameBurstTriggerWait;
-    const BinningSelectorEnums BinningMode = BinningSelectorEnums::BinningSelector_Average;
+    const s3_Camera_Reportable_Properties_BinningSelectorEnums BinningMode = s3_Camera_Reportable_Properties_BinningSelectorEnums::BinningSelector_Average;
 };
 
 class s3_Camera_Reportable {
