@@ -278,7 +278,6 @@ struct e18_Camera_Reader {
 
     // These classes handle
     // camera itself
-    s3_Camera_Reportable_Properties cam_properties;
     s3_Camera_Reportable *camera = nullptr;
 
     /* Capture thread */
@@ -306,12 +305,13 @@ struct e18_Camera_Reader {
 
     e18_Camera_Reader (e18_Image_Processor *p_processor) :
     processor (p_processor) {
+        s3_Camera_Reportable_Properties cam_properties;
         cam_properties.AcqFrameRate = 1800;
         cam_properties.Height       = 240;
         cam_properties.Width        = 320;
         cam_properties.ExposureTime = 59.0f;
-        cam_properties.BinningHorizontal = 2;
-        cam_properties.BinningVertical   = 2;
+        //cam_properties.BinningHorizontal = 2;
+        //cam_properties.BinningVertical   = 2;
         cam_properties.TriggerDelay = 0.0f;
         cam_properties.AcqBurstCount = 1;
         cam_properties.AcqFREnable = true;
@@ -335,6 +335,7 @@ struct e18_Camera_Reader {
             mvt = new macOS_Vsync_Timer (0, timer);
         #endif
         
+        std::cout<<"INFO: [e18_Camera_Reader] Exposure Time: " << cam_properties.ExposureTime << " us\n"; 
         camera = new s3_Camera_Reportable (cam_properties, mvt);
         camera->open();
         camera->start();

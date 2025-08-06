@@ -186,9 +186,10 @@ void s3_Camera_Reportable::p_open () {
     camera.ExposureTime.SetValue(prop.ExposureTime);
     camera.Height.SetValue(prop.Height);
     camera.Width.SetValue(prop.Width);
-    camera.BinningHorizontal.SetValue(prop.BinningHorizontal);
-    camera.BinningVertical.SetValue(prop.BinningVertical); 
+    //camera.BinningHorizontal.SetValue(prop.BinningHorizontal);
+    //camera.BinningVertical.SetValue(prop.BinningVertical); 
     
+    /*
     switch (prop.BinningMode) {
         case s3_Camera_Reportable_Properties_BinningSelectorEnums::BinningSelector_Average:
             camera.BinningHorizontalMode.SetValue(Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Average);
@@ -199,6 +200,7 @@ void s3_Camera_Reportable::p_open () {
             camera.BinningVerticalMode.SetValue(Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Sum);
             break;
     }
+    */
 
 
     camera.TriggerSelector.SetValue(prop.TriggerSelect);
