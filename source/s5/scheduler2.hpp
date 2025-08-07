@@ -52,11 +52,15 @@ public:
     );
 
     void SetupCamera (
-        int Height=240, 
-        int Width=320, 
+        int Height=480, 
+        int Width=640, 
         float ExposureTime=59.0f, 
-        int BinningHorizontal=2,
-        int BinningVertical=2
+        int BinningHorizontal=1,
+        int BinningVertical=1,
+        int cam_LineTrigger=3,
+        bool cam_UseZones=false,
+        int cam_NumberOfZones=4,
+        int cam_ZoneSize=60
     );
 
     void SetupPEncoder ();
@@ -78,6 +82,21 @@ public:
     void ReadFromCamera();
 
     // Pipeline for processing the data
+    /**
+     * @brief Processes the data pipeline.
+     * 
+     * Important notice:
+     * This method will run on a separate thread and will continuously
+     * process data from the camera2process queue using the provided
+     * process_function. The processed data will be stored in the outputs queue.
+     * 
+     * Note: The input tensor will differ based on how the camera is configured.
+     * If the zones are disabled, the input tensor will be a single channel image
+     * with shape [Height, Width].
+     * 
+     * However, if the zones are enabled, the input tensor will be
+     * a multi-channel image with shape [NumberOfZones * NumberOfZones, ZoneSize, ZoneSize].
+     */
     void ProcessDataPipeline(
         std::function<torch::Tensor(torch::Tensor)> process_function
     );
@@ -104,11 +123,15 @@ public:
         int fps=30,
 
         /* Camera */
-        int cam_Height=240, 
-        int cam_Width=320, 
+        int cam_Height=480, 
+        int cam_Width=640, 
         float cam_ExposureTime=59.0f, 
-        int cam_BinningHorizontal=2,
-        int cam_BinningVertical=2,
+        int cam_BinningHorizontal=1,
+        int cam_BinningVertical=1,
+        int cam_LineTrigger=3,
+        bool cam_UseZones=false,
+        int cam_NumberOfZones=4,
+        int cam_ZoneSize=60,
 
         /* Optimizer */
         s4_Optimizer *opt=nullptr,
@@ -121,6 +144,8 @@ private:
     // Private methods 
     torch::Tensor ReadCamera();
     void CameraThread();
+    torch::Tensor ReadCamera_1();
+    torch::Tensor ReadCamera_2();
 
     // Handles the timing between VSYNC pulses and camera
     sched2VSYNCtimer *mvt = nullptr;

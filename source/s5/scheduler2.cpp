@@ -44,13 +44,21 @@ void Scheduler2::SetupCamera(
     int Width, 
     float ExposureTime, 
     int BinningHorizontal,
-    int BinningVertical
+    int BinningVertical,
+    int cam_LineTrigger,
+    bool cam_UseZones,
+    int cam_NumberOfZone,
+    int cam_ZoneSize
 ) {
     camera.Height = Height;
     camera.Width  = Width;
     camera.ExposureTime = ExposureTime;
     camera.BinningHorizontal = BinningHorizontal;
     camera.BinningVertical = BinningVertical;
+    camera.LineTrigger = cam_LineTrigger;
+    camera.UseZones = cam_UseZones;
+    camera.NumberOfZones = cam_NumberOfZone;
+    camera.ZoneSize = cam_ZoneSize;
 }
 
 void Scheduler2::SetupPEncoder() {
@@ -94,7 +102,7 @@ void Scheduler2::StopCamera() {
     std::cout << "INFO: [Scheduler2::StopCamera] Camera closed.\n";
 }
 
-torch::Tensor Scheduler2::ReadCamera() {
+torch::Tensor Scheduler2::ReadCamera_1() {
     // camera.sread() returns a u8Image
     u8Image image = camera.sread();
     
@@ -106,6 +114,32 @@ torch::Tensor Scheduler2::ReadCamera() {
     ).clone();
 
     return tensor;
+}
+
+torch::Tensor Scheduler2::ReadCamera_2() {
+    // There's gotta be
+    // a better way to do this...
+
+    auto [_, zones] = camera.pread();
+
+    std::vector<torch::Tensor> zone_tensors;
+    for (auto &zone : zones) {
+        // Convert u8Image to torch::Tensor
+        torch::Tensor tensor = torch::from_blob(
+            zone.data(), 
+            {camera.ZoneSize, camera.ZoneSize}, 
+            torch::kUInt8
+        ).clone();
+        zone_tensors.push_back(tensor);
+    }
+    return torch::stack(zone_tensors);  // [N, H, W]
+}
+
+torch::Tensor Scheduler2::ReadCamera() {
+    switch (camera.UseZones) {
+        case false: return ReadCamera_1();
+        case true : return ReadCamera_2();
+    }
 }
 
 
@@ -282,6 +316,10 @@ void Scheduler2::Start (
         float cam_ExposureTime, 
         int cam_BinningHorizontal,
         int cam_BinningVertical,
+        int cam_LineTrigger,
+        bool cam_UseZones,
+        int cam_NumberOfZones,
+        int cam_ZoneSize,
 
         /* Optimizer */
         s4_Optimizer *opt,
@@ -289,8 +327,27 @@ void Scheduler2::Start (
         /* Processing function */
         std::function<torch::Tensor(torch::Tensor)> process_function
 ) {
-    SetupWindow(monitor, Height, Width, wmode, fmode, fps);
-    SetupCamera(cam_Height, cam_Width, cam_ExposureTime, cam_BinningHorizontal, cam_BinningVertical);
+    SetupWindow(
+        monitor, 
+        Height, 
+        Width, 
+        wmode, 
+        fmode, 
+        fps
+    );
+        
+    SetupCamera(
+        cam_Height, 
+        cam_Width,
+        cam_ExposureTime, 
+        cam_BinningHorizontal, 
+        cam_BinningVertical,
+        cam_LineTrigger,
+        cam_UseZones,
+        cam_NumberOfZones,
+        cam_ZoneSize
+    );
+
     StartWindow();
     StartCamera();
     ProcessDataPipeline(process_function);
