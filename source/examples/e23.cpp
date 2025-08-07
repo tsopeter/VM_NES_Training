@@ -134,6 +134,7 @@ public:
 
 
 int e23 () {
+    int Height = 240/2, Width = 320/2; /* Camera dimensions */
     Pylon::PylonAutoInitTerm init {};
     Scheduler2 scheduler {};
 
@@ -145,7 +146,7 @@ int e23 () {
     // HComms comms {"192.168.193.20", 9001};
 
     // Set the target
-    torch::Tensor target_0 = torch::zeros({240, 320}, torch::kFloat32);
+    torch::Tensor target_0 = torch::zeros({Height, Width}, torch::kFloat32);
     target_0.index_put_(
         {torch::indexing::Slice(),
             torch::indexing::Slice(scheduler.camera.Width/2 - 8, scheduler.camera.Width/2 + 8)},
@@ -179,8 +180,8 @@ int e23 () {
         30,
 
         /* Camera */
-        240,
-        320,
+        Height,
+        Width,
         59.0f,
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */

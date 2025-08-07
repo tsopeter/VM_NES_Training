@@ -142,6 +142,13 @@ void Cam2::GetProperties() const {
     std::cout << "Exposure Time: " << camera.ExposureTime.GetValue() << " us\n";
     std::cout << "Binning Horizontal: " << camera.BinningHorizontal.GetValue() << '\n';
     std::cout << "Binning Vertical: " << camera.BinningVertical.GetValue() << '\n';
+    std::cout << "Frame Rate: " << camera.AcquisitionFrameRate.GetValue() << " Hz\n";
+    std::cout << "Trigger Mode: " << camera.TriggerMode.ToString() << '\n';
+    std::cout << "Trigger Source: " << camera.TriggerSource.ToString() << '\n';
+    std::cout << "Trigger Activation: " << camera.TriggerActivation.ToString() << '\n';
+    std::cout << "Trigger Selector: " << camera.TriggerSelector.ToString() << '\n';
+    std::cout << "Sensor Readout Mode: " << camera.SensorReadoutMode.ToString() << '\n';
+    std::cout << "Acquisition Status Selector: " << camera.AcquisitionStatusSelector.ToString() << '\n';
 }
 
 Cam2_Handler::Cam2_Handler() {
