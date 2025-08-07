@@ -11,6 +11,7 @@
 #include "examples/e21.hpp"
 #include "examples/e22.hpp"
 #include "examples/e23.hpp"
+#include "examples/e24.hpp"
 #include "s3/IP.hpp"
 #include "utils/utils.hpp"
 #include "s3/window.hpp"
@@ -32,5 +33,6 @@ void run_code () {
 }
 
 int main () {
-    run_code ();
+    e24();
+   //run_code ();
 }

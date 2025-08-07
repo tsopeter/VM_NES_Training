@@ -1,10 +1,29 @@
 #include "e24.hpp"
 
 #include "../s5/cam2.hpp"
-#include "../s3/Serial.hpp"
-#include "../s3/window.hpp"
+#include "raylib.h"
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include <functional>
 
 int e24() {
+    std::function<void(std::vector<u8Image>, int)> SaveBatchImages = [](std::vector<u8Image> images, int ZoneSize) {
+        for (size_t i = 0; i < images.size(); ++i) {
+            std::string filename = "e24_image_" + std::to_string(i) + ".png";
+            Image image;
+            image.data = images[i].data();
+            image.width = ZoneSize;
+            image.height = ZoneSize;
+            image.mipmaps = 1;
+            image.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+            ExportImage(image, filename.c_str());
+            std::cout << "Image saved to " << filename << '\n';
+        }
+    };
+
+
+
     Pylon::PylonAutoInitTerm autoInitTerm;
     Cam2 camera;
 
@@ -17,50 +36,39 @@ int e24() {
     // Set the camera to use zones
     camera.UseZones = true;
     camera.NumberOfZones = 4;
-    camera.ZoneSize = 65;
-
+    camera.ZoneSize = 60;
     camera.open();
     camera.start();
 
-    Serial serial;
-    serial.Open("/dev/ttyUSB0", 115200);
+    // print properties
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    camera.GetProperties();
 
-    // Init window
-    s3_Window window;
-    window.Height = camera.Height;
-    window.Width = camera.Width;
-    window.monitor = 0; // Use the primary monitor
-    window.title = "Camera 2 Example";
-    window.wmode = s3_Windowing_Mode::WINDOWED;
-    window.fmode = s3_TargetFPS_Mode::SET_TARGET_FPS;
-    window.load();
+    // If the camera has not taken a picture in 5 seconds, exit the program
+    // sread is a blocking call.
+    
+    // start a thread to time
+    auto[img, zones] = camera.pread();
 
-    // Main loop
-    while (!WindowShouldClose()) {
-        u8Image image = camera.sread(); // u8Image is a simple vector<uint8_t>
-        BeginDrawing();
-        if (!image.empty()) {
-            Image image;
-            image.data = image.data,
-            image.width = camera.Width;
-            image.height = camera.Height;
-            image.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
-            image.mipmaps = 1;
-            Texture2D texture = LoadTextureFromImage(image);
-            ClearBackground(RAYWHITE);
-            DrawTexture(texture, 0, 0, WHITE);
-            UnloadTexture(texture);
-        }
-        EndDrawing();
-        
-        // Press 's' to send a signal over serial
-        if (IsKeyPressed(KEY_S)) {
-            serial.Signal();
-            std::cout << "Signal sent over serial port.\n";
-        }
-    }
+    // Save the image to a file
+    std::string filename = "e24_image.png";
+    Image image;
+    image.data = img.data();
+    image.width = camera.Width;
+    image.height = camera.Height;
+    image.mipmaps = 1;
+    image.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+    ExportImage(image, filename.c_str());
 
+    std::cout << "Image saved to " << filename << '\n';
+    std::cout << "Image has size: " << img.size() << " bytes\n";
+    std::cout << "Image has dimensions: " << camera.Width << "x" << camera.Height << '\n';
     camera.close();
-    serial.Close();
+
+    // Print the number of images captured by the camera
+    std::cout << "Number of images captured by the camera: " << camera.ImagesCapturedByCamera() << '\n';
+
+    SaveBatchImages(zones, camera.ZoneSize);
+
     return 0;
 }

@@ -19,6 +19,34 @@ u8Image Cam2::sread() {
     return image;
 }
 
+std::pair<u8Image, std::vector<u8Image>> Cam2::pread() {
+    std::vector<u8Image> images;
+    images.reserve(NumberOfZones * NumberOfZones);
+    u8Image image = sread();
+
+    // Partition the images into zones
+    for (int i = 0; i < NumberOfZones; ++i) {
+        for (int j = 0; j < NumberOfZones; ++j) {
+            u8Image zone_ij;
+            zone_ij.resize(ZoneSize * ZoneSize);
+
+            int y_start = i * ZoneSize;
+            int x_start = j * (ZoneSize + GapX);
+
+            int x_end   = x_start + ZoneSize;
+            for (int k = 0; k < ZoneSize; ++k) {
+                std::memcpy(
+                    zone_ij.data() + (k * ZoneSize),
+                    image.data() + (y_start * Width + x_start) + (k * Width),
+                    ZoneSize * sizeof(uint8_t)
+                );
+            }
+            images.push_back(std::move(zone_ij));
+        }
+    }
+    return {image, images};
+}
+
 void Cam2::open() {
     try {
         p_open();
@@ -26,11 +54,14 @@ void Cam2::open() {
     }
     catch (const std::exception &e) {
         std::cerr << "Cam2::open() An exception has occurred!\n" << e.what() << '\n';
+        camera.Close();
         exit(EXIT_FAILURE);
     }
     catch (const Pylon::GenericException &e) {
         std::cerr << "Cam2::open() An exception has occurred!\n" << e.GetDescription() << '\n';
+        camera.Close();
         exit(EXIT_FAILURE);
+        
     }
 }
 
@@ -48,14 +79,29 @@ void Cam2::p_open () {
 
     camera.Open();
 
-    // Set camera Properties
+    // Disabling previous zones
+    std::cout << "INFO: [Cam2::p_open()] Disabling previous zones...\n";
+    DisableZones();
+    ResetCameraView();
+
+    // Set the exposure time
+    std::cout << "INFO: [Cam2::p_open()] Setting Exposure Time to " << ExposureTime << " us\n";
     camera.ExposureTime.SetValue(ExposureTime);
+
+    // Set the dimensions of the camera
+    std::cout << "INFO: [Cam2::p_open()] Setting Camera Dimensions to " << Width << "x" << Height << '\n';
     camera.Height.SetValue(Height);
     camera.Width.SetValue(Width);
+
+    // Use centering
+    std::cout << "INFO: [Cam2::p_open()] Setting Centering to true\n";
+    camera.CenterX.SetValue(true);
+    camera.CenterY.SetValue(true);
+
+    // Set binning
+    std::cout << "INFO: [Cam2::p_open()] Setting Binning to " << BinningHorizontal << "x" << BinningVertical << '\n';
     camera.BinningHorizontal.SetValue(BinningHorizontal);
     camera.BinningVertical.SetValue(BinningVertical);
-
-    // Set the Binning Mode to be Average
     camera.BinningHorizontalMode.SetValue(
         Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Average
     );
@@ -63,52 +109,126 @@ void Cam2::p_open () {
         Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Average
     );
 
+    // Set the camera to use frame, not burst mode
+    std::cout << "INFO: [Cam2::p_open()] Setting Camera to Frame Mode\n";
+    camera.TriggerSelector.SetValue(
+        Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameStart
+    );
+
     // Set the  trigger mode to be On
+    std::cout << "INFO: [Cam2::p_open()] Setting Trigger Mode to On\n";
     camera.TriggerMode.SetValue(
         Basler_UsbCameraParams::TriggerModeEnums::TriggerMode_On
     );
 
     // Set the trigger to Line 3
+    Basler_UsbCameraParams::TriggerSourceEnums trigger_source[] = {
+        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_Software,
+        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_Line1,
+        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_Line3,
+        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_Line4,
+        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_SoftwareSignal1,
+        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_SoftwareSignal2,
+        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_SoftwareSignal3
+    };
+
+    // Conver the LineTrigger to the corresponding trigger source
+    switch (LineTrigger) {
+        case 0:
+            LineTrigger = 0; // Software
+            break;
+        case 1:
+            LineTrigger = 1; // Line 1
+            break;
+        case 2:
+            throw std::runtime_error("LineTrigger 2 is not supported.");
+        case 3:
+            LineTrigger = 2; // Line 3
+            break;
+        case 4:
+            LineTrigger = 3; // Line 4
+            break;
+        case 5:
+            LineTrigger = 4; // Software Signal 1
+            break;
+        case 6:
+            LineTrigger = 5; // Software Signal 2
+            break;
+        case 7:
+            LineTrigger = 6; // Software Signal 3
+            break;
+        default:
+            throw std::runtime_error("Invalid LineTrigger value. Use values between 0 and 6.");
+    }
+
+
+    std::cout << "INFO: [Cam2::p_open()] Setting Trigger Source to " << trigger_source[LineTrigger] << '\n';
     camera.TriggerSource.SetValue(
-        Basler_UsbCameraParams::TriggerSourceEnums::TriggerSource_Line3
+        trigger_source[LineTrigger]
     );
 
     // Set the trigger activation to be Falling Edge
+    std::cout << "INFO: [Cam2::p_open()] Setting Trigger Activation to Falling Edge\n";
     camera.TriggerActivation.SetValue(
         Basler_UsbCameraParams::TriggerActivationEnums::TriggerActivation_FallingEdge
     );
 
-    // Use Frame Burst Start
-    camera.TriggerSelector.SetValue(
-        Basler_UsbCameraParams::TriggerSelectorEnums::TriggerSelector_FrameBurstStart
-    );
-
     // Use Fast Readout Mode
+    std::cout << "INFO: [Cam2::p_open()] Setting Sensor Readout Mode to Fast\n";
     camera.SensorReadoutMode.SetValue(
         Basler_UsbCameraParams::SensorReadoutModeEnums::SensorReadoutMode_Fast
     );
 
-    // Set acq selector to Frame Burst Trigger Wait
+    // Set the acquisition status selector to Frame Trigger Wait
+    std::cout << "INFO: [Cam2::p_open()] Setting Acquisition Status Selector to Frame Trigger Wait\n";
     camera.AcquisitionStatusSelector.SetValue(
-        Basler_UsbCameraParams::AcquisitionStatusSelectorEnums::AcquisitionStatusSelector_FrameBurstTriggerWait
+        Basler_UsbCameraParams::AcquisitionStatusSelectorEnums::AcquisitionStatusSelector_FrameTriggerWait
     );
 
     // Set the trigger delay to 0
+    std::cout << "INFO: [Cam2::p_open()] Setting Trigger Delay to 0\n";
     camera.TriggerDelay.SetValue(0.0f);
 
-    // Set the acquisition burst frame count
-    camera.AcquisitionBurstFrameCount.SetValue(1);
-
-    // Enable the acquisition frame rate
-    camera.AcquisitionFrameRateEnable.SetValue(true);
-
-    // Set the acquisition frame rate
-    camera.AcquisitionFrameRate.SetValue(1800.0f);
-
-    if (UseZones) ModifyForZones();
+    if (UseZones) EnableZones();
 }
 
-void Cam2::ModifyForZones() {
+void Cam2::ResetCameraView() {
+    // Reset the camera view to the default properties
+    std::cout << "INFO: [Cam2::ResetCameraView] Resetting camera offset and centering to default.\n";
+
+    // Disable centering
+    camera.CenterX.SetValue(false);
+    camera.CenterY.SetValue(false);
+    
+    // Reset the offset to 0
+    camera.OffsetX.SetValue(0);
+    camera.OffsetY.SetValue(0);
+
+}
+
+void Cam2::DisableZones() {
+    // statically define the zone properties
+    static Basler_UsbCameraParams::ROIZoneSelectorEnums zone_selection[] = {
+        Basler_UsbCameraParams::ROIZoneSelector_Zone0,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone1,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone2,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone3,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone4,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone5,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone6,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone7
+    };
+
+    // Disable all zones (if any)
+    for (int i = 0; i < 8; ++i) {
+        camera.ROIZoneSelector.SetValue(zone_selection[i]);
+        camera.ROIZoneMode.SetValue(
+            Basler_UsbCameraParams::ROIZoneMode_Off
+        );
+    }
+}
+
+void Cam2::EnableZones() {
     // statically define the zone properties
     static Basler_UsbCameraParams::ROIZoneSelectorEnums zone_selection[] = {
         Basler_UsbCameraParams::ROIZoneSelector_Zone0,
@@ -136,21 +256,18 @@ void Cam2::ModifyForZones() {
     // This means that the gap size is
     // GapSize = (Width - NumberOfZones * ZoneSize) / (NumberOfZones - 1);
     int gap_size_w = (Width - NumberOfZones * ZoneSize) / (NumberOfZones + 1);
+    GapX = gap_size_w;
 
     // Calculate the gap_size_h, for height
     int gap_size_h = (Height - NumberOfZones * ZoneSize) / (NumberOfZones + 1);
+    GapY = gap_size_h;
 
     // Reset the camera Width
     Width = NumberOfZones * ZoneSize + (NumberOfZones - 1) * gap_size_w;
     camera.Width.SetValue(Width);
 
-    // Disable all zones (if any)
-    for (int i = 0; i < 8; ++i) {
-        camera.ROIZoneSelector.SetValue(zone_selection[i]);
-        camera.ROIZoneMode.SetValue(
-            Basler_UsbCameraParams::ROIZoneMode_Off
-        );
-    }
+    Height = NumberOfZones * ZoneSize;
+    // Height is automatically controlled by the zoning feature
 
     for (int i = 0; i < NumberOfZones; ++i) {
         // Select the zone and turn it on.
@@ -205,12 +322,13 @@ void Cam2::GetProperties() const {
     std::cout << "Binning Horizontal: " << camera.BinningHorizontal.GetValue() << '\n';
     std::cout << "Binning Vertical: " << camera.BinningVertical.GetValue() << '\n';
     std::cout << "Frame Rate: " << camera.AcquisitionFrameRate.GetValue() << " Hz\n";
-    std::cout << "Trigger Mode: " << camera.TriggerMode.ToString() << '\n';
-    std::cout << "Trigger Source: " << camera.TriggerSource.ToString() << '\n';
-    std::cout << "Trigger Activation: " << camera.TriggerActivation.ToString() << '\n';
-    std::cout << "Trigger Selector: " << camera.TriggerSelector.ToString() << '\n';
-    std::cout << "Sensor Readout Mode: " << camera.SensorReadoutMode.ToString() << '\n';
-    std::cout << "Acquisition Status Selector: " << camera.AcquisitionStatusSelector.ToString() << '\n';
+    std::cout << "Trigger Mode: " << camera.TriggerMode.ToString() << ": " << camera.TriggerMode.GetValue() << '\n';
+
+    std::cout << "Trigger Source: " << camera.TriggerSource.ToString() << ": " << camera.TriggerSource.GetValue() << '\n';
+    std::cout << "Trigger Activation: " << camera.TriggerActivation.ToString() << ": " << camera.TriggerActivation.GetValue() << '\n';
+    std::cout << "Trigger Selector: " << camera.TriggerSelector.ToString() << ": " << camera.TriggerSelector.GetValue() << '\n';
+    std::cout << "Sensor Readout Mode: " << camera.SensorReadoutMode.ToString() << ": " << camera.SensorReadoutMode.GetValue() << '\n';
+    std::cout << "Acquisition Status Selector: " << camera.AcquisitionStatusSelector.ToString() << ": " << camera.AcquisitionStatusSelector.GetValue() << '\n';
 
     std::cout << "Zone Properties:\n";
     std::cout << "Use Zones: " << (UseZones ? "Yes" : "No") << '\n';
@@ -242,7 +360,11 @@ void Cam2_Handler::OnImageGrabbed(Pylon::CInstantCamera &camera,
         }
 
         // Print image count
-        std::cout << "INFO: [Cam2_Handler::OnImageGrabbed] Image count: "
-                  << image_count->load(std::memory_order_acquire) << '\n';
+        //std::cout << "INFO: [Cam2_Handler::OnImageGrabbed] Image count: "
+        //          << image_count->load(std::memory_order_acquire) << '\n';
     }
+}
+
+int64_t Cam2::ImagesCapturedByCamera() const {
+    return image_count.load(std::memory_order_acquire);
 }

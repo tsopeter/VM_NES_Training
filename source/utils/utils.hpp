@@ -2,7 +2,6 @@
 #define utils_utils_hpp__
 
 #include <cstdint>
-#include <torch/torch.h>
 #include <vector>
 
 namespace Utils {

@@ -9,7 +9,7 @@ uint64_t Utils::GetCurrentTime_us () {
 
 #ifdef __linux__
 #define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+#include <GL/gl.h> 
 #include <GL/glext.h>
 
 #include <cuda_runtime.h>

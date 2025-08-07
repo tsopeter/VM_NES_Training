@@ -44,6 +44,10 @@ public:
     bool UseZones      = false;
     int  NumberOfZones =  4;
     int  ZoneSize      = 65; // px
+
+    //
+    // This is used for triggering the camera
+    int LineTrigger    = 3;
     
     Cam2();
     ~Cam2();
@@ -52,15 +56,36 @@ public:
     void close();
     void start();
 
+    /**
+     * @brief Read an image from the camera.
+     * 
+     * This method will block until an image is available.
+     * It will return the image as a vector of uint8_t.
+     */
     u8Image sread();
 
+    /**
+     * @brief Read an image from the camera.
+     * 
+     * Similar to sread(), it will block until an image is available.
+     * However, if you are using zones, it will read the image from the camera
+     * and structure it into an image with only the zones that are enabled.
+     * 
+     * The total number of zones is determined by the 
+     * square of NumberOfZones.
+     */
+    std::pair<u8Image, std::vector<u8Image>> pread();
+
+    int64_t ImagesCapturedByCamera () const;
 
     void GetProperties() const;
 private:
     void create_handle();
     void destroy_handle();
 
-    void ModifyForZones();
+    void DisableZones();
+    void EnableZones();
+    void ResetCameraView();
 
     void p_open();
 
@@ -73,7 +98,8 @@ private:
     Pylon::CBaslerUsbInstantCamera camera;
     Cam2_Handler handler;
 
-    // Camera Properties
+    // Zoning Properties
+    int GapX, GapY;
 };
 
 #endif
