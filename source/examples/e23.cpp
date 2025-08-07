@@ -185,6 +185,10 @@ int e23 () {
         59.0f,
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
+        3,  /* Line Trigger */
+        false,  /* Use Zones */
+        4,  /* Number of Zones */
+        60, /* Zone Size */
 
         /* Optimizer */
         &opt,
