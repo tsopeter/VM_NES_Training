@@ -104,6 +104,68 @@ void Cam2::p_open () {
 
     // Set the acquisition frame rate
     camera.AcquisitionFrameRate.SetValue(1800.0f);
+
+    if (UseZones) ModifyForZones();
+}
+
+void Cam2::ModifyForZones() {
+    // statically define the zone properties
+    static Basler_UsbCameraParams::ROIZoneSelectorEnums zone_selection[] = {
+        Basler_UsbCameraParams::ROIZoneSelector_Zone0,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone1,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone2,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone3,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone4,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone5,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone6,
+        Basler_UsbCameraParams::ROIZoneSelector_Zone7
+    };
+
+    // Set the Width and Height of the camera to be
+    // the largest available...
+    Height = 480;
+    Width  = 640;
+
+    // Set the camera properties
+    camera.Height.SetValue(Height);
+    camera.Width.SetValue(Width);
+
+    // Calculate the new width of the image
+    // We know that the width of the new image will essentially be
+    // or Width = NumberOfZones * ZoneSize + (NumberOfZones + 1) * GapSize;
+    // This means that the gap size is
+    // GapSize = (Width - NumberOfZones * ZoneSize) / (NumberOfZones - 1);
+    int gap_size_w = (Width - NumberOfZones * ZoneSize) / (NumberOfZones + 1);
+
+    // Calculate the gap_size_h, for height
+    int gap_size_h = (Height - NumberOfZones * ZoneSize) / (NumberOfZones + 1);
+
+    // Reset the camera Width
+    Width = NumberOfZones * ZoneSize + (NumberOfZones - 1) * gap_size_w;
+    camera.Width.SetValue(Width);
+
+    // Disable all zones (if any)
+    for (int i = 0; i < 8; ++i) {
+        camera.ROIZoneSelector.SetValue(zone_selection[i]);
+        camera.ROIZoneMode.SetValue(
+            Basler_UsbCameraParams::ROIZoneMode_Off
+        );
+    }
+
+    for (int i = 0; i < NumberOfZones; ++i) {
+        // Select the zone and turn it on.
+        camera.ROIZoneSelector.SetValue(zone_selection[i]);
+        camera.ROIZoneMode.SetValue(
+            Basler_UsbCameraParams::ROIZoneMode_On
+        );
+
+
+        // Calculate the offset for the zone
+        int zone_offset = gap_size_h + i * (ZoneSize + gap_size_h);
+
+        camera.ROIZoneSize.SetValue(ZoneSize);
+        camera.ROIZoneOffset.SetValue(zone_offset);
+    }
 }
 
 void Cam2::close() {
@@ -149,6 +211,11 @@ void Cam2::GetProperties() const {
     std::cout << "Trigger Selector: " << camera.TriggerSelector.ToString() << '\n';
     std::cout << "Sensor Readout Mode: " << camera.SensorReadoutMode.ToString() << '\n';
     std::cout << "Acquisition Status Selector: " << camera.AcquisitionStatusSelector.ToString() << '\n';
+
+    std::cout << "Zone Properties:\n";
+    std::cout << "Use Zones: " << (UseZones ? "Yes" : "No") << '\n';
+    std::cout << "Number of Zones: " << NumberOfZones << '\n';
+    std::cout << "Zone Size: " << ZoneSize << " px\n";
 }
 
 Cam2_Handler::Cam2_Handler() {

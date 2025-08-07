@@ -34,9 +34,17 @@ public:
     int Height = 480;
     int Width = 640;
     float ExposureTime = 59.0f;
-    int BinningHorizontal = 2;
-    int BinningVertical = 2;
+    int BinningHorizontal = 1;
+    int BinningVertical = 1;
 
+    //
+    // This is used to create a grid of zones.
+    // It wil automatically calculate the size and offset of each zone
+    // as well as image dimensions.
+    bool UseZones      = false;
+    int  NumberOfZones =  4;
+    int  ZoneSize      = 65; // px
+    
     Cam2();
     ~Cam2();
 
@@ -51,6 +59,8 @@ public:
 private:
     void create_handle();
     void destroy_handle();
+
+    void ModifyForZones();
 
     void p_open();
 
