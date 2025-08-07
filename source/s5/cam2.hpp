@@ -23,14 +23,22 @@ public:
         const Pylon::CGrabResultPtr &ptrGrabResult) override;
 
     moodycamel::ConcurrentQueue<u8Image> *images = nullptr;
-    moodycamel::ConcurrentQueue<uint64_t> *timestamps = nullptr;
+    moodycamel::ConcurrentQueue<uint64_t> *system_timestamps = nullptr;
+    moodycamel::ConcurrentQueue<uint64_t> *camera_timestamps = nullptr;
     std::atomic<int64_t> *image_count = nullptr;
+    int *timestamp_sample_time = nullptr;
 };
 
+/**
+ * @brief Cam2 is a class that handles the camera operations.
+ * 
+ * It is a replacement for the original cam class (see source/s3/cam.hpp).
+ * Unlike cam.hpp, which had a separate class for handling camera properties.
+ * Cam2 handles the camera properties directly.
+ */
 class Cam2 {
 public:
-    // Camera Properties that are
-    // modifiable by the user
+    // Camera Properties that are modifiable by the user
     int Height = 480;
     int Width = 640;
     float ExposureTime = 59.0f;
@@ -48,12 +56,40 @@ public:
     //
     // This is used for triggering the camera
     int LineTrigger    = 3;
+
+    // In images
+    // It is important that you DO NOT MODIFY this value on-the-fly,
+    // i.e., once defined during construction, it should not be changed.
+    int timestamp_sample_time = 20;
     
     Cam2();
     ~Cam2();
 
+    /**
+     * @brief Opens the camera and attaches the default handler to it.
+     * 
+     */
     void open();
+
+    /**
+     * @brief Opens the camera and attaches the user-defined handler to it.
+     * Note that using a user-defined handler will disable the sread and pread methods.
+     * 
+     * @param user_handle The user-defined handler to attach to the camera.
+     */
+    void open(Pylon::CImageEventHandler &user_handle);
+
+    /**
+     * @brief Closes the camera and un-registers the handler.
+     * 
+     */
     void close();
+
+    /**
+     * @brief Starts the camera. Does not start grabbing images until, this
+     * method is called.
+     * 
+     */
     void start();
 
     /**
@@ -76,11 +112,33 @@ public:
      */
     std::pair<u8Image, std::vector<u8Image>> pread();
 
+    /**
+     * @brief Returns the total number of images captured by the camera.
+     * 
+     * @return The total number of images captured by the camera.
+     */
     int64_t ImagesCapturedByCamera () const;
 
+    /**
+     * @brief Returns the properties of the camera.
+     * Prints to stdout.
+     * 
+     */
     void GetProperties() const;
+
+    /**
+     * @brief Returns the current system timestamp in microseconds, and
+     * camera timestamp in nanoseconds.
+     * 
+     * Note: the default handler will sample time every 20 images.
+     * 
+     * @return A pair containing the system timestamp and camera timestamp.
+     */
+    std::pair<uint64_t, uint64_t> GetTimestamp ();
+
 private:
     void create_handle();
+    void attach_handle(Pylon::CImageEventHandler &handle);
     void destroy_handle();
 
     void DisableZones();
@@ -90,7 +148,8 @@ private:
     void p_open();
 
     moodycamel::ConcurrentQueue<u8Image> buffer;
-    moodycamel::ConcurrentQueue<uint64_t> timestamps;
+    moodycamel::ConcurrentQueue<uint64_t> system_timestamps;
+    moodycamel::ConcurrentQueue<uint64_t> camera_timestamps;
     std::atomic<int64_t> image_count {0};
 
 
@@ -100,6 +159,10 @@ private:
 
     // Zoning Properties
     int GapX, GapY;
+
+    // Flags
+    bool is_camera_open          = false;
+    bool is_handle_attached      = false;
 };
 
 #endif

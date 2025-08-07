@@ -48,6 +48,10 @@ std::pair<u8Image, std::vector<u8Image>> Cam2::pread() {
 }
 
 void Cam2::open() {
+    if (is_camera_open) {
+        std::cerr << "Cam2::open() Camera is already open.\n";
+        return;
+    }
     try {
         p_open();
         create_handle();
@@ -63,6 +67,29 @@ void Cam2::open() {
         exit(EXIT_FAILURE);
         
     }
+    is_camera_open = true;
+}
+
+void Cam2::open(Pylon::CImageEventHandler &user_handle) {
+    if (is_camera_open) {
+        std::cerr << "Cam2::open() Camera is already open.\n";
+        return;
+    }
+    try {
+        p_open();
+        attach_handle(user_handle);
+    }
+    catch (const std::exception &e) {
+        std::cerr << "Cam2::open() An exception has occurred!\n" << e.what() << '\n';
+        camera.Close();
+        exit(EXIT_FAILURE);
+    }
+    catch (const Pylon::GenericException &e) {
+        std::cerr << "Cam2::open() An exception has occurred!\n" << e.GetDescription() << '\n';
+        camera.Close();
+        exit(EXIT_FAILURE);
+    }
+    is_camera_open = true; 
 }
 
 void Cam2::p_open () {
@@ -287,6 +314,11 @@ void Cam2::EnableZones() {
 
 void Cam2::close() {
     destroy_handle();
+
+    if (is_camera_open) {
+        camera.Close();
+        is_camera_open = false;
+    }
 }
 
 void Cam2::start() {
@@ -297,18 +329,31 @@ void Cam2::start() {
     );
 }
 
+void Cam2::attach_handle(Pylon::CImageEventHandler &user_handle) {
+    if (is_handle_attached) return;
+
+    camera.RegisterImageEventHandler(&user_handle, Pylon::RegistrationMode_Append, Pylon::Cleanup_None);
+    is_handle_attached = true;
+}
+
 void Cam2::create_handle() {
+    if (is_handle_attached) return;
     // Attach the handler to the camera
     handler.images = &buffer;
-    handler.timestamps = &timestamps;
+    handler.system_timestamps = &system_timestamps;
+    handler.camera_timestamps = &camera_timestamps;
     handler.image_count = &image_count;
+    handler.timestamp_sample_time = &timestamp_sample_time;
 
     camera.RegisterImageEventHandler(&handler, Pylon::RegistrationMode_Append, Pylon::Cleanup_None);
+    is_handle_attached = true;
 }
 
 void Cam2::destroy_handle() {
+    if (!is_handle_attached) return;
     camera.StopGrabbing();
     camera.DeregisterImageEventHandler(&handler);
+    is_handle_attached = false;
 }
 
 void Cam2::GetProperties() const {
@@ -338,7 +383,7 @@ void Cam2::GetProperties() const {
 
 Cam2_Handler::Cam2_Handler() {
     images = nullptr;
-    timestamps = nullptr;
+    system_timestamps = nullptr;
     image_count = nullptr;
 }
 
@@ -355,8 +400,9 @@ void Cam2_Handler::OnImageGrabbed(Pylon::CInstantCamera &camera,
         images->enqueue(image);
         image_count->fetch_add(1, std::memory_order_release);
 
-        if (image_count->load(std::memory_order_acquire) % 20 == 0) {
-            timestamps->enqueue(Utils::GetCurrentTime_us());
+        if (image_count->load(std::memory_order_acquire) % *timestamp_sample_time == 0) {
+            system_timestamps->enqueue(Utils::GetCurrentTime_us());
+            camera_timestamps->enqueue(ptrGrabResult->GetTimeStamp());
         }
 
         // Print image count
@@ -367,4 +413,19 @@ void Cam2_Handler::OnImageGrabbed(Pylon::CInstantCamera &camera,
 
 int64_t Cam2::ImagesCapturedByCamera() const {
     return image_count.load(std::memory_order_acquire);
+}
+
+std::pair<uint64_t, uint64_t> Cam2::GetTimestamp() {
+    uint64_t system_timestamp = 0;
+    uint64_t camera_timestamp = 0;
+
+    if (!system_timestamps.try_dequeue(system_timestamp)) {
+        std::cerr << "Cam2::GetTimestamp() No system timestamp available.\n";
+    } 
+
+    if (!camera_timestamps.try_dequeue(camera_timestamp)) {
+        std::cerr << "Cam2::GetTimestamp() No camera timestamp available.\n";
+    }
+
+    return {system_timestamp, camera_timestamp};
 }
