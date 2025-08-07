@@ -142,7 +142,7 @@ int e23 () {
     torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.1));
     s4_Optimizer opt (adam, model);
 
-    HComms comms {"192.168.193.20", 9001};
+    // HComms comms {"192.168.193.20", 9001};
 
     // Set the target
     torch::Tensor target_0 = torch::zeros({240, 320}, torch::kFloat32);
@@ -206,12 +206,7 @@ int e23 () {
         model.squash();
         //auto reward = scheduler.Update();
 
-        HCommsDataPacket_Outbound packet;
-        packet.step = step;
-        //packet.reward = reward;
-        packet.reward = 0.0;
-        packet.image = scheduler.GetSampleImage().to(torch::kUInt8);
-        comms.Transmit(packet);
+        scheduler.SaveSampleImage("e23_sample.png");
 
         
         // Save a sample image
