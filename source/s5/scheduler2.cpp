@@ -102,7 +102,7 @@ void Scheduler2::StopCamera() {
     std::cout << "INFO: [Scheduler2::StopCamera] Camera closed.\n";
 }
 
-torch::Tensor Scheduler2::ReadCamera_1() {
+std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_1() {
     // camera.sread() returns a u8Image
     u8Image image = camera.sread();
     
@@ -113,14 +113,14 @@ torch::Tensor Scheduler2::ReadCamera_1() {
         torch::kUInt8
     ).clone();
 
-    return tensor;
+    return {tensor, tensor};
 }
 
-torch::Tensor Scheduler2::ReadCamera_2() {
+std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_2() {
     // There's gotta be
     // a better way to do this...
 
-    auto [_, zones] = camera.pread();
+    auto [image, zones] = camera.pread();
 
     std::vector<torch::Tensor> zone_tensors;
     for (auto &zone : zones) {
@@ -132,10 +132,17 @@ torch::Tensor Scheduler2::ReadCamera_2() {
         ).clone();
         zone_tensors.push_back(tensor);
     }
-    return torch::stack(zone_tensors);  // [N, H, W]
+
+    auto tensor = torch::from_blob(
+        image.data(), 
+        {camera.Height, camera.Width}, 
+        torch::kUInt8
+    ).clone();
+
+    return {tensor, torch::stack(zone_tensors)};  // [N, H, W]
 }
 
-torch::Tensor Scheduler2::ReadCamera() {
+std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera() {
     switch (camera.UseZones) {
         case false: return ReadCamera_1();
         case true : return ReadCamera_2();
@@ -284,8 +291,8 @@ void Scheduler2::CameraThread() {
 
         int64_t count = 0;
         while (count < maximum_number_of_frames_in_image) {
-            torch::Tensor image = ReadCamera();
-            camera2process.enqueue(image);
+            auto [image, zones] = ReadCamera();
+            camera2process.enqueue(zones);
             ++count;
 
             //std::cout << "INFO: [Scheduler2::CameraThread] Captured image " << count << " of " << maximum_number_of_frames_in_image << ".\n";
@@ -401,10 +408,7 @@ torch::Tensor Scheduler2::GetSampleImage_2() {
 }
 
 torch::Tensor Scheduler2::GetSampleImage() {
-    switch (camera.UseZones) {
-        case false: return GetSampleImage_1();
-        case true : return GetSampleImage_2();
-    }
+    return GetSampleImage_1();
 }
 
 void Scheduler2::SaveSampleImage(const std::string &filename) {

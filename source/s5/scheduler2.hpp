@@ -148,10 +148,10 @@ public:
 
 private:
     // Private methods 
-    torch::Tensor ReadCamera();
+    std::pair<torch::Tensor, torch::Tensor> ReadCamera();
     void CameraThread();
-    torch::Tensor ReadCamera_1();
-    torch::Tensor ReadCamera_2();
+    std::pair<torch::Tensor, torch::Tensor> ReadCamera_1();
+    std::pair<torch::Tensor, torch::Tensor> ReadCamera_2();
 
     torch::Tensor GetSampleImage_1();
     torch::Tensor GetSampleImage_2();

@@ -171,7 +171,7 @@ int e23 () {
             torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
         );  // [1]
 
-        return loss;
+        return -loss;
     };
 
     scheduler.Start(
@@ -216,7 +216,6 @@ int e23 () {
         }
         model.squash();
         auto reward = scheduler.Update();
-        scheduler.DisposeSampleImages();
 
         // Transmit the data to remote server
         
@@ -227,6 +226,7 @@ int e23 () {
 
         // Send the packet
         comms.Transmit(packet);
+        scheduler.DisposeSampleImages();
         
 
     }
