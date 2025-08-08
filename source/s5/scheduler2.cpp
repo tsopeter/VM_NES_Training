@@ -67,8 +67,11 @@ void Scheduler2::SetupCamera(
     camera.OffsetY = cam_offset_y;
 }
 
-void Scheduler2::SetupPEncoder() {
-    pen = new PEncoder(0, 0, window.Height, window.Width);
+void Scheduler2::SetupPEncoder(
+    int pencoder_Height,
+    int pencoder_Width
+) {
+    pen = new PEncoder(0, 0, pencoder_Height, pencoder_Width);
     pen->init_pbo();
     std::cout << "INFO: [Scheduler2::SetupPEncoder] PEncoder created on heap.\n";
 }
@@ -168,6 +171,7 @@ void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
     auto timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // same-size
     m_texture = pen->u8Tensor_Texture(timage);
     std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture set from tensor (tiled).\n";
+    std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture size: " << m_texture.width << "x" << m_texture.height << '\n';
 }
 
 // Draw Texture to Screen
@@ -369,6 +373,10 @@ void Scheduler2::Start (
         int cam_offset_x,
         int cam_offset_y,
 
+        /* PEncoder properties */
+        int pencoder_Height,
+        int pencoder_Width,
+
         /* Optimizer */
         s4_Optimizer *opt,
 
@@ -403,7 +411,10 @@ void Scheduler2::Start (
     StartCamera();
     ProcessDataPipeline(process_function);
     StartCameraThread();
-    SetupPEncoder();
+    SetupPEncoder(
+        pencoder_Height,
+        pencoder_Width
+    );
     SetOptimizer(opt);
     SetupVSYNCTimer();
 }

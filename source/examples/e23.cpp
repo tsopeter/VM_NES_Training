@@ -73,7 +73,7 @@ public:
 
         m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
 
-        /*
+        /*        
         torch::Tensor mask = torch::ones({m_Height, m_Width});
 
         // Create a pattern in the mask, where alternating rows of size 10 are 1 and 0
@@ -82,9 +82,8 @@ public:
                 mask.index_put_({torch::indexing::Slice(i, i + 10), torch::indexing::Slice()}, 0.0f);
             }
         }
+        m_parameter = s4_Utils::GSAlgorithm(mask, 50).to(torch::kFloat32).to(DEVICE);
         */
-
-        //m_parameter = s4_Utils::GSAlgorithm(mask, 50).to(torch::kFloat32).to(DEVICE);
 
         // save m_parameter to disk
         //std::cout<<"INFO: [e23_Model] Created parameter tensor of shape: " << m_parameter.sizes() << '\n';
@@ -270,6 +269,11 @@ int e23 () {
         false, /* Use Centering */
         0, /* Offset X */
         0, /* Offset Y */
+
+        /* PEncoder properties */
+        /* These actually determine the size of the texture */
+        1600/2,
+        2560/2,
 
         /* Optimizer */
         &opt,
