@@ -276,7 +276,6 @@ int e23 () {
         // Transmit the data to remote server
         
         HCommsDataPacket_Outbound packet;
-        packet.delta  = delta;
         packet.reward = reward;
         packet.step   = step;
         packet.image  = scheduler.GetSampleImage().contiguous().to(torch::kUInt8);
