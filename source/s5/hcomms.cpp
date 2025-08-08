@@ -29,6 +29,7 @@ void HComms::Transmit(HCommsDataPacket_Outbound &packet) {
     if (mode != HCOMMS_CLIENT) {
         throw std::runtime_error("HComms is not a client.");
     }
+    std::cout << "INFO: [HComms] Structuring data packet for transmission.\n";
 
     CommsDataPacket dp;
     dp[0].type = COMMS_INT64;
