@@ -74,11 +74,19 @@ public:
         //m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
 
         torch::Tensor mask = torch::ones({m_Height, m_Width});
+
+        // Create a pattern in the mask, where alternating rows of size 10 are 1 and 0
+        for (int i = 0; i < m_Height; i += 10) {
+            if (i % 20 == 0) {
+                mask.index_put_({torch::indexing::Slice(i, i + 10), torch::indexing::Slice()}, 0.0f);
+            }
+        }
+
         m_parameter = s4_Utils::GSAlgorithm(mask, 50).to(torch::kFloat32).to(DEVICE);
 
         // save m_parameter to disk
-        std::cout<<"INFO: [e23_Model] Created parameter tensor of shape: " << m_parameter.sizes() << '\n';
-        torch::save({m_parameter.cpu().detach()}, "e23_parameter.pt");
+        //std::cout<<"INFO: [e23_Model] Created parameter tensor of shape: " << m_parameter.sizes() << '\n';
+        //torch::save({m_parameter.cpu().detach()}, "e23_parameter.pt");
 
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e23_Model] Set parameters...\n";
@@ -211,7 +219,7 @@ torch::Tensor e23_ProcessFunction (torch::Tensor &t) {
 int e23 () {
     /* Camera Parameters */
     int Height = 480, Width = 640;
-    bool use_partitioning = true;
+    bool use_partitioning = false;
 
     if (use_partitioning) {
         std::cout << "INFO: [e23] Using partitioning mode.\n";
