@@ -6,6 +6,7 @@
 #include "../s4/optimizer.hpp"
 #include "../s5/scheduler2.hpp"
 #include "../s5/hcomms.hpp"
+#include "../utils/utils.hpp"
 
 
 class e23_Normal : public Dist {

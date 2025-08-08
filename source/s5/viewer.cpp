@@ -32,12 +32,14 @@ void Viewer::run() {
 
     double reward = 0.0;
     int64_t step  = 0;
+    int64_t delta = 0;
     try {
         while (!WindowShouldClose()) {
             HCommsDataPacket_Inbound packet = comms->Receive();
             reward = packet.reward;
             step = packet.step;
             m_texture = packet.image;
+            delta = packet.delta;
             BeginDrawing();
             ClearBackground(BLACK);
             DrawTexturePro(
@@ -48,6 +50,7 @@ void Viewer::run() {
             );
             DrawText(TextFormat("Step: %d", step), 10, 10, 20, RED);
             DrawText(TextFormat("Reward: %.2f", reward), 10, 40, 20, GREEN);
+            DrawText(TextFormat("Delta: %lld", delta/10), 10, 70, 20, BLUE);
             EndDrawing();
             UnloadTexture(m_texture);
         }
