@@ -66,7 +66,10 @@ public:
         int cam_offset_y=0
     );
 
-    void SetupPEncoder ();
+    void SetupPEncoder (
+        int pencoder_Height=1600,
+        int pencoder_Width=2560
+    );
 
     void StartWindow();
     void StopWindow();
@@ -75,8 +78,10 @@ public:
     void StopCamera();
 
     void SetTextureFromTensor(const torch::Tensor &tensor);
+    void SetTextureFromTensorTiled (const torch::Tensor &tensor);
 
     void DrawTextureToScreen ();
+    void DrawTextureToScreenTiled ();
 
     void SetOptimizer(s4_Optimizer *opt);
 
@@ -144,6 +149,10 @@ public:
         bool cam_use_centering=true,
         int cam_offset_x=0,
         int cam_offset_y=0,
+
+        /* PEncoder properties */
+        int pencoder_Height=0,
+        int pencoder_Width=0,
 
         /* Optimizer */
         s4_Optimizer *opt=nullptr,
