@@ -76,6 +76,10 @@ public:
         torch::Tensor mask = torch::ones({m_Height, m_Width});
         m_parameter = s4_Utils::GSAlgorithm(mask, 50).to(torch::kFloat32).to(DEVICE);
 
+        // save m_parameter to disk
+        std::cout<<"INFO: [e23_Model] Created parameter tensor of shape: " << m_parameter.sizes() << '\n';
+        torch::save({m_parameter}, "e23_parameter.pt");
+
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e23_Model] Set parameters...\n";
 
