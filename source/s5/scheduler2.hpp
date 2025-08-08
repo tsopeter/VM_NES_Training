@@ -111,6 +111,11 @@ public:
     void SaveSampleImage(const std::string &filename);
     void DisposeSampleImages();
 
+    // Enables or Disables sample image capture.
+    // This frees up some time, but not much...
+    void EnableSampleImageCapture();
+    void DisableSampleImageCapture();
+
     void StopThreads();
 
     void Start (
@@ -147,6 +152,9 @@ private:
     torch::Tensor ReadCamera_1();
     torch::Tensor ReadCamera_2();
 
+    torch::Tensor GetSampleImage_1();
+    torch::Tensor GetSampleImage_2();
+
     // Handles the timing between VSYNC pulses and camera
     sched2VSYNCtimer *mvt = nullptr;
     std::function<void(std::atomic<uint64_t>&)> timer_callback; 
@@ -161,6 +169,10 @@ private:
     //
     // Sample image for viewing purposes
     moodycamel::ConcurrentQueue<torch::Tensor> sample_images;
+
+    //
+    // Sample image control
+    std::atomic<bool> sample_image_capture_enabled {false};
 
 
     //
@@ -201,6 +213,7 @@ private:
     //
     // Update control
     int64_t number_of_frames_sent = 0;
+
 };
 
 

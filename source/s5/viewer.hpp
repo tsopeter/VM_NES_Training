@@ -2,7 +2,7 @@
 #define viewer_hpp__
 
 #include "../s3/window.hpp"
-#include "comms.hpp"
+#include "hcomms.hpp"
 #include "raylib.h"
 #include <iostream>
 #include <string>
@@ -17,9 +17,9 @@ public:
 
     void run ();
 private:
-
+    HComms *comms = nullptr;
     Texture m_texture;
-    Comms comms {CommsType::COMMS_HOST};
+    
     s3_Window window;
 
     int port_number = 9001;

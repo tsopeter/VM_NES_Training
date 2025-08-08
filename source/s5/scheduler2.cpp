@@ -290,7 +290,7 @@ void Scheduler2::CameraThread() {
             std::cout << "INFO: [Scheduler2::CameraThread] Captured image " << count << " of " << maximum_number_of_frames_in_image << ".\n";
 
             // store the first image as a sample
-            if (count == 1) {
+            if (count == 1 && sample_image_capture_enabled.load(std::memory_order_acquire)) {
                 sample_images.enqueue(image);
                 std::cout << "INFO: [Scheduler2::CameraThread] Sample image captured.\n";
             }
@@ -365,17 +365,45 @@ void Scheduler2::DisposeSampleImages() {
     std::cout << "INFO: [Scheduler2::DisposeSampleImages] Sample images disposed.\n";
 }
 
-torch::Tensor Scheduler2::GetSampleImage() {
+torch::Tensor Scheduler2::GetSampleImage_1() {
     // Get the sample image from the camera
     torch::Tensor tensor;
+
     if (!sample_images.try_dequeue(tensor)) {
-        std::cerr << "ERROR: [Scheduler2::GetSampleImage] No sample image available.\n";
+        std::cerr << "ERROR: [Scheduler2::GetSampleImage_1] No sample image available.\n";
         return torch::Tensor();
     }
 
     // Return the tensor
-    std::cout << "INFO: [Scheduler2::GetSampleImage] Sample image retrieved.\n";
+    std::cout << "INFO: [Scheduler2::GetSampleImage_1] Sample image retrieved.\n";
     return tensor;
+}
+
+torch::Tensor Scheduler2::GetSampleImage_2() {
+    // Get the sample image from the camera
+    torch::Tensor tensor;
+
+    if (!sample_images.try_dequeue(tensor)) {
+        std::cerr << "ERROR: [Scheduler2::GetSampleImage_2] No sample image available.\n";
+        return torch::Tensor();
+    }
+
+    // Sample image is in the form [16, H, W]
+    // We need to convert it to [H, W] for display
+    // by taking the first channel
+    tensor = tensor.index({0, torch::indexing::Slice(), torch::indexing::Slice()});
+
+    // Return the tensor
+    std::cout << "INFO: [Scheduler2::GetSampleImage_2] Sample image retrieved.\n";
+    return tensor;
+
+}
+
+torch::Tensor Scheduler2::GetSampleImage() {
+    switch (camera.UseZones) {
+        case false: return GetSampleImage_1();
+        case true : return GetSampleImage_2();
+    }
 }
 
 void Scheduler2::SaveSampleImage(const std::string &filename) {
@@ -402,4 +430,14 @@ void Scheduler2::StopThreads() {
     end_camera.store(true, std::memory_order_release);
     camera_thread.join();
     std::cout << "INFO: [Scheduler2::StopThreads] Camera thread joined.\n";
+}
+
+void Scheduler2::EnableSampleImageCapture() {
+    sample_image_capture_enabled.store(true, std::memory_order_release);
+    std::cout << "INFO: [Scheduler2::EnableSampleImageCapture] Sample image capture enabled.\n";
+}
+
+void Scheduler2::DisableSampleImageCapture() {
+    sample_image_capture_enabled.store(false, std::memory_order_release);
+    std::cout << "INFO: [Scheduler2::DisableSampleImageCapture] Sample image capture disabled.\n";
 }

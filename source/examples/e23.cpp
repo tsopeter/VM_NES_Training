@@ -143,31 +143,34 @@ int e23 () {
     torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.1));
     s4_Optimizer opt (adam, model);
 
-    // HComms comms {"192.168.193.20", 9001};
+    HComms comms {"192.168.193.20", 9001};
 
-    // Set the target
-    torch::Tensor target_0 = torch::zeros({Height, Width}, torch::kFloat32);
-    target_0.index_put_(
-        {torch::indexing::Slice(),
-            torch::indexing::Slice(scheduler.camera.Width/2 - 8, scheduler.camera.Width/2 + 8)},
-        1.0f
-    );
+    auto process_function = [](torch::Tensor t) {
+        // Tensor t has shape [16, H, W]
 
-    auto target_1 = 1.0 - target_0;
-    auto regions  = torch::stack({target_0, target_1});
+        // Sum only the first channel 0
+        auto zone_0    = t.index({0, torch::indexing::Slice(), torch::indexing::Slice()});
 
-    auto process_function = [regions](torch::Tensor t) {
-        // t would have shape [N, H, W]
+        // All other channels 1-15
+        auto zone_1_15 = t.index({torch::indexing::Slice(1, 16), torch::indexing::Slice(), torch::indexing::Slice()});
 
-        if (t.dim() == 2) {
-            t = t.unsqueeze(0);  // convert to [1, H, W] 
-        }
+        auto t0 = zone_0.sum();
+        auto t1 = zone_1_15.sum();
 
-        auto t_expanded = t.unsqueeze(1); // [B, 1, H, W]
-        auto m_regions_expanded = regions.unsqueeze(0).to(t.device()); // [1, N, H, W]
-        auto scores = (t_expanded * m_regions_expanded).sum({2, 3}); // [B, N]
+        // Concatenate along the first dimension
+        auto predictions = torch::stack({t0, t1}, 1);  // [1, 2]
 
-        return scores;
+        // the first class is always the target
+        auto targets = torch::tensor({0}, torch::kLong).to(t.device());  // [1]
+
+        // score is the cross entropy loss
+        auto loss = torch::nn::functional::cross_entropy(
+            predictions,
+            targets,
+            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+        );  // [1]
+
+        return loss;
     };
 
     scheduler.Start(
@@ -186,7 +189,7 @@ int e23 () {
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
         3,  /* Line Trigger */
-        false,  /* Use Zones */
+        true,  /* Use Zones */
         4,  /* Number of Zones */
         60, /* Zone Size */
 
@@ -196,6 +199,7 @@ int e23 () {
         /* Processing function */
         process_function
     );
+    scheduler.EnableSampleImageCapture();
 
     
     int64_t step=0;
@@ -209,16 +213,18 @@ int e23 () {
             ++step;
         }
         model.squash();
-        //auto reward = scheduler.Update();
-
-        scheduler.SaveSampleImage("e23_sample.png");
-
-        
-        // Save a sample image
-        //scheduler.SaveSampleImage("sample_image.png");
-        //break;
-        
+        auto reward = scheduler.Update();
         scheduler.DisposeSampleImages();
+
+        // Transmit the data to remote server
+        HCommsDataPacket_Outbound packet;
+        packet.reward = reward;
+        packet.step   = step;
+        packet.image  = scheduler.GetSampleImage().contiguous().to(torch::kUInt8);
+
+        // Send the packet
+        comms.Transmit(packet);
+
     }
 
     scheduler.StopThreads();
