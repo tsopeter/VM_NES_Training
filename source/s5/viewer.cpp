@@ -19,7 +19,7 @@ Viewer::Viewer(int height, int width, int port_number)
 
 Viewer::~Viewer() {
     std::cout << "INFO: [Viewer] Destroying viewer...\n";
-
+    delete comms;
 }
 
 
