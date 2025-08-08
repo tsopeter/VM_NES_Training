@@ -288,7 +288,7 @@ void Scheduler2::CameraThread() {
             camera2process.enqueue(image);
             ++count;
 
-            std::cout << "INFO: [Scheduler2::CameraThread] Captured image " << count << " of " << maximum_number_of_frames_in_image << ".\n";
+            //std::cout << "INFO: [Scheduler2::CameraThread] Captured image " << count << " of " << maximum_number_of_frames_in_image << ".\n";
 
             // store the first image as a sample
             if (count == 1 && sample_image_capture_enabled.load(std::memory_order_acquire)) {
