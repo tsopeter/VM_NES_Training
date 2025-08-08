@@ -132,9 +132,81 @@ public:
 };
 
 
+torch::Tensor e23_ProcessFunction (torch::Tensor &t) {
+    if (t.dim() == 3) {
+        // Use
+
+        auto zone_0    = t.index({torch::indexing::Slice(4, 7), torch::indexing::Slice(), torch::indexing::Slice()});
+
+        // All other channels 0-3 and 8-15
+        auto zone_0_3  = t.index({torch::indexing::Slice(0, 4), torch::indexing::Slice(), torch::indexing::Slice()});
+        auto zone_8_15 = t.index({torch::indexing::Slice(8, 16), torch::indexing::Slice(), torch::indexing::Slice()});
+
+        // stack the zones together
+        auto zone_1_15 = torch::cat({zone_0_3, zone_8_15}, 0);
+
+        auto t0 = zone_0.sum().unsqueeze(0).to(torch::kFloat64); // [1]
+        auto t1 = zone_1_15.sum().unsqueeze(0).to(torch::kFloat64); // [1]
+
+        // Concatenate along the first dimension
+        auto predictions = torch::stack({t0, t1}, 1);  // [1, 2]
+
+        // the first class is always the target
+        auto targets = torch::zeros({1}, torch::kLong).to(t.device());  // [1]
+
+        // score is the cross entropy loss
+        auto loss = torch::nn::functional::cross_entropy(
+            predictions,
+            targets,
+            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+        );  // [1]
+
+        return -loss;
+    }
+    else {
+        int64_t H = t.size(0);
+        int64_t W = t.size(1);
+        // Use more primative processing
+        torch::Tensor t0 = torch::zeros({H, W}, torch::kFloat64);
+        t0.index_put_({torch::indexing::Slice(), torch::indexing::Slice(W/2-8, W/2+8)}, 1.0f);
+
+        torch::Tensor t1 = 1.0 - t0; // Invert the tensor
+        
+        // Stack the tensors
+        auto mask = torch::stack({t0, t1}, 0).unsqueeze(0);
+        t = t.unsqueeze(0);  // [1, H, W]
+
+        auto scores = (t * mask).sum({2, 3}); // [1, 2]
+
+        torch::Tensor targets = torch::zeros({1}, torch::kLong).to(t.device());  // [1]
+
+        // apply cross entropy loss
+        auto loss = torch::nn::functional::cross_entropy(
+            scores,
+            targets,
+            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+        );  // [1]
+
+        return -loss;
+    }
+}
 
 int e23 () {
-    int Height = 480, Width = 640; /* Camera dimensions */
+    /* Camera Parameters */
+    int Height = 480, Width = 640;
+    bool use_partitioning = false;
+
+    if (use_partitioning) {
+        std::cout << "INFO: [e23] Using partitioning mode.\n";
+        Height = 480;
+        Width  = 640;
+    }
+    else {
+        std::cout << "INFO: [e23] Using non-partitioning mode.\n";
+        Height = 480 / 2;
+        Width  = 640 / 2;
+    }
+
     Pylon::PylonAutoInitTerm init {};
     Scheduler2 scheduler {};
 
@@ -145,33 +217,8 @@ int e23 () {
 
     HComms comms {"192.168.193.20", 9001};
 
-    auto process_function = [](torch::Tensor t) {
-        // Tensor t has shape [16, H, W]
-
-
-        // Sum only the first channel 0
-        auto zone_0    = t.index({0, torch::indexing::Slice(), torch::indexing::Slice()});
-
-        // All other channels 1-15
-        auto zone_1_15 = t.index({torch::indexing::Slice(1, 16), torch::indexing::Slice(), torch::indexing::Slice()});
-
-        auto t0 = zone_0.sum().unsqueeze(0).to(torch::kFloat64); // [1]
-        auto t1 = zone_1_15.sum().unsqueeze(0).to(torch::kFloat64); // [1]
-
-        // Concatenate along the first dimension
-        auto predictions = torch::stack({t0, t1}, 1);  // [1, 2]
-
-        // the first class is always the target
-        auto targets = torch::tensor({0}, torch::kLong).to(t.device());  // [1]
-
-        // score is the cross entropy loss
-        auto loss = torch::nn::functional::cross_entropy(
-            predictions,
-            targets,
-            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
-        );  // [1]
-
-        return -loss;
+    auto process_function = [](torch::Tensor t)->torch::Tensor {
+        return e23_ProcessFunction(t);
     };
 
     scheduler.Start(
@@ -190,9 +237,12 @@ int e23 () {
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
         3,  /* Line Trigger */
-        true,  /* Use Zones */
+        use_partitioning,  /* Use Zones */
         4,  /* Number of Zones */
         60, /* Zone Size */
+        false, /* Use Centering */
+        0, /* Offset X */
+        0, /* Offset Y */
 
         /* Optimizer */
         &opt,
@@ -206,7 +256,8 @@ int e23 () {
     
     int64_t step=0;
     while (!WindowShouldClose()) {
-        for (int i =0; i < 5; ++i) {
+        int64_t time_0 = Utils::GetCurrentTime_us();
+        for (int i =0; i < 10; ++i) {
             torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
             scheduler.SetTextureFromTensor(action);
             scheduler.DrawTextureToScreen();
@@ -216,10 +267,15 @@ int e23 () {
         }
         model.squash();
         auto reward = scheduler.Update();
+        int64_t time_1 = Utils::GetCurrentTime_us();
+
+        int64_t delta = time_1 - time_0;
+
 
         // Transmit the data to remote server
         
         HCommsDataPacket_Outbound packet;
+        packet.delta  = delta;
         packet.reward = reward;
         packet.step   = step;
         packet.image  = scheduler.GetSampleImage().contiguous().to(torch::kUInt8);

@@ -120,10 +120,15 @@ void Cam2::p_open () {
     camera.Height.SetValue(Height);
     camera.Width.SetValue(Width);
 
+    // Set the offset
+    std::cout << "INFO: [Cam2::p_open()] Setting Camera Offset to (" << OffsetX << ", " << OffsetY << ")\n";
+    camera.OffsetX.SetValue(OffsetX);
+    camera.OffsetY.SetValue(OffsetY);
+
     // Use centering
     std::cout << "INFO: [Cam2::p_open()] Setting Centering to true\n";
-    camera.CenterX.SetValue(true);
-    camera.CenterY.SetValue(true);
+    camera.CenterX.SetValue(UseCentering);
+    camera.CenterY.SetValue(UseCentering);
 
     // Set binning
     std::cout << "INFO: [Cam2::p_open()] Setting Binning to " << BinningHorizontal << "x" << BinningVertical << '\n';

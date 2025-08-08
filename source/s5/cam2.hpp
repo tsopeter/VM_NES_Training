@@ -45,6 +45,11 @@ public:
     int BinningHorizontal = 1;
     int BinningVertical = 1;
 
+    // If centering is used, OffsetX and OffsetY are disabled.
+    bool UseCentering = true;
+    int OffsetX = 0;
+    int OffsetY = 0;
+
     //
     // This is used to create a grid of zones.
     // It wil automatically calculate the size and offset of each zone

@@ -60,7 +60,10 @@ public:
         int cam_LineTrigger=3,
         bool cam_UseZones=false,
         int cam_NumberOfZones=4,
-        int cam_ZoneSize=60
+        int cam_ZoneSize=60,
+        bool cam_use_centering=true,
+        int cam_offset_x=0,
+        int cam_offset_y=0
     );
 
     void SetupPEncoder ();
@@ -138,6 +141,9 @@ public:
         bool cam_UseZones=false,
         int cam_NumberOfZones=4,
         int cam_ZoneSize=60,
+        bool cam_use_centering=true,
+        int cam_offset_x=0,
+        int cam_offset_y=0,
 
         /* Optimizer */
         s4_Optimizer *opt=nullptr,

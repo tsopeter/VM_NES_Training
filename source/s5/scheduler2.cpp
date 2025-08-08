@@ -48,7 +48,10 @@ void Scheduler2::SetupCamera(
     int cam_LineTrigger,
     bool cam_UseZones,
     int cam_NumberOfZone,
-    int cam_ZoneSize
+    int cam_ZoneSize,
+    bool cam_use_centering,
+    int cam_offset_x,
+    int cam_offset_y
 ) {
     camera.Height = Height;
     camera.Width  = Width;
@@ -59,6 +62,9 @@ void Scheduler2::SetupCamera(
     camera.UseZones = cam_UseZones;
     camera.NumberOfZones = cam_NumberOfZone;
     camera.ZoneSize = cam_ZoneSize;
+    camera.UseCentering = cam_use_centering;
+    camera.OffsetX = cam_offset_x;
+    camera.OffsetY = cam_offset_y;
 }
 
 void Scheduler2::SetupPEncoder() {
@@ -153,6 +159,7 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera() {
 // Set Texture from Tensor
 void Scheduler2::SetTextureFromTensor(const torch::Tensor &tensor) {
     auto timage = pen->MEncode_u8Tensor4(tensor).contiguous().to(torch::kInt32);
+    //auto timage = pen->MEncode_u8Tensor3(tensor).contiguous().to(torch::kInt32);
     m_texture = pen->u8Tensor_Texture(timage);
     std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Texture set from tensor.\n";
 }
@@ -328,6 +335,9 @@ void Scheduler2::Start (
         bool cam_UseZones,
         int cam_NumberOfZones,
         int cam_ZoneSize,
+        bool cam_use_centering,
+        int cam_offset_x,
+        int cam_offset_y,
 
         /* Optimizer */
         s4_Optimizer *opt,
@@ -353,7 +363,10 @@ void Scheduler2::Start (
         cam_LineTrigger,
         cam_UseZones,
         cam_NumberOfZones,
-        cam_ZoneSize
+        cam_ZoneSize,
+        cam_use_centering,
+        cam_offset_x,
+        cam_offset_y
     );
 
     StartWindow();

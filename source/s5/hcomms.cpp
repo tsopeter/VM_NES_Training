@@ -40,6 +40,9 @@ void HComms::Transmit(HCommsDataPacket_Outbound &packet) {
     dp[2].type = COMMS_IMAGE;
     dp[2].data = reinterpret_cast<char*>(&packet.image);
 
+    dp[3].type = COMMS_INT64;
+    dp[3].data = reinterpret_cast<char*>(&packet.delta);
+
     comms->TransmitDataPacket(dp);
 }
 
@@ -74,6 +77,12 @@ HCommsDataPacket_Inbound HComms::Receive() {
         throw std::runtime_error("HComms::Receive: Expected IMAGE for image, got different type.");
     }
     packet.image = comms->DP_ReceiveImageAsTexture();
+
+    type = comms->DP_ReadField();
+    if (type != COMMS_INT64) {
+        throw std::runtime_error("HComms::Receive: Expected INT64 for delta, got different type.");
+    }
+    packet.delta = comms->DP_ReceiveInt64();
 
     return packet;
 }

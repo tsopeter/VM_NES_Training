@@ -51,7 +51,7 @@
 #include "../s4/slicer.hpp"
 #include "../s3/IP.hpp"
 #include "../utils/utils.hpp"
-#include "../utils/comms.hpp"
+#include "../s5/hcomms.hpp"
 #include "../device.hpp"
 #include "shared.hpp"
 
@@ -943,9 +943,7 @@ struct e18_Scheduler {
 int e18 () {
     Pylon::PylonAutoInitTerm init {};    
 
-    Comms comms {CommsType::COMMS_CLIENT};
-    comms.SetParameters(9001, "192.168.193.20");
-    comms.Connect();
+    HComms comms {"192.168.193.20", 9001};
 
     /* Init Window */
     s3_Window window {};
@@ -1032,19 +1030,14 @@ int e18 () {
         // 
         scheduler.Squash();
         double rewards = scheduler.Update();
-        CommsDataPacket packet;
+        HCommsDataPacket_Outbound packet;
 
-        packet[0].type = COMMS_INT64;
-        packet[0].data = reinterpret_cast<char*>(&step);
+        packet.step = step;
+        packet.reward = rewards;
+        packet.image = t.cpu().to(torch::kUInt8).contiguous();
 
-        packet[1].type = COMMS_DOUBLE;
-        packet[1].data = reinterpret_cast<char*>(&rewards);
-
-        packet[2].type = COMMS_IMAGE;
-        packet[2].data = reinterpret_cast<char*>(&t);
-
-        comms.TransmitDataPacket(packet);
-
+        comms.Transmit(packet);
+    
     }
 
 
