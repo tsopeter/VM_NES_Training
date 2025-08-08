@@ -103,6 +103,7 @@ char *CommsDataPacket::CreatePacket(size_t &size) {
             }
         }
     }
+    std::cout<<"INFO: [CommsDataPacket] Created packet of size "<<size<<" bytes.\n";
     return packet;
 }
 
