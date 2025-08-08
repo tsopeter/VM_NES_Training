@@ -143,7 +143,7 @@ int e23 () {
     torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.1));
     s4_Optimizer opt (adam, model);
 
-    //HComms comms {"192.168.193.20", 9001};
+    HComms comms {"192.168.193.20", 9001};
 
     auto process_function = [](torch::Tensor t) {
         // Tensor t has shape [16, H, W]
@@ -219,7 +219,7 @@ int e23 () {
         scheduler.DisposeSampleImages();
 
         // Transmit the data to remote server
-        /*
+        
         HCommsDataPacket_Outbound packet;
         packet.reward = reward;
         packet.step   = step;
@@ -227,7 +227,7 @@ int e23 () {
 
         // Send the packet
         comms.Transmit(packet);
-        */
+        
 
     }
 
