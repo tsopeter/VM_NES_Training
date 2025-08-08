@@ -69,27 +69,32 @@ char *CommsDataPacket::CreatePacket(size_t &size) {
         offset += 1; // Move past the type byte
         switch (nodes[i].type) {
             case COMMS_INT: {
+                std::cout<<"INFO: [CommsDataPacket] Writing INT data to packet.\n";
                 std::memcpy(packet + offset, nodes[i].data, sizeof(int));
                 offset += sizeof(int);
                 break;
             }
             case COMMS_INT64: {
+                std::cout<<"INFO: [CommsDataPacket] Writing INT64 data to packet.\n";
                 std::memcpy(packet + offset, nodes[i].data, sizeof(int64_t));
                 offset += sizeof(int64_t);
                 break;
             }
             case COMMS_DOUBLE: {
+                std::cout<<"INFO: [CommsDataPacket] Writing DOUBLE data to packet.\n";
                 std::memcpy(packet + offset, nodes[i].data, sizeof(double));
                 offset += sizeof(double);
                 break;
             }
             case COMMS_STRING: {
+                std::cout<<"INFO: [CommsDataPacket] Writing STRING data to packet.\n";
                 size_t str_length = std::strlen(nodes[i].data);
                 std::memcpy(packet + offset, nodes[i].data, str_length);
                 offset += str_length;
                 break;
             }
             case COMMS_IMAGE: {
+                std::cout<<"INFO: [CommsDataPacket] Writing IMAGE data to packet.\n";
                 auto *tensor = reinterpret_cast<torch::Tensor*>(nodes[i].data);
                 int64_t Height = tensor->size(0);
                 int64_t Width = tensor->size(1);
