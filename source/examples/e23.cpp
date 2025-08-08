@@ -7,6 +7,7 @@
 #include "../s5/scheduler2.hpp"
 #include "../s5/hcomms.hpp"
 #include "../utils/utils.hpp"
+#include "../s4/utils.hpp"
 
 
 class e23_Normal : public Dist {
@@ -25,6 +26,7 @@ public:
         auto mu_shape = m_mu.sizes();
         auto sample_shape = torch::IntArrayRef({n}).vec();
         sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
+
 
         torch::Tensor eps = torch::randn(sample_shape, m_mu.options());
         return m_mu.unsqueeze(0).expand_as(eps) + m_std * eps;
@@ -69,7 +71,10 @@ public:
         std::cout<<"INFO: [e23_Model] Staging model...\n";
         std::cout<<"INFO: [e23_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
 
-        m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
+        //m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
+
+        torch::Tensor mask = torch::ones({m_Height, m_Width});
+        m_parameter = s4_Utils::GSAlgorithm(mask, 50).to(torch::kFloat32).to(DEVICE);
 
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e23_Model] Set parameters...\n";
@@ -139,15 +144,22 @@ torch::Tensor e23_ProcessFunction (torch::Tensor &t) {
 
         auto zone_0    = t.index({torch::indexing::Slice(4, 7), torch::indexing::Slice(), torch::indexing::Slice()});
 
-        // All other channels 0-3 and 8-15
-        auto zone_0_3  = t.index({torch::indexing::Slice(0, 4), torch::indexing::Slice(), torch::indexing::Slice()});
-        auto zone_8_15 = t.index({torch::indexing::Slice(8, 16), torch::indexing::Slice(), torch::indexing::Slice()});
+        // Get Channels 0,4,8,12
+        // These are the target channels
+        auto zone_0_4_8_12 = t.index({torch::indexing::Slice(0, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()});
 
-        // stack the zones together
-        auto zone_1_15 = torch::cat({zone_0_3, zone_8_15}, 0);
+        // Get channels 1,2,3,5,6,7,9,10,11,13,14,15
+        // These are the non-target channels
+        torch::Tensor zone_1_2_3_5_6_7_9_10_11_13_14_15;
+        zone_1_2_3_5_6_7_9_10_11_13_14_15 = torch::cat({
+            t.index({torch::indexing::Slice(1, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()}),
+            t.index({torch::indexing::Slice(2, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()}),
+            t.index({torch::indexing::Slice(3, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()})
+        }, 0);
 
-        auto t0 = zone_0.sum().unsqueeze(0).to(torch::kFloat64); // [1]
-        auto t1 = zone_1_15.sum().unsqueeze(0).to(torch::kFloat64); // [1]
+
+        auto t0 = zone_0_4_8_12.sum().unsqueeze(0).to(torch::kFloat64); // [1]
+        auto t1 = zone_1_2_3_5_6_7_9_10_11_13_14_15.sum().unsqueeze(0).to(torch::kFloat64); // [1]
 
         // Concatenate along the first dimension
         auto predictions = torch::stack({t0, t1}, 1);  // [1, 2]

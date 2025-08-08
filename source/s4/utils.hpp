@@ -18,6 +18,10 @@ namespace s4_Utils
      */
     Image         TensorToImage      (torch::Tensor&);
 
+    torch::Tensor GSAlgorithm (const torch::Tensor &target, int iterations);
+
+
+
 } // namespace s4_Utils
 
 
