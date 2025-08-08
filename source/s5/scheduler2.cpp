@@ -158,10 +158,16 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera() {
 
 // Set Texture from Tensor
 void Scheduler2::SetTextureFromTensor(const torch::Tensor &tensor) {
-    //auto timage = pen->MEncode_u8Tensor4(tensor).contiguous().to(torch::kInt32);
-    auto timage = pen->MEncode_u8Tensor3(tensor).contiguous().to(torch::kInt32);
+    auto timage = pen->MEncode_u8Tensor4(tensor).contiguous().to(torch::kInt32);  // faster speed
+    //auto timage = pen->MEncode_u8Tensor3(tensor).contiguous().to(torch::kInt32);    // high resolution
     m_texture = pen->u8Tensor_Texture(timage);
     std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Texture set from tensor.\n";
+}
+
+void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
+    auto timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // same-size
+    m_texture = pen->u8Tensor_Texture(timage);
+    std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture set from tensor (tiled).\n";
 }
 
 // Draw Texture to Screen
@@ -178,6 +184,30 @@ void Scheduler2::DrawTextureToScreen() {
     EndShaderMode();
     EndDrawing();
     std::cout<< "INFO: [Scheduler2::DrawTextureToScreen] Texture drawn to screen.\n";
+}
+
+void Scheduler2::DrawTextureToScreenTiled() {
+    // Figure out the number of tiles we need for both x and y
+    // where m_texture is some scaled down size of the window
+    int tiles_x = window.Width / m_texture.width;
+    int tiles_y = window.Height / m_texture.height;
+    
+    BeginDrawing();
+    BeginShaderMode(shader);
+        ClearBackground(BLACK);
+        for (int x = 0; x < tiles_x; ++x) {
+            for (int y = 0; y < tiles_y; ++y) {
+                DrawTexturePro(
+                    m_texture,
+                    {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                    {static_cast<float>(x * m_texture.width), static_cast<float>(y * m_texture.height),
+                     static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                    {0, 0}, 0.0f, WHITE
+                );
+            }
+        }
+    EndShaderMode();
+    EndDrawing();
 }
 
 //

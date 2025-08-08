@@ -71,8 +71,9 @@ public:
         std::cout<<"INFO: [e23_Model] Staging model...\n";
         std::cout<<"INFO: [e23_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
 
-        //m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
+        m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;  /* Why does placing m_parameter on CUDA cause segmentation fault */
 
+        /*
         torch::Tensor mask = torch::ones({m_Height, m_Width});
 
         // Create a pattern in the mask, where alternating rows of size 10 are 1 and 0
@@ -81,8 +82,9 @@ public:
                 mask.index_put_({torch::indexing::Slice(i, i + 10), torch::indexing::Slice()}, 0.0f);
             }
         }
+        */
 
-        m_parameter = s4_Utils::GSAlgorithm(mask, 50).to(torch::kFloat32).to(DEVICE);
+        //m_parameter = s4_Utils::GSAlgorithm(mask, 50).to(torch::kFloat32).to(DEVICE);
 
         // save m_parameter to disk
         //std::cout<<"INFO: [e23_Model] Created parameter tensor of shape: " << m_parameter.sizes() << '\n';
@@ -219,7 +221,7 @@ torch::Tensor e23_ProcessFunction (torch::Tensor &t) {
 int e23 () {
     /* Camera Parameters */
     int Height = 480, Width = 640;
-    bool use_partitioning = false;
+    bool use_partitioning = true;
 
     if (use_partitioning) {
         std::cout << "INFO: [e23] Using partitioning mode.\n";
@@ -284,9 +286,9 @@ int e23 () {
         int64_t time_0 = Utils::GetCurrentTime_us();
         for (int i =0; i < 10; ++i) {
             torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
-            scheduler.SetTextureFromTensor(action);
-            scheduler.DrawTextureToScreen();
-            scheduler.DrawTextureToScreen();
+            scheduler.SetTextureFromTensorTiled(action);
+            scheduler.DrawTextureToScreenTiled();
+            scheduler.DrawTextureToScreenTiled();
             scheduler.ReadFromCamera();
             ++step;
         }

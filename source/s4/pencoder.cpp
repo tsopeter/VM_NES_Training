@@ -330,6 +330,35 @@ torch::Tensor PEncoder::MEncode_u8Tensor4 (const torch::Tensor &x) {
     return image;
 }
 
+torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
+    int64_t N       = x.size(0);
+    int64_t input_h = x.size(1);
+    int64_t input_w = x.size(2);
+
+    // firstly, quantize the input tensor first (which is often much smaller than x)
+    torch::Tensor plane = q[x];
+
+    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Generating encoding...\n";
+    if (masks.device() != x.device())
+        masks = masks.to(x.device());
+
+    auto logical = masks.index_select(0, plane.view({-1}));
+    logical = logical.view({N, input_h, input_w, 2, 2});
+    logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
+    torch::Tensor encoded = logical.view({N, input_h * 2, input_w * 2});
+
+    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Generating bit representation...\n";
+
+    // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    encoded = encoded.to(torch::kInt32);
+    torch::Tensor image = torch::sum(encoded * shifts_used, 0);
+
+    return image;
+}
+
+
+
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
     torch::Tensor encoding = MEncode_u8Tensor(x).contiguous();
     return u8MTensor_Image (encoding);

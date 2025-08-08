@@ -89,9 +89,14 @@ public:
      */
     torch::Tensor MEncode_u8Tensor2 (const torch::Tensor &x);
     
+    // High resolution encoding based on upscaling using GPU
     torch::Tensor MEncode_u8Tensor3 (const torch::Tensor &x);
 
+    // Lower resolution encoding based on bit-manip
     torch::Tensor MEncode_u8Tensor4 (const torch::Tensor &x);
+
+   // Tile-based encoding, requires a custom-shader
+   torch::Tensor MEncode_u8Tensor5 (const torch::Tensor &x);
 
     int m_x, m_y; // Used for placing the phase mask on (x,y), assuming that the phase
                   // mask is smaller than the image plane

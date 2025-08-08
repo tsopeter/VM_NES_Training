@@ -75,8 +75,10 @@ public:
     void StopCamera();
 
     void SetTextureFromTensor(const torch::Tensor &tensor);
+    void SetTextureFromTensorTiled (const torch::Tensor &tensor);
 
     void DrawTextureToScreen ();
+    void DrawTextureToScreenTiled ();
 
     void SetOptimizer(s4_Optimizer *opt);
 
