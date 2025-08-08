@@ -9,14 +9,12 @@ enum HCommsModes {
 };
 
 struct HCommsDataPacket_Outbound {
-    int64_t delta;
     double  reward;
     int64_t step;
     torch::Tensor image; // Expecting a 8-bit grayscale image [H, W]
 };
 
 struct HCommsDataPacket_Inbound {
-    int64_t delta;
     double  reward;
     int64_t step;
     Texture image; // Expecting a 8-bit grayscale image [H, W]

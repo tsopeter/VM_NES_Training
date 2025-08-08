@@ -35,14 +35,11 @@ void HComms::Transmit(HCommsDataPacket_Outbound &packet) {
     dp[0].type = COMMS_INT64;
     dp[0].data = reinterpret_cast<char*>(&packet.step);
 
-    dp[1].type = COMMS_INT64;
-    dp[1].data = reinterpret_cast<char*>(&packet.delta);
+    dp[1].type = COMMS_DOUBLE;
+    dp[1].data = reinterpret_cast<char*>(&packet.reward);
 
-    dp[2].type = COMMS_DOUBLE;
-    dp[2].data = reinterpret_cast<char*>(&packet.reward);
-
-    dp[3].type = COMMS_IMAGE;
-    dp[3].data = reinterpret_cast<char*>(&packet.image);
+    dp[2].type = COMMS_IMAGE;
+    dp[2].data = reinterpret_cast<char*>(&packet.image);
 
     comms->TransmitDataPacket(dp);
 }
@@ -66,12 +63,6 @@ HCommsDataPacket_Inbound HComms::Receive() {
         throw std::runtime_error("HComms::Receive: Expected INT64 for step, got different type.");
     }
     packet.step = comms->DP_ReceiveInt64();
-
-    type = comms->DP_ReadField();
-    if (type != COMMS_INT64) {
-        throw std::runtime_error("HComms::Receive: Expected INT64 for delta, got different type.");
-    }
-    packet.delta = comms->DP_ReceiveInt64();
 
     type = comms->DP_ReadField();
     if (type != COMMS_DOUBLE) {

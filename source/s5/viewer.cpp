@@ -39,7 +39,6 @@ void Viewer::run() {
             reward = packet.reward;
             step = packet.step;
             m_texture = packet.image;
-            delta = packet.delta;
             BeginDrawing();
             ClearBackground(BLACK);
             DrawTexturePro(

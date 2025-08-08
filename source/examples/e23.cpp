@@ -195,7 +195,7 @@ torch::Tensor e23_ProcessFunction (torch::Tensor &t) {
 int e23 () {
     /* Camera Parameters */
     int Height = 480, Width = 640;
-    bool use_partitioning = false;
+    bool use_partitioning = true;
 
     if (use_partitioning) {
         std::cout << "INFO: [e23] Using partitioning mode.\n";
