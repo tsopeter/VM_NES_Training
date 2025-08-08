@@ -50,6 +50,7 @@ char *CommsDataPacket::CreatePacket(size_t &size) {
     for (size_t i = 0; i < max_size; ++i) {
         size += nodes[i].GetSize();
     }
+    std::cout << "INFO: [CommsDataPacket] Total size required for packet: " << size << " bytes.\n";
 
     // allocate memory for the packet
     char *packet = new char[size + 1];
