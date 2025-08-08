@@ -112,7 +112,7 @@ public:
     }
 
     int64_t N_samples () const override {
-        return m_n;
+        return m_action.size(0);
     }
 
     int64_t m_Height;
@@ -134,7 +134,7 @@ public:
 
 
 int e23 () {
-    int Height = 240/2, Width = 320/2; /* Camera dimensions */
+    int Height = 480, Width = 640; /* Camera dimensions */
     Pylon::PylonAutoInitTerm init {};
     Scheduler2 scheduler {};
 
@@ -143,10 +143,11 @@ int e23 () {
     torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.1));
     s4_Optimizer opt (adam, model);
 
-    HComms comms {"192.168.193.20", 9001};
+    //HComms comms {"192.168.193.20", 9001};
 
     auto process_function = [](torch::Tensor t) {
         // Tensor t has shape [16, H, W]
+
 
         // Sum only the first channel 0
         auto zone_0    = t.index({0, torch::indexing::Slice(), torch::indexing::Slice()});
@@ -154,8 +155,8 @@ int e23 () {
         // All other channels 1-15
         auto zone_1_15 = t.index({torch::indexing::Slice(1, 16), torch::indexing::Slice(), torch::indexing::Slice()});
 
-        auto t0 = zone_0.sum();
-        auto t1 = zone_1_15.sum();
+        auto t0 = zone_0.sum().unsqueeze(0).to(torch::kFloat64); // [1]
+        auto t1 = zone_1_15.sum().unsqueeze(0).to(torch::kFloat64); // [1]
 
         // Concatenate along the first dimension
         auto predictions = torch::stack({t0, t1}, 1);  // [1, 2]
@@ -200,6 +201,7 @@ int e23 () {
         process_function
     );
     scheduler.EnableSampleImageCapture();
+    scheduler.SetRewardDevice(DEVICE);
 
     
     int64_t step=0;
@@ -217,6 +219,7 @@ int e23 () {
         scheduler.DisposeSampleImages();
 
         // Transmit the data to remote server
+        /*
         HCommsDataPacket_Outbound packet;
         packet.reward = reward;
         packet.step   = step;
@@ -224,6 +227,7 @@ int e23 () {
 
         // Send the packet
         comms.Transmit(packet);
+        */
 
     }
 

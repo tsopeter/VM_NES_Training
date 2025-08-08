@@ -15,6 +15,7 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
         throw std::runtime_error("Mismatch in reward size: got " + std::to_string(rewards.size(0)) +
                                  ", expected " + std::to_string(m_model.N_samples()));
     }
+
     auto sum_rewards = rewards.sum();
     auto baseline    = (sum_rewards - rewards)/(m_model.N_samples()-1);
     auto norm_sum    = (rewards - baseline)/rewards.std(true);

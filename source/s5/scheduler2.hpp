@@ -117,6 +117,7 @@ public:
     void DisableSampleImageCapture();
 
     void StopThreads();
+    void SetRewardDevice(const torch::Device &device);
 
     void Start (
         /* Windowing */
@@ -213,6 +214,10 @@ private:
     //
     // Update control
     int64_t number_of_frames_sent = 0;
+
+    //
+    // Set reward device
+    torch::Device reward_device = torch::kCPU;
 
 };
 

@@ -217,6 +217,7 @@ double Scheduler2::Update() {
     auto stacked_rewards = torch::stack(rewards_collected).view({-1});
     double total_rewards = stacked_rewards.mean().item<double>();
 
+    stacked_rewards = stacked_rewards.to(reward_device);
     opt->step(stacked_rewards);
 
     // Reset this back to zero
@@ -440,4 +441,9 @@ void Scheduler2::EnableSampleImageCapture() {
 void Scheduler2::DisableSampleImageCapture() {
     sample_image_capture_enabled.store(false, std::memory_order_release);
     std::cout << "INFO: [Scheduler2::DisableSampleImageCapture] Sample image capture disabled.\n";
+}
+
+void Scheduler2::SetRewardDevice(const torch::Device &device) {
+    reward_device = device;
+    std::cout << "INFO: [Scheduler2::SetRewardDevice] Reward device set to " << reward_device << ".\n";
 }
