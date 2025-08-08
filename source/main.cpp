@@ -33,6 +33,5 @@ void run_code () {
 }
 
 int main () {
-    e24();
-   //run_code ();
+   run_code ();
 }
