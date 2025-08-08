@@ -78,7 +78,7 @@ public:
 
         // save m_parameter to disk
         std::cout<<"INFO: [e23_Model] Created parameter tensor of shape: " << m_parameter.sizes() << '\n';
-        torch::save({m_parameter}, "e23_parameter.pt");
+        torch::save({m_parameter.cpu().detach()}, "e23_parameter.pt");
 
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e23_Model] Set parameters...\n";
