@@ -8,6 +8,7 @@
 #include "../s5/hcomms.hpp"
 #include "../utils/utils.hpp"
 #include "../s4/utils.hpp"
+#include "../s2/dataloader.hpp"
 
 
 class e23_Normal : public Dist {
@@ -144,83 +145,50 @@ public:
     //VonMises m_dist {};
     e23_Normal m_dist {};
 
-    const double std = 0.5;//1e-0;
+    const double std = 0.05;
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
 };
 
 
-torch::Tensor e23_ProcessFunction (torch::Tensor &t) {
-    if (t.dim() == 3) {
-        // Use
+std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
+    // Sum to [16]
+    auto t = ts.image;
+    auto k = ts.full; // full image
+    auto l = torch::tensor({ts.label}); // label
 
-        auto zone_0    = t.index({torch::indexing::Slice(4, 7), torch::indexing::Slice(), torch::indexing::Slice()});
+    auto sums = t.sum({1,2});
+    auto ksum = k.sum() - sums.sum();
 
-        // Get Channels 0,4,8,12
-        // These are the target channels
-        auto zone_0_4_8_12 = t.index({torch::indexing::Slice(0, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()});
+    // just one
+    auto t0 = sums[0].unsqueeze(0).to(torch::kFloat64);
+    auto t1 = sums[1].unsqueeze(0).to(torch::kFloat64);
 
-        // Get channels 1,2,3,5,6,7,9,10,11,13,14,15
-        // These are the non-target channels
-        torch::Tensor zone_1_2_3_5_6_7_9_10_11_13_14_15;
-        zone_1_2_3_5_6_7_9_10_11_13_14_15 = torch::cat({
-            t.index({torch::indexing::Slice(1, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()}),
-            t.index({torch::indexing::Slice(2, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()}),
-            t.index({torch::indexing::Slice(3, 16, 4), torch::indexing::Slice(), torch::indexing::Slice()})
-        }, 0);
+    // rest (for noise suppression)
+    auto t2 = torch::sum(sums.index({torch::indexing::Slice(2,16)}), 0).unsqueeze(0).to(torch::kFloat64);
+    t2 = t2 + ksum;
 
+    // Concatenate along the first dimension
+    auto predictions = torch::stack({t0, t1, t2}, 1);  // [1, 3]
 
-        auto t0 = zone_0_4_8_12.sum().unsqueeze(0).to(torch::kFloat64); // [1]
-        auto t1 = zone_1_2_3_5_6_7_9_10_11_13_14_15.sum().unsqueeze(0).to(torch::kFloat64); // [1]
+    auto targets = l.to(torch::kLong).to(t.device()); // [1]
 
-        // Concatenate along the first dimension
-        auto predictions = torch::stack({t0, t1}, 1);  // [1, 2]
+    // score is the cross entropy loss
+    auto loss = torch::nn::functional::cross_entropy(
+        predictions,
+        targets,
+        torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+    );  // [1]
 
-        // the first class is always the target
-        auto targets = torch::zeros({1}, torch::kLong).to(t.device());  // [1]
-
-        // score is the cross entropy loss
-        auto loss = torch::nn::functional::cross_entropy(
-            predictions,
-            targets,
-            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
-        );  // [1]
-
-        return -loss;
-    }
-    else {
-        int64_t H = t.size(0);
-        int64_t W = t.size(1);
-        // Use more primative processing
-        torch::Tensor t0 = torch::zeros({H, W}, torch::kFloat64);
-        t0.index_put_({torch::indexing::Slice(), torch::indexing::Slice(W/2-8, W/2+8)}, 1.0f);
-
-        torch::Tensor t1 = 1.0 - t0; // Invert the tensor
-        
-        // Stack the tensors
-        auto mask = torch::stack({t0, t1}, 0).unsqueeze(0);
-        t = t.unsqueeze(0);  // [1, H, W]
-
-        auto scores = (t * mask).sum({2, 3}); // [1, 2]
-
-        torch::Tensor targets = torch::zeros({1}, torch::kLong).to(t.device());  // [1]
-
-        // apply cross entropy loss
-        auto loss = torch::nn::functional::cross_entropy(
-            scores,
-            targets,
-            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
-        );  // [1]
-
-        return -loss;
-    }
+    return {-loss, true};
 }
 
 int e23 () {
     /* Camera Parameters */
     int Height = 480, Width = 640;
     bool use_partitioning = true;
+    bool use_tiles        = true;
 
     if (use_partitioning) {
         std::cout << "INFO: [e23] Using partitioning mode.\n";
@@ -237,14 +205,14 @@ int e23 () {
     Scheduler2 scheduler {};
 
     e23_Model model {};
-    model.init(200*2, 320*2, scheduler.maximum_number_of_frames_in_image);
-    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.1));
+    model.init(200, 320, scheduler.maximum_number_of_frames_in_image);
+    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
     s4_Optimizer opt (adam, model);
 
     HComms comms {"192.168.193.20", 9001};
 
-    auto process_function = [](torch::Tensor t)->torch::Tensor {
-        return e23_ProcessFunction(t);
+    PDFunction process_function = [](CaptureData ts)->std::pair<torch::Tensor, bool> {
+        return e23_ProcessFunction(ts);
     };
 
     scheduler.Start(
@@ -266,14 +234,14 @@ int e23 () {
         use_partitioning,  /* Use Zones */
         4,  /* Number of Zones */
         60, /* Zone Size */
-        false, /* Use Centering */
+        true, /* Use Centering */
         0, /* Offset X */
         0, /* Offset Y */
 
         /* PEncoder properties */
         /* These actually determine the size of the texture */
-        1600/2,
-        2560/2,
+        1600/4,
+        2560/4,
 
         /* Optimizer */
         &opt,
@@ -284,24 +252,72 @@ int e23 () {
     scheduler.EnableSampleImageCapture();
     scheduler.SetRewardDevice(DEVICE);
 
-    
-    int64_t step=0;
-    while (!WindowShouldClose()) {
-        int64_t time_0 = Utils::GetCurrentTime_us();
-        for (int i =0; i < 10; ++i) {
-            torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
+    // Get image data
+    s2_Dataloader data_loader {"./Datasets/"};
+    auto data = data_loader.load(s2_DataTypes::TRAIN, 10);
+    std::cout << "INFO: [e23] Loaded data with " << data.len() << " samples.\n";
+
+    auto [d0, l0] = data[0];
+    auto [d1, l1] = data[1];
+
+    d0 = 255.0 - d0;
+    d1 = 255.0 - d1;
+    Image i0 = s4_Utils::TensorToImage(d0);
+    Image i1 = s4_Utils::TensorToImage(d1);
+
+    // Save image
+    //ExportImage(i0, "circle.bmp");
+
+    // Set each image to use bilinear
+    Texture t0 = LoadTextureFromImage(i0);
+    Texture t1 = LoadTextureFromImage(i1);
+    SetTextureFilter(t0, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(t1, TEXTURE_FILTER_BILINEAR);
+
+    scheduler.SetSubTextures(t0, 0);
+    scheduler.EnableSubTexture(0);
+    scheduler.SetSubTextures(t1, 1);
+    scheduler.DisableSubTexture(1);
+
+    auto draw_to_screen_with_i = [&](int index, torch::Tensor &action) {
+        for (int i = 0; i < 10; ++i)
+            scheduler.DisableSubTexture(i);
+        scheduler.EnableSubTexture(index);
+        scheduler.SetLabel(index);
+
+        if (use_tiles) {
             scheduler.SetTextureFromTensorTiled(action);
             scheduler.DrawTextureToScreenTiled();
             scheduler.DrawTextureToScreenTiled();
+        } else {
+            scheduler.SetTextureFromTensor(action);
+            scheduler.DrawTextureToScreen();
+            scheduler.DrawTextureToScreen();
+        }
+    };
+
+    int64_t step=0;
+    while (!WindowShouldClose()) {
+        int64_t time_0 = Utils::GetCurrentTime_us();
+
+
+        for (int i =0; i < 16; ++i) {
+            torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
+            draw_to_screen_with_i(0, action);
+            scheduler.ReadFromCamera();
+
+            draw_to_screen_with_i(1, action);
             scheduler.ReadFromCamera();
             ++step;
         }
+
+
+
         model.squash();
         auto reward = scheduler.Update();
         int64_t time_1 = Utils::GetCurrentTime_us();
 
         int64_t delta = time_1 - time_0;
-
 
         // Transmit the data to remote server
         
@@ -313,13 +329,16 @@ int e23 () {
         // Send the packet
         comms.Transmit(packet);
         scheduler.DisposeSampleImages();
-        
-
     }
 
     scheduler.StopThreads();
     scheduler.StopCamera();
     scheduler.StopWindow();
+
+    UnloadTexture(t0);
+    UnloadTexture(t1);
+    UnloadImage(i0);
+    UnloadImage(i1);
 
     return 0;
 }

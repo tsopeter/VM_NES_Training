@@ -476,6 +476,10 @@ void PEncoder::init_pbo () {
     cudaGraphicsGLRegisterBuffer(&m_cuda_pbo_resource, m_pbo, cudaGraphicsMapFlagsWriteDiscard);
 
     m_texture_initialized = true;
+
+    // Unbind to restore OpenGL state (important for raylib and other textures)
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 }
 #else
 void PEncoder::init_pbo () {

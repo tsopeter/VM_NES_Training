@@ -1,6 +1,9 @@
 #include "scheduler2.hpp"
 
 Scheduler2::Scheduler2() {
+    for (int i = 0; i < 10; i++) {
+        m_sub_textures_enable[i] = false;
+    }
 }
 
 Scheduler2::~Scheduler2() {
@@ -87,6 +90,7 @@ void Scheduler2::StartWindow() {
     window.load();
     // Load shader
     shader = LoadShader(nullptr, "source/shaders/alpha_ignore.fs");
+    sub_shader = LoadShader(nullptr, "source/shaders/alpha_mask.fs");
     std::cout << "INFO: [Scheduler2::StartWindow] Shader loaded.\n";
     std::cout << "INFO: [Scheduler2::StartWindow] Window started.\n";
 }
@@ -151,6 +155,25 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_2() {
     return {tensor, torch::stack(zone_tensors)};  // [N, H, W]
 }
 
+std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_3() {
+    auto [image, zones] = camera.pread2();
+
+    // convert zones into tensors, zones is a vector of int64_t
+    torch::Tensor zone_tensor = torch::from_blob(
+        zones.data(),
+        {static_cast<int64_t>(zones.size())},
+        torch::kInt64
+    );
+
+    auto tensor = torch::from_blob(
+        image.data(), 
+        {camera.Height, camera.Width}, 
+        torch::kUInt8
+    ).clone();
+
+    return {tensor, zone_tensor};
+}
+
 std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera() {
     switch (camera.UseZones) {
         case false: return ReadCamera_1();
@@ -177,7 +200,7 @@ void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
 // Draw Texture to Screen
 void Scheduler2::DrawTextureToScreen() {
     BeginDrawing();
-    BeginShaderMode(shader);
+        BeginShaderMode(shader);
         ClearBackground(BLACK);
         DrawTexturePro(
             m_texture,
@@ -185,7 +208,9 @@ void Scheduler2::DrawTextureToScreen() {
             {0, 0, static_cast<float>(window.Width), static_cast<float>(window.Height)},
             {0, 0}, 0.0f, WHITE
         );
-    EndShaderMode();
+        EndShaderMode();
+        DrawSubTexturesToScreen();
+
     EndDrawing();
     std::cout<< "INFO: [Scheduler2::DrawTextureToScreen] Texture drawn to screen.\n";
 }
@@ -197,7 +222,7 @@ void Scheduler2::DrawTextureToScreenTiled() {
     int tiles_y = window.Height / m_texture.height;
     
     BeginDrawing();
-    BeginShaderMode(shader);
+        BeginShaderMode(shader);
         ClearBackground(BLACK);
         for (int x = 0; x < tiles_x; ++x) {
             for (int y = 0; y < tiles_y; ++y) {
@@ -210,30 +235,68 @@ void Scheduler2::DrawTextureToScreenTiled() {
                 );
             }
         }
-    EndShaderMode();
+        EndShaderMode();
+
+        DrawSubTexturesToScreen();
     EndDrawing();
 }
 
+void Scheduler2::DrawSubTexturesToScreen() {
+    BeginShaderMode(sub_shader);
+    for (int i = 0; i < 10; ++i) {
+        if (m_sub_textures_enable[i]) {
+            std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
+            std::cout << "INFO: [Sub Texture " << i << "] (" 
+                << m_sub_textures[i].width 
+                << ", " 
+                << m_sub_textures[i].height 
+                << ") -> ("
+                << window.Width
+                << ", "
+                << window.Height
+                << ")\n";
+            DrawTexturePro(
+                m_sub_textures[i],
+                {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
+                {0, 0, static_cast<float>(window.Width), static_cast<float>(window.Height)},
+                {0, 0}, 0.0f, WHITE
+            );
+        }
+    }
+    EndShaderMode();
+}
+
+void Scheduler2::DrawSubTexturesOnly () {
+    BeginDrawing();
+    DrawSubTexturesToScreen();
+    EndDrawing();
+}
 //
 // Processing
 void Scheduler2::ProcessDataPipeline(
-    std::function<torch::Tensor(torch::Tensor)> process_function
+    PDFunction process_function
 ) {
     // Place onto separate thread for data processing.
     processing_thread = std::thread([this, process_function]() {
-        torch::Tensor data;
+        std::vector<torch::Tensor> data;
         while (!end_processing.load(std::memory_order_acquire)) {
             // Read from camera2process queue
             if (!camera2process.try_dequeue(data)) {
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
                 continue;
             }
-
             // Process the data using the provided function
-            torch::Tensor result = process_function(data);
+            auto [result, valid] = process_function(CaptureData{
+                .image     = data[1],
+                .full      = data[0],
+                .label     = m_label,
+                .batch_id  = m_batch_id,
+                .action_id = m_action_id 
+            });
 
             // Store into rewards queue
-            outputs.enqueue(result);
+            if (valid)
+                outputs.enqueue(result);
         }
     });
 
@@ -263,6 +326,27 @@ double Scheduler2::Update() {
     }
 
     auto stacked_rewards = torch::stack(rewards_collected).view({-1});
+
+    // rewards are stacked as
+    // 
+    // [r0A, r1A, ..., r19A, r0B, r1B, ..., r19B, ...]
+    //
+    // We want it in form
+    // [
+    //   r0A, r0B, ...
+    //   r1A, r1B, ...
+    //   ...
+    //   r19A, r19B, ...
+    // ]
+    //
+    // Reshape and transpose to get the desired order
+    // stacked_rewards: [number_of_frames_sent * maximum_number_of_frames_in_image]
+    // Reshape to [number_of_frames_sent, maximum_number_of_frames_in_image]
+    // Then transpose to [maximum_number_of_frames_in_image, number_of_frames_sent]
+    stacked_rewards = stacked_rewards.view({number_of_frames_sent, maximum_number_of_frames_in_image}).transpose(0, 1).contiguous().view({-1});
+    
+
+
     double total_rewards = stacked_rewards.mean().item<double>();
 
     stacked_rewards = stacked_rewards.to(reward_device);
@@ -333,7 +417,7 @@ void Scheduler2::CameraThread() {
         int64_t count = 0;
         while (count < maximum_number_of_frames_in_image) {
             auto [image, zones] = ReadCamera();
-            camera2process.enqueue(zones);
+            camera2process.enqueue({image, zones});
             ++count;
 
             //std::cout << "INFO: [Scheduler2::CameraThread] Captured image " << count << " of " << maximum_number_of_frames_in_image << ".\n";
@@ -381,7 +465,7 @@ void Scheduler2::Start (
         s4_Optimizer *opt,
 
         /* Processing function */
-        std::function<torch::Tensor(torch::Tensor)> process_function
+        PDFunction process_function
 ) {
     SetupWindow(
         monitor, 
@@ -504,4 +588,39 @@ void Scheduler2::DisableSampleImageCapture() {
 void Scheduler2::SetRewardDevice(const torch::Device &device) {
     reward_device = device;
     std::cout << "INFO: [Scheduler2::SetRewardDevice] Reward device set to " << reward_device << ".\n";
+}
+
+void Scheduler2::SetSubTextures(Texture tex, int index) {
+    if (index < 10) {
+        m_sub_textures[index] = tex;
+        m_sub_textures_enable[index] = true;
+    }
+}
+
+void Scheduler2::EnableSubTexture(int index) {
+    if (index < 10) {
+        m_sub_textures_enable[index] = true;
+    }
+}
+
+void Scheduler2::DisableSubTexture(int index) {
+    if (index < 10) {
+        m_sub_textures_enable[index] = false;
+    }
+}
+
+void Scheduler2::SetLabel(int label) {
+    m_label = label;
+}
+
+void Scheduler2::SetBatch_Id(int batch_id) {
+    m_batch_id = batch_id;
+}
+
+void Scheduler2::SetAction_Id(int action_id) {
+    m_action_id = action_id;
+}
+
+void Scheduler2::SetBatchSize(int batch_size) {
+    m_batch_size = batch_size;
 }

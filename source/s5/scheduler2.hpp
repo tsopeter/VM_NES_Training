@@ -25,6 +25,16 @@
     #error "Unsupported platform"
 #endif
 
+struct CaptureData {
+    torch::Tensor image;
+    torch::Tensor full;
+    int           label;
+    int           batch_id;
+    int           action_id;
+};
+
+using PDFunction = std::function<std::pair<torch::Tensor, bool>(CaptureData)>;
+
 class Scheduler2 {
 public:
     //
@@ -106,7 +116,7 @@ public:
      * a multi-channel image with shape [NumberOfZones * NumberOfZones, ZoneSize, ZoneSize].
      */
     void ProcessDataPipeline(
-        std::function<torch::Tensor(torch::Tensor)> process_function
+        PDFunction process_function
     );
 
     // Setup the VSYNC timing channels
@@ -126,6 +136,16 @@ public:
 
     void StopThreads();
     void SetRewardDevice(const torch::Device &device);
+
+    void SetSubTextures(Texture, int);
+    void EnableSubTexture(int);
+    void DisableSubTexture(int);
+    void DrawSubTexturesOnly();
+
+    void SetLabel(int);
+    void SetBatch_Id(int);
+    void SetAction_Id(int);
+    void SetBatchSize(int);
 
     void Start (
         /* Windowing */
@@ -158,7 +178,7 @@ public:
         s4_Optimizer *opt=nullptr,
 
         /* Processing function */
-        std::function<torch::Tensor(torch::Tensor)> process_function=nullptr
+        PDFunction process_function=nullptr
     );
 
 private:
@@ -167,6 +187,7 @@ private:
     void CameraThread();
     std::pair<torch::Tensor, torch::Tensor> ReadCamera_1();
     std::pair<torch::Tensor, torch::Tensor> ReadCamera_2();
+    std::pair<torch::Tensor, torch::Tensor> ReadCamera_3();
 
     torch::Tensor GetSampleImage_1();
     torch::Tensor GetSampleImage_2();
@@ -181,6 +202,10 @@ private:
     void send_ready_to_capture ();
 
     Texture m_texture;
+    Texture m_sub_textures[10];
+    bool m_sub_textures_enable[10];
+
+    void DrawSubTexturesToScreen();
 
     //
     // Sample image for viewing purposes
@@ -205,6 +230,7 @@ private:
     //
     // Shader is used for ignoring alpha channel
     Shader shader;
+    Shader sub_shader;
 
     //
     // Optimizer
@@ -212,7 +238,7 @@ private:
 
     //
     // Data buffers
-    moodycamel::ConcurrentQueue<torch::Tensor> camera2process;
+    moodycamel::ConcurrentQueue<std::vector<torch::Tensor>> camera2process;
     moodycamel::ConcurrentQueue<torch::Tensor> outputs;
 
     //
@@ -233,6 +259,13 @@ private:
     //
     // Set reward device
     torch::Device reward_device = torch::kCPU;
+
+    //
+    //
+    int m_label = 0;
+    int m_batch_id = 0;
+    int m_action_id = 0;
+    int m_batch_size = 0;
 
 };
 

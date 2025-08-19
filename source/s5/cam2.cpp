@@ -3,6 +3,8 @@
 // Modules
 #include "../utils/utils.hpp"
 
+#include <numeric>
+
 Cam2::Cam2() {
 
 }
@@ -45,6 +47,26 @@ std::pair<u8Image, std::vector<u8Image>> Cam2::pread() {
         }
     }
     return {image, images};
+}
+
+std::pair<u8Image, std::vector<int64_t>> Cam2::pread2() {
+    auto [full_image, zone_images] = pread();
+
+    std::vector<int64_t> sums;
+    sums.reserve(zone_images.size()+1);
+
+    int64_t total = 0;
+    for (const auto & zone : zone_images) {
+        int64_t sum = std::accumulate(zone.begin(), zone.end(), 0);
+        sums.push_back(sum);
+        total += sum;
+    }
+
+    // full sum
+    int64_t full_sum = std::accumulate(full_image.begin(), full_image.end(), 0);// - total;
+    sums.push_back(full_sum);
+
+    return {full_image, sums};
 }
 
 void Cam2::open() {

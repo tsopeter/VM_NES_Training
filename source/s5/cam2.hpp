@@ -118,6 +118,17 @@ public:
     std::pair<u8Image, std::vector<u8Image>> pread();
 
     /**
+     * @brief Read an image from the camera.
+     *
+     * Similar to pread() and sread(), it will block until an image is available.
+     * However, if you are using zones, it will read the image from the camera
+     * and structure it into a sum of the image with only zones + backgorund.
+     *
+     * The total number of zones is determined by the square of the NumberOfZones.
+     */
+    std::pair<u8Image, std::vector<int64_t>> pread2();
+
+    /**
      * @brief Returns the total number of images captured by the camera.
      * 
      * @return The total number of images captured by the camera.
