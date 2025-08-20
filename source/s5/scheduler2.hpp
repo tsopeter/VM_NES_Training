@@ -207,6 +207,8 @@ private:
 
     void DrawSubTexturesToScreen();
 
+    torch::Tensor Uninterleave(torch::Tensor&);
+
     //
     // Sample image for viewing purposes
     moodycamel::ConcurrentQueue<torch::Tensor> sample_images;

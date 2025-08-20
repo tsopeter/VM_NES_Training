@@ -309,9 +309,42 @@ void Scheduler2::ReadFromCamera() {
     ++number_of_frames_sent;
 }
 
+torch::Tensor Scheduler2::Uninterleave (torch::Tensor &x) {
+    std::cout << "INFO: [Scheduler2::Uninterleave] Uninterleaving tensor...\n";
+    int64_t B = m_batch_size;
+    int64_t M = maximum_number_of_frames_in_image;  // 20
+    int64_t N = x.size(0) / (B * M);
+
+    auto y = torch::zeros({M * N, B}, x.options());
+
+    // Reshape/permute equivalent
+    //   x: [M*N, B] → [N, B, M] → [M, N, B] → [M*N, B]
+
+    y.copy_(
+        x.reshape({N, B, M})
+        .permute({2, 0, 1})
+        .reshape({M * N, B})
+    );
+    int64_t rows = y.size(0);
+    M = rows / N;
+
+
+    // idx = torch.arange(rows, device=arr.device)
+    auto idx = torch::arange(rows, x.options().dtype(torch::kInt32).device(x.device()));
+
+    // inv = (idx % M) * N + (idx // M)
+    auto inv = (idx % M) * N + (idx / M);
+    inv = inv.to(torch::kInt32);
+
+    // return arr[inv]
+    auto result = y.index_select(0, inv);
+    return result;
+}
+
 
 // Update Method
 double Scheduler2::Update() {
+    std::cout << "INFO: [Scheduler2::Update] Updating scheduler...\n";
     // Calculate the number of rewards we need
     int64_t required_rewards = number_of_frames_sent * maximum_number_of_frames_in_image;
     std::vector<torch::Tensor> rewards_collected;
@@ -327,25 +360,11 @@ double Scheduler2::Update() {
 
     auto stacked_rewards = torch::stack(rewards_collected).view({-1});
 
-    // rewards are stacked as
-    // 
-    // [r0A, r1A, ..., r19A, r0B, r1B, ..., r19B, ...]
-    //
-    // We want it in form
-    // [
-    //   r0A, r0B, ...
-    //   r1A, r1B, ...
-    //   ...
-    //   r19A, r19B, ...
-    // ]
-    //
-    // Reshape and transpose to get the desired order
-    // stacked_rewards: [number_of_frames_sent * maximum_number_of_frames_in_image]
-    // Reshape to [number_of_frames_sent, maximum_number_of_frames_in_image]
-    // Then transpose to [maximum_number_of_frames_in_image, number_of_frames_sent]
-    stacked_rewards = stacked_rewards.view({number_of_frames_sent, maximum_number_of_frames_in_image}).transpose(0, 1).contiguous().view({-1});
-    
+    stacked_rewards = Uninterleave(stacked_rewards);
+    std::cout << stacked_rewards.sizes() << '\n';
 
+
+    stacked_rewards = stacked_rewards.mean({1});
 
     double total_rewards = stacked_rewards.mean().item<double>();
 

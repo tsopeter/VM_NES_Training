@@ -10,6 +10,10 @@
 #include "../s4/utils.hpp"
 #include "../s2/dataloader.hpp"
 
+namespace e23_global {
+    static std::atomic<double> correct = 0;
+    static std::atomic<double> total   = 0;
+}
 
 class e23_Normal : public Dist {
 public:
@@ -145,7 +149,7 @@ public:
     //VonMises m_dist {};
     e23_Normal m_dist {};
 
-    const double std = 0.05;
+    const double std = 0.02;
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -153,6 +157,11 @@ public:
 
 
 std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
+    static double norm_factors[] = {1, 1, 1, 1, 1, 
+                                    1, 1, 1, 1, 1};
+    static double gain = 2;
+    static double gain_factor = 0.9995;
+
     // Sum to [16]
     auto t = ts.image;
     auto k = ts.full; // full image
@@ -161,16 +170,32 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     auto sums = t.sum({1,2});
     auto ksum = k.sum() - sums.sum();
 
-    // just one
-    auto t0 = sums[0].unsqueeze(0).to(torch::kFloat64);
-    auto t1 = sums[1].unsqueeze(0).to(torch::kFloat64);
+    std::vector<torch::Tensor> t_vec;
 
-    // rest (for noise suppression)
-    auto t2 = torch::sum(sums.index({torch::indexing::Slice(2,16)}), 0).unsqueeze(0).to(torch::kFloat64);
-    t2 = t2 + ksum;
+    for (int i = 0; i < 10; ++i) {
+        t_vec.push_back(gain * norm_factors[i] * sums[i].unsqueeze(0).to(torch::kFloat64));
+    }
+
+    // The first instance is used as a normalization factor
+    static bool first_instance = true;
+    if (first_instance) {
+        // compute normalization factors
+        for (int i = 0; i < 10; ++i) {
+            norm_factors[i] = 1.0 / (sums[i].item<double>() + 1e-8);
+        }
+
+        first_instance = false;
+    }
 
     // Concatenate along the first dimension
-    auto predictions = torch::stack({t0, t1, t2}, 1);  // [1, 3]
+    auto predictions = torch::stack(t_vec, 1);  // [1, 10]
+    // take the argmax
+    auto preds = predictions.argmax(1); // [1]
+
+    if (preds.item<int64_t>() == l.item<int64_t>()) {
+        e23_global::correct.fetch_add(1, std::memory_order_release);
+    }
+    e23_global::total.fetch_add(1, std::memory_order_release);
 
     auto targets = l.to(torch::kLong).to(t.device()); // [1]
 
@@ -205,7 +230,7 @@ int e23 () {
     Scheduler2 scheduler {};
 
     e23_Model model {};
-    model.init(200, 320, scheduler.maximum_number_of_frames_in_image);
+    model.init(200/2, 320/2, scheduler.maximum_number_of_frames_in_image);
     torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
     s4_Optimizer opt (adam, model);
 
@@ -240,8 +265,8 @@ int e23 () {
 
         /* PEncoder properties */
         /* These actually determine the size of the texture */
-        1600/4,
-        2560/4,
+        1600/8,
+        2560/8,
 
         /* Optimizer */
         &opt,
@@ -253,65 +278,64 @@ int e23 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
+    int64_t n_training_samples = 100;
+    int64_t n_batch_size       = 10;
+    int64_t n_samples          = 16;    // Note actual number of samples is n_samples * 20
+
+
     s2_Dataloader data_loader {"./Datasets/"};
-    auto data = data_loader.load(s2_DataTypes::TRAIN, 10);
+    auto data = data_loader.load(s2_DataTypes::TRAIN, n_training_samples);
     std::cout << "INFO: [e23] Loaded data with " << data.len() << " samples.\n";
 
-    auto [d0, l0] = data[0];
-    auto [d1, l1] = data[1];
-
-    d0 = 255.0 - d0;
-    d1 = 255.0 - d1;
-    Image i0 = s4_Utils::TensorToImage(d0);
-    Image i1 = s4_Utils::TensorToImage(d1);
-
-    // Save image
-    //ExportImage(i0, "circle.bmp");
-
-    // Set each image to use bilinear
-    Texture t0 = LoadTextureFromImage(i0);
-    Texture t1 = LoadTextureFromImage(i1);
-    SetTextureFilter(t0, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(t1, TEXTURE_FILTER_BILINEAR);
-
-    scheduler.SetSubTextures(t0, 0);
-    scheduler.EnableSubTexture(0);
-    scheduler.SetSubTextures(t1, 1);
-    scheduler.DisableSubTexture(1);
-
-    auto draw_to_screen_with_i = [&](int index, torch::Tensor &action) {
-        for (int i = 0; i < 10; ++i)
-            scheduler.DisableSubTexture(i);
-        scheduler.EnableSubTexture(index);
-        scheduler.SetLabel(index);
-
-        if (use_tiles) {
-            scheduler.SetTextureFromTensorTiled(action);
-            scheduler.DrawTextureToScreenTiled();
-            scheduler.DrawTextureToScreenTiled();
-        } else {
-            scheduler.SetTextureFromTensor(action);
-            scheduler.DrawTextureToScreen();
-            scheduler.DrawTextureToScreen();
-        }
+    struct Batch {
+        std::vector<Texture> textures;
+        std::vector<int>     labels;
     };
 
+    std::vector<Batch> batches;
+    batches.resize(n_training_samples / n_batch_size);
+
+    for (int i = 0; i < n_training_samples; i += n_batch_size) {
+        for (int j = 0; j < n_batch_size; ++j) {
+            auto [d, l] = data[i + j];
+            // Process the data
+
+            auto li = l.argmax().item<int64_t>();
+
+            d = 255.0 - d;
+            Image di = s4_Utils::TensorToImage(d);
+            Texture ti = LoadTextureFromImage(di);
+            SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
+            UnloadImage(di);
+
+            batches[i/n_batch_size].textures.push_back(ti);
+            batches[i/n_batch_size].labels.push_back(li);
+        }
+
+    }
+    scheduler.SetBatchSize(n_batch_size);
+
     int64_t step=0;
+    int64_t batch_sel=0;
     while (!WindowShouldClose()) {
         int64_t time_0 = Utils::GetCurrentTime_us();
 
 
-        for (int i =0; i < 16; ++i) {
+        for (int i =0; i < n_samples; ++i) {
             torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
-            draw_to_screen_with_i(0, action);
-            scheduler.ReadFromCamera();
+            scheduler.SetTextureFromTensorTiled(action);
 
-            draw_to_screen_with_i(1, action);
-            scheduler.ReadFromCamera();
-            ++step;
+            for (int j = 0; j < n_batch_size; ++j) {
+                scheduler.SetSubTextures(batches[batch_sel].textures[j], 0);
+                scheduler.SetLabel(batches[batch_sel].labels[j]);
+
+                scheduler.DrawTextureToScreenTiled();
+                scheduler.DrawTextureToScreenTiled();
+                scheduler.ReadFromCamera();
+                ++step;
+            }
         }
-
-
+        batch_sel = (batch_sel + 1) % batches.size();
 
         model.squash();
         auto reward = scheduler.Update();
@@ -320,11 +344,13 @@ int e23 () {
         int64_t delta = time_1 - time_0;
 
         // Transmit the data to remote server
-        
         HCommsDataPacket_Outbound packet;
-        packet.reward = reward;
+        packet.reward = 100 * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
         packet.step   = step;
         packet.image  = scheduler.GetSampleImage().contiguous().to(torch::kUInt8);
+
+        e23_global::correct.store(0, std::memory_order_release);
+        e23_global::total.store(0, std::memory_order_release);
 
         // Send the packet
         comms.Transmit(packet);
@@ -335,10 +361,11 @@ int e23 () {
     scheduler.StopCamera();
     scheduler.StopWindow();
 
-    UnloadTexture(t0);
-    UnloadTexture(t1);
-    UnloadImage(i0);
-    UnloadImage(i1);
+    for (auto &b : batches) {
+        for (auto &t : b.textures) {
+            UnloadTexture(t);
+        }
+    }
 
     return 0;
 }
