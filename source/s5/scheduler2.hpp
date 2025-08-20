@@ -96,6 +96,7 @@ public:
     void SetOptimizer(s4_Optimizer *opt);
 
     double Update ();
+    void   Dump ();
 
     void ReadFromCamera();
 

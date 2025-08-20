@@ -341,6 +341,11 @@ torch::Tensor Scheduler2::Uninterleave (torch::Tensor &x) {
     return result;
 }
 
+void Scheduler2::Dump () {
+    // just dump the data collected in outputs
+    torch::Tensor output;
+    while (outputs.try_dequeue(output)) {}
+}
 
 // Update Method
 double Scheduler2::Update() {

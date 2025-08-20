@@ -15,6 +15,43 @@ namespace e23_global {
     static std::atomic<double> total   = 0;
 }
 
+struct e23_Batch {
+    std::vector<Texture> textures;
+    std::vector<int>     labels;
+};
+
+
+std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
+    s2_Dataloader data_loader {"./Datasets/"};
+    auto data = data_loader.load(dtype, n_data_points);
+    std::cout << "INFO: [e23] Loaded data with " << data.len() << " samples.\n";
+
+    std::vector<e23_Batch> batches;
+    batches.resize(n_data_points / batch_size);
+
+    for (int i = 0; i < n_data_points; i += batch_size) {
+        for (int j = 0; j < batch_size; ++j) {
+            auto [d, l] = data[i + j];
+            // Process the data
+
+            auto li = l.argmax().item<int64_t>();
+
+            d = 255.0 - d;
+            Image di = s4_Utils::TensorToImage(d);
+            Texture ti = LoadTextureFromImage(di);
+            SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
+            UnloadImage(di);
+
+            batches[i / batch_size].textures.push_back(ti);
+            batches[i / batch_size].labels.push_back(li);
+        }
+
+    }
+
+    return batches;
+}
+
+
 class e23_Normal : public Dist {
 public:
     e23_Normal () {}
@@ -282,44 +319,16 @@ int e23 () {
     int64_t n_batch_size       = 10;
     int64_t n_samples          = 16;    // Note actual number of samples is n_samples * 20
 
-
-    s2_Dataloader data_loader {"./Datasets/"};
-    auto data = data_loader.load(s2_DataTypes::TRAIN, n_training_samples);
-    std::cout << "INFO: [e23] Loaded data with " << data.len() << " samples.\n";
-
-    struct Batch {
-        std::vector<Texture> textures;
-        std::vector<int>     labels;
-    };
-
-    std::vector<Batch> batches;
-    batches.resize(n_training_samples / n_batch_size);
-
-    for (int i = 0; i < n_training_samples; i += n_batch_size) {
-        for (int j = 0; j < n_batch_size; ++j) {
-            auto [d, l] = data[i + j];
-            // Process the data
-
-            auto li = l.argmax().item<int64_t>();
-
-            d = 255.0 - d;
-            Image di = s4_Utils::TensorToImage(d);
-            Texture ti = LoadTextureFromImage(di);
-            SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
-            UnloadImage(di);
-
-            batches[i/n_batch_size].textures.push_back(ti);
-            batches[i/n_batch_size].labels.push_back(li);
-        }
-
-    }
+    auto batches = Get_Data(n_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
+
+    int64_t n_validation_samples = 10;
+    auto val_batches = Get_Data(n_validation_samples, 1, s2_DataTypes::VALID);
 
     int64_t step=0;
     int64_t batch_sel=0;
     while (!WindowShouldClose()) {
         int64_t time_0 = Utils::GetCurrentTime_us();
-
 
         for (int i =0; i < n_samples; ++i) {
             torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
@@ -342,6 +351,13 @@ int e23 () {
         int64_t time_1 = Utils::GetCurrentTime_us();
 
         int64_t delta = time_1 - time_0;
+
+        auto mask = model.get_parameters(); // [H, W]
+        for (int i = 0; i < n_validation_samples; ++i) {
+
+        }
+
+
 
         // Transmit the data to remote server
         HCommsDataPacket_Outbound packet;
