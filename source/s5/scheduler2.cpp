@@ -347,6 +347,17 @@ void Scheduler2::Dump () {
     // just dump the data collected in outputs
     torch::Tensor output;
     while (outputs.try_dequeue(output)) {}
+    number_of_frames_sent = 0;
+}
+
+void Scheduler2::Dump(int frames) {
+    torch::Tensor output;
+    int counter = 0;
+    while (counter < frames) {
+        if (outputs.try_dequeue(output))
+            ++counter;
+    }
+    number_of_frames_sent = 0;
 }
 
 // Update Method
@@ -662,6 +673,12 @@ void Scheduler2::Validation_SetDatasetTexture (Texture t) {
 
 void Scheduler2::Validation_SetTileParams(int p) {
     m_val_tile_size = p;
+}
+
+void Scheduler2::Validation_SaveMaskToDrive(const std::string &filename) {
+    Image img = LoadImageFromTexture(m_val_mask);
+    ExportImage(img, filename.c_str());
+    UnloadImage(img);
 }
 
 void Scheduler2::Validation_SetMask (const torch::Tensor &mask) {

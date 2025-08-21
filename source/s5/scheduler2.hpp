@@ -93,15 +93,17 @@ public:
     void DrawTextureToScreen ();
     void DrawTextureToScreenTiled ();
 
+    void Validation_SetTileParams(int);
     void Validation_SetDatasetTexture(Texture);
     void Validation_SetMask(const torch::Tensor&);
     void Validation_DrawToScreen();
-    void Validation_SetTileParams(int);
+    void Validation_SaveMaskToDrive(const std::string&);
 
     void SetOptimizer(s4_Optimizer *opt);
 
     double Update ();
     void   Dump ();
+    void   Dump (int);
 
     void ReadFromCamera();
 

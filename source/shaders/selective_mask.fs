@@ -30,7 +30,6 @@ void main() {
     vec3 acc = vec3(0.0);
     vec2 tiledCoord = fragTexCoord * vec2(uTileX, uTileY);
     acc = texture(uBase, tiledCoord).rgb;
-    acc = vec3(0.0);
 
     for (int i = 0; i < 20; i++) {
         int index = i % 8;

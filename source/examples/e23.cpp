@@ -20,10 +20,12 @@ struct e23_Batch {
     std::vector<int>     labels;
 };
 
+
 struct e23_Validation_Batch {
     Texture texture;
     std::vector<int> labels;
 };
+
 
 std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
     s2_Dataloader data_loader {"./Datasets/"};
@@ -239,6 +241,9 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
                                     1, 1, 1, 1, 1};
     static double gain = 2;
     static double gain_factor = 0.9995;
+    static int64_t process_count = 0;
+
+    std::cout << "INFO: [e23_ProcessFunction]: Processed: " << ++process_count << " so far.\n";
 
     // Sum to [16]
     auto t = ts.image;
@@ -360,15 +365,15 @@ int e23 () {
     int64_t n_batch_size       = 10;
     int64_t n_samples          = 16;    // Note actual number of samples is n_samples * 20
 
-    auto batches = Get_Data(n_samples, n_batch_size, s2_DataTypes::TRAIN);
+    auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
 
-    /*
+    
     int64_t n_validation_samples = 20;
     std::cout << "INFO: [e23] Loading Validation Set\n";
     std::vector<e23_Validation_Batch> val_batches = e23_Pack20(n_validation_samples/20); // note that we obtain in batches of 20
     std::cout << "INFO: [e23] Loaded " << val_batches.size() << " validation batches.\n";
-    */
+    
 
     int64_t step=0;
     int64_t batch_sel=0;
@@ -390,6 +395,7 @@ int e23 () {
             }
         }
         batch_sel = (batch_sel + 1) % batches.size();
+        std::cout << "INFO: [e23] Training step " << step << " completed...\n";
 
         model.squash();
         auto reward = scheduler.Update();
@@ -397,10 +403,14 @@ int e23 () {
 
         int64_t delta = time_1 - time_0;
 
-        /*
+        e23_global::correct.store(0, std::memory_order_release);
+        e23_global::total.store(0, std::memory_order_release);
         auto mask = model.get_parameters(); // [H, W]
         scheduler.Validation_SetMask(mask);
+        scheduler.Validation_SetTileParams(8);
         // Draw the validation set
+
+        std::cout << "INFO: [e23] Running Validation...\n";
         for (int i = 0; i < val_batches.size(); ++i) {
             scheduler.SetLabel(val_batches[i].labels);
             scheduler.Validation_SetDatasetTexture(val_batches[i].texture);
@@ -408,11 +418,11 @@ int e23 () {
             scheduler.Validation_DrawToScreen();
             scheduler.ReadFromCamera();
         }
-        scheduler.Dump();
-        */
+        // Export the screen shot for analysis
+        scheduler.Validation_SaveMaskToDrive("val_mask.png");
+        TakeScreenshot("val_screen.png");
 
-
-
+        scheduler.Dump(20);
 
         // Transmit the data to remote server
         HCommsDataPacket_Outbound packet;
@@ -438,10 +448,10 @@ int e23 () {
         }
     }
 
-    /*
+    
     for (auto &t : val_batches) {
         UnloadTexture(t.texture);
     }
-    */
+    
     return 0;
 }
