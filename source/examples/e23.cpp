@@ -394,6 +394,9 @@ int e23 () {
                 ++step;
             }
         }
+
+        TakeScreenshot("train_screen.png");
+
         batch_sel = (batch_sel + 1) % batches.size();
         std::cout << "INFO: [e23] Training step " << step << " completed...\n";
 
@@ -420,6 +423,7 @@ int e23 () {
         }
         // Export the screen shot for analysis
         scheduler.Validation_SaveMaskToDrive("val_mask.png");
+        scheduler.Training_SaveMaskToDrive("train_mask.png");
         TakeScreenshot("val_screen.png");
 
         scheduler.Dump(20);

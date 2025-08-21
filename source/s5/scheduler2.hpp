@@ -89,6 +89,7 @@ public:
 
     void SetTextureFromTensor(const torch::Tensor &tensor);
     void SetTextureFromTensorTiled (const torch::Tensor &tensor);
+    void Training_SaveMaskToDrive(const std::string &);
 
     void DrawTextureToScreen ();
     void DrawTextureToScreenTiled ();

@@ -667,6 +667,12 @@ void Scheduler2::SetBatchSize(int batch_size) {
     m_batch_size = batch_size;
 }
 
+void Scheduler2::Training_SaveMaskToDrive(const std::string &filename) {
+    Image img = LoadImageFromTexture(m_texture);
+    ExportImage(img, filename.c_str());
+    UnloadImage(img);
+}
+
 void Scheduler2::Validation_SetDatasetTexture (Texture t) {
     m_val_texture = t;
 }
