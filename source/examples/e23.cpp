@@ -20,6 +20,10 @@ struct e23_Batch {
     std::vector<int>     labels;
 };
 
+struct e23_Validation_Batch {
+    Texture texture;
+    std::vector<int> labels;
+};
 
 std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
     s2_Dataloader data_loader {"./Datasets/"};
@@ -46,6 +50,43 @@ std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes 
             batches[i / batch_size].labels.push_back(li);
         }
 
+    }
+
+    return batches;
+}
+
+std::vector<e23_Validation_Batch> e23_Pack20 (int n) {
+    s2_Dataloader dataloader {"./Datasets"};
+    std::vector<e23_Validation_Batch> batches;
+
+    auto dl = dataloader.load(s2_DataTypes::VALID, n*20);
+
+    for (int i = 0; i < n * 20; i += 20) {
+        uint8_t data[28 * 28 * 20]; // 1 channel, R32B32G32A32, 20 images
+        std::vector<int> labels;
+
+        // Each image is 28x28 of uint8_t
+        for (int j = 0; j < 20; ++j) {
+            auto [image, l] = dl[i + j];
+            labels.push_back(l.argmax().item<int>());
+            image = image.to(torch::kUInt8).contiguous(); // [28 x 28]
+
+            // copy sequentially
+            std::memcpy(data + j * 28 * 28, image.data_ptr<uint8_t>(), 28 * 28);
+
+        }
+        Image image;
+        image.data = data;
+        image.width = 28;
+        image.height = 28 * 20;
+        image.mipmaps = 1;
+        image.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+
+        Texture texture = LoadTextureFromImage(image);
+        SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR); 
+        batches.push_back(
+            e23_Validation_Batch{.texture = texture, .labels = labels}
+        );
     }
 
     return batches;
@@ -322,8 +363,12 @@ int e23 () {
     auto batches = Get_Data(n_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
 
-    int64_t n_validation_samples = 10;
-    auto val_batches = Get_Data(n_validation_samples, 1, s2_DataTypes::VALID);
+    /*
+    int64_t n_validation_samples = 20;
+    std::cout << "INFO: [e23] Loading Validation Set\n";
+    std::vector<e23_Validation_Batch> val_batches = e23_Pack20(n_validation_samples/20); // note that we obtain in batches of 20
+    std::cout << "INFO: [e23] Loaded " << val_batches.size() << " validation batches.\n";
+    */
 
     int64_t step=0;
     int64_t batch_sel=0;
@@ -352,10 +397,20 @@ int e23 () {
 
         int64_t delta = time_1 - time_0;
 
+        /*
         auto mask = model.get_parameters(); // [H, W]
-        for (int i = 0; i < n_validation_samples; ++i) {
-
+        scheduler.Validation_SetMask(mask);
+        // Draw the validation set
+        for (int i = 0; i < val_batches.size(); ++i) {
+            scheduler.SetLabel(val_batches[i].labels);
+            scheduler.Validation_SetDatasetTexture(val_batches[i].texture);
+            scheduler.Validation_DrawToScreen();
+            scheduler.Validation_DrawToScreen();
+            scheduler.ReadFromCamera();
         }
+        scheduler.Dump();
+        */
+
 
 
 
@@ -365,12 +420,12 @@ int e23 () {
         packet.step   = step;
         packet.image  = scheduler.GetSampleImage().contiguous().to(torch::kUInt8);
 
-        e23_global::correct.store(0, std::memory_order_release);
-        e23_global::total.store(0, std::memory_order_release);
-
         // Send the packet
         comms.Transmit(packet);
         scheduler.DisposeSampleImages();
+
+        e23_global::correct.store(0, std::memory_order_release);
+        e23_global::total.store(0, std::memory_order_release);
     }
 
     scheduler.StopThreads();
@@ -383,5 +438,10 @@ int e23 () {
         }
     }
 
+    /*
+    for (auto &t : val_batches) {
+        UnloadTexture(t.texture);
+    }
+    */
     return 0;
 }

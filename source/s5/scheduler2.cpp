@@ -84,13 +84,13 @@ void Scheduler2::SetOptimizer(s4_Optimizer *opt) {
     std::cout << "INFO: [Scheduler2::SetOptimizer] Optimizer set.\n";
 }
 
-
 // Start/Stop Window Methods
 void Scheduler2::StartWindow() {
     window.load();
     // Load shader
     shader = LoadShader(nullptr, "source/shaders/alpha_ignore.fs");
     sub_shader = LoadShader(nullptr, "source/shaders/alpha_mask.fs");
+    val_shader = LoadShader(nullptr, "source/shaders/selective_mask.fs");
     std::cout << "INFO: [Scheduler2::StartWindow] Shader loaded.\n";
     std::cout << "INFO: [Scheduler2::StartWindow] Window started.\n";
 }
@@ -279,6 +279,7 @@ void Scheduler2::ProcessDataPipeline(
     // Place onto separate thread for data processing.
     processing_thread = std::thread([this, process_function]() {
         std::vector<torch::Tensor> data;
+        int label_counter = 0;
         while (!end_processing.load(std::memory_order_acquire)) {
             // Read from camera2process queue
             if (!camera2process.try_dequeue(data)) {
@@ -289,10 +290,11 @@ void Scheduler2::ProcessDataPipeline(
             auto [result, valid] = process_function(CaptureData{
                 .image     = data[1],
                 .full      = data[0],
-                .label     = m_label,
+                .label     = m_labels[label_counter % m_labels.size()],
                 .batch_id  = m_batch_id,
                 .action_id = m_action_id 
             });
+            ++label_counter;
 
             // Store into rewards queue
             if (valid)
@@ -634,7 +636,12 @@ void Scheduler2::DisableSubTexture(int index) {
 }
 
 void Scheduler2::SetLabel(int label) {
-    m_label = label;
+    // replicate it n times
+    m_labels = std::vector<int>(maximum_number_of_frames_in_image, label);
+}
+
+void Scheduler2::SetLabel(std::vector<int> labels) {
+    m_labels = labels;
 }
 
 void Scheduler2::SetBatch_Id(int batch_id) {
@@ -647,4 +654,61 @@ void Scheduler2::SetAction_Id(int action_id) {
 
 void Scheduler2::SetBatchSize(int batch_size) {
     m_batch_size = batch_size;
+}
+
+void Scheduler2::Validation_SetDatasetTexture (Texture t) {
+    m_val_texture = t;
+}
+
+void Scheduler2::Validation_SetTileParams(int p) {
+    m_val_tile_size = p;
+}
+
+void Scheduler2::Validation_SetMask (const torch::Tensor &mask) {
+    // Create the validation mask
+    // Note, validation mask is a tensor of shape [H, W]
+    // which is not necessarily the same size as the window
+
+    auto t = mask.unsqueeze(0);
+    auto image = pen->MEncode_u8Tensor5(t);
+    m_val_mask = pen->u8Tensor_Texture(image);
+}
+
+void Scheduler2::Validation_DrawToScreen () {
+    BeginDrawing();
+    DrawTexture(
+        m_val_mask,
+        0, 0, WHITE
+    );
+    BindShader(
+        val_shader,
+        m_val_tile_size,
+        m_val_tile_size,
+        m_val_mask,
+        m_val_texture
+    );
+    EndDrawing();
+}
+
+void Scheduler2::BindShader(Shader &shader, float TileX, float TileY, Texture base, Texture texture) {
+    // Suppose you have textures tex[0..n-1], n <= 8
+    int loc_cnt  = GetShaderLocation(shader, "uCount0");
+
+    // Set the base texture
+    SetShaderValueTexture(shader, GetShaderLocation(shader, "uBase"), base);
+
+    // Set tile parameters
+    SetShaderValue(shader, GetShaderLocation(shader, "uTileX"), &TileX, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(shader, GetShaderLocation(shader, "uTileY"), &TileY, SHADER_UNIFORM_FLOAT);
+
+    int loc = GetShaderLocation(shader, "uTex");
+    SetShaderValueTexture(shader, loc, texture);
+
+    // Draw with shader active
+    BeginShaderMode(shader);
+    DrawTexturePro(base, 
+        Rectangle{0,0,(float)base.width,(float)base.height}, 
+        Rectangle{0,0,(float)GetScreenWidth(),(float)GetScreenHeight()}, 
+        Vector2{0,0}, 0, WHITE);
+    EndShaderMode();
 }

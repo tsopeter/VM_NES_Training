@@ -93,6 +93,11 @@ public:
     void DrawTextureToScreen ();
     void DrawTextureToScreenTiled ();
 
+    void Validation_SetDatasetTexture(Texture);
+    void Validation_SetMask(const torch::Tensor&);
+    void Validation_DrawToScreen();
+    void Validation_SetTileParams(int);
+
     void SetOptimizer(s4_Optimizer *opt);
 
     double Update ();
@@ -144,6 +149,7 @@ public:
     void DrawSubTexturesOnly();
 
     void SetLabel(int);
+    void SetLabel(std::vector<int>);
     void SetBatch_Id(int);
     void SetAction_Id(int);
     void SetBatchSize(int);
@@ -206,6 +212,10 @@ private:
     Texture m_sub_textures[10];
     bool m_sub_textures_enable[10];
 
+    Texture m_val_texture;
+    Texture m_val_mask;
+    int     m_val_tile_size;
+
     void DrawSubTexturesToScreen();
 
     torch::Tensor Uninterleave(torch::Tensor&);
@@ -234,6 +244,7 @@ private:
     // Shader is used for ignoring alpha channel
     Shader shader;
     Shader sub_shader;
+    Shader val_shader;
 
     //
     // Optimizer
@@ -265,10 +276,12 @@ private:
 
     //
     //
-    int m_label = 0;
+    std::vector<int> m_labels;
     int m_batch_id = 0;
     int m_action_id = 0;
     int m_batch_size = 0;
+
+    void BindShader (Shader&, float,float,Texture,Texture);
 
 };
 
