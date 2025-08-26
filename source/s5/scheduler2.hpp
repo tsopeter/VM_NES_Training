@@ -35,6 +35,22 @@ struct CaptureData {
 
 using PDFunction = std::function<std::pair<torch::Tensor, bool>(CaptureData)>;
 
+struct Scheduler2_CheckPoint {
+    int    batch_id;
+    double training_accuracy;
+    double validation_accuracy;
+    torch::Tensor phase;
+    double kappa;
+
+    int64_t step;
+
+
+    std::string dataset_path;
+
+    std::string checkpoint_dir;
+    std::string checkpoint_name; /* optional */
+};
+
 class Scheduler2 {
 public:
     //
@@ -93,6 +109,7 @@ public:
 
     void DrawTextureToScreen ();
     void DrawTextureToScreenTiled ();
+    void DrawTextureToScreenCentered ();
 
     void Validation_SetTileParams(int);
     void Validation_SetDatasetTexture(Texture);
@@ -191,6 +208,10 @@ public:
         PDFunction process_function=nullptr
     );
 
+
+    void SaveCheckpoint(Scheduler2_CheckPoint);
+    Scheduler2_CheckPoint LoadCheckpoint(const std::string&);
+
 private:
     // Private methods 
     std::pair<torch::Tensor, torch::Tensor> ReadCamera();
@@ -220,6 +241,7 @@ private:
     int     m_val_tile_size;
 
     void DrawSubTexturesToScreen();
+    void DrawSubTexturesToScreenCentered();
 
     torch::Tensor Uninterleave(torch::Tensor&);
 
@@ -279,6 +301,7 @@ private:
 
     //
     //
+    std::atomic<int> m_label;
     std::vector<int> m_labels;
     int m_batch_id = 0;
     int m_action_id = 0;

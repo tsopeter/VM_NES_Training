@@ -1,4 +1,6 @@
 #include "scheduler2.hpp"
+#include <filesystem>
+#include <fstream>
 
 Scheduler2::Scheduler2() {
     for (int i = 0; i < 10; i++) {
@@ -241,6 +243,25 @@ void Scheduler2::DrawTextureToScreenTiled() {
     EndDrawing();
 }
 
+void Scheduler2::DrawTextureToScreenCentered () {
+    int centerX = (window.Width - m_texture.width) / 2;
+    int centerY = (window.Height - m_texture.height) / 2;
+
+    BeginDrawing();
+        BeginShaderMode(shader);
+        ClearBackground(BLACK);
+        DrawTexturePro(
+            m_texture,
+            {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+            {static_cast<float>(centerX), static_cast<float>(centerY),
+             static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+            {0, 0}, 0.0f, WHITE
+        );
+        EndShaderMode();
+        DrawSubTexturesToScreenCentered ();
+    EndDrawing();
+}
+
 void Scheduler2::DrawSubTexturesToScreen() {
     BeginShaderMode(sub_shader);
     for (int i = 0; i < 10; ++i) {
@@ -263,6 +284,35 @@ void Scheduler2::DrawSubTexturesToScreen() {
             );
         }
     }
+    EndShaderMode();
+}
+
+void Scheduler2::DrawSubTexturesToScreenCentered () {
+    int centerX = (window.Width - m_texture.width) / 2;
+    int centerY = (window.Height - m_texture.height) / 2;
+    BeginShaderMode(sub_shader);
+    for (int i = 0; i < 10; ++i) {
+        if (m_sub_textures_enable[i]) {
+            std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
+            std::cout << "INFO: [Sub Texture " << i << "] (" 
+                << m_sub_textures[i].width 
+                << ", " 
+                << m_sub_textures[i].height 
+                << ") -> ("
+                << window.Width
+                << ", "
+                << window.Height
+                << ")\n";
+            DrawTexturePro (
+                m_sub_textures[i],
+                {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
+                {static_cast<float>(centerX), static_cast<float>(centerY),
+                 static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                {0, 0}, 0.0f, WHITE
+            );
+        }
+    }
+
     EndShaderMode();
 }
 
@@ -290,7 +340,7 @@ void Scheduler2::ProcessDataPipeline(
             auto [result, valid] = process_function(CaptureData{
                 .image     = data[1],
                 .full      = data[0],
-                .label     = m_labels[label_counter % m_labels.size()],
+                .label     = m_label.load(std::memory_order_acquire),
                 .batch_id  = m_batch_id,
                 .action_id = m_action_id 
             });
@@ -648,7 +698,8 @@ void Scheduler2::DisableSubTexture(int index) {
 
 void Scheduler2::SetLabel(int label) {
     // replicate it n times
-    m_labels = std::vector<int>(maximum_number_of_frames_in_image, label);
+    //m_labels = std::vector<int>(maximum_number_of_frames_in_image, label);
+    m_label.store(label, std::memory_order_release);
 }
 
 void Scheduler2::SetLabel(std::vector<int> labels) {
@@ -734,4 +785,65 @@ void Scheduler2::BindShader(Shader &shader, float TileX, float TileY, Texture ba
         Rectangle{0,0,(float)GetScreenWidth(),(float)GetScreenHeight()}, 
         Vector2{0,0}, 0, WHITE);
     EndShaderMode();
+}
+
+void Scheduler2::SaveCheckpoint (
+    Scheduler2_CheckPoint cp
+) {
+    // get the directory
+    std::string dir = cp.checkpoint_dir;
+    std::string name = cp.checkpoint_name;
+
+    // if name not given, assign current date and time
+    name = name + "checkpoint_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+
+    // create the directory if it doesn't exist
+    if (!std::filesystem::exists(dir)) {
+        std::filesystem::create_directories(dir);
+    }
+
+    // create the directory with the name
+    std::string full_path = dir + "/" + name;
+    if (!std::filesystem::exists(full_path)) {
+        std::filesystem::create_directories(full_path);
+    }
+
+
+    // create the params.txt
+    std::ofstream ofs(full_path + "/params.txt");
+    if (ofs) {
+        ofs << cp.batch_id << "\n";
+        ofs << cp.training_accuracy << "\n";
+        ofs << cp.validation_accuracy << "\n";
+        ofs << cp.dataset_path << "\n";
+        ofs << cp.kappa << "\n";
+        ofs << cp.step << "\n";
+    }
+
+    // save the phase information as torch tensor
+    torch::save({cp.phase}, full_path + "/phase.pt");
+
+    // tell user
+    std::cout << "INFO: [Scheduler2] Checkpoint saved to " << full_path << "\n";
+}
+
+Scheduler2_CheckPoint Scheduler2::LoadCheckpoint(const std::string &cp) {
+    Scheduler2_CheckPoint checkpoint;
+
+    // Load the params.txt
+    std::ifstream ifs(cp + "/params.txt");
+    if (ifs) {
+        ifs >> checkpoint.batch_id;
+        ifs >> checkpoint.training_accuracy;
+        ifs >> checkpoint.validation_accuracy;
+        ifs >> checkpoint.dataset_path;
+        ifs >> checkpoint.kappa;
+        ifs >> checkpoint.step;
+    }
+
+    // Load the phase information as torch tensor
+    std::string phase_path = cp + "/phase.pt";
+    torch::load(checkpoint.phase, phase_path);
+
+    return checkpoint;
 }
