@@ -818,6 +818,7 @@ void Scheduler2::SaveCheckpoint (
         ofs << cp.dataset_path << "\n";
         ofs << cp.kappa << "\n";
         ofs << cp.step << "\n";
+        ofs << cp.reward << "\n";
     }
 
     // save the phase information as torch tensor
@@ -839,6 +840,7 @@ Scheduler2_CheckPoint Scheduler2::LoadCheckpoint(const std::string &cp) {
         ifs >> checkpoint.dataset_path;
         ifs >> checkpoint.kappa;
         ifs >> checkpoint.step;
+        ifs >> checkpoint.reward;
     }
 
     // Load the phase information as torch tensor

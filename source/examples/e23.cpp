@@ -9,6 +9,7 @@
 #include "../utils/utils.hpp"
 #include "../s4/utils.hpp"
 #include "../s2/dataloader.hpp"
+#include "../s2/von_mises.hpp"
 #include <fstream>
 #include <ostream>
 
@@ -156,6 +157,10 @@ public:
         m_std = std;
     }
 
+    double get_std () {
+        return m_std;
+    }
+
     torch::Tensor m_mu;
     double m_std;
 
@@ -187,6 +192,7 @@ public:
         std::cout<<"INFO: [e23_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
 
         m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;
+        //m_parameter = torch::zeros({Height, Width}).to(DEVICE);
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e23_Model] Set parameters...\n";
 
@@ -242,7 +248,7 @@ public:
     //VonMises m_dist {};
     e23_Normal m_dist {};
 
-    const double std = 0.02;
+    const double std = 0.05;
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -252,13 +258,20 @@ public:
 std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     static double norm_factors[] = {1, 1, 1, 1, 1, 
                                     1, 1, 1, 1, 1};
-    static double gain = 2;
+    static double gain = 1;
     static double gain_factor = 0.9995;
     static int64_t process_count = 0;
 
     std::cout << "INFO: [e23_ProcessFunction]: Processed: " << process_count + 1 << " so far.\n";
 
     // Sum to [16]
+    if (ts.label <= 4) {
+        ts.label = 0;
+    } else {
+        ts.label = 1;
+    }
+
+
     auto t = ts.image;
     auto k = ts.full; // full image
     auto l = torch::tensor({ts.label}); // label
@@ -273,8 +286,6 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     }
 
     // The first instance is used as a normalization factor
-    
-    
     static bool first_instance = true;
     if (first_instance) {
         // compute normalization factors
@@ -285,8 +296,17 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
         first_instance = false;
     }
 
+    // Sum the rest as the 11'th vector
+    /*
+    torch::Tensor rest = torch::zeros({1}, torch::kFloat64);
+    for (int i = 10; i < 16; ++i) {
+        rest += sums[i].unsqueeze(0).to(torch::kFloat64);
+    }
+    t_vec.push_back(rest);
+    */
+
     // Concatenate along the first dimension
-    auto predictions = torch::stack(t_vec, 1);  // [1, 10]
+    auto predictions = torch::stack(t_vec, 1);  // [1, 11]
     // take the argmax
     auto preds = predictions.argmax(1); // [1]
 
@@ -320,6 +340,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 }
 
 int e23 () {
+    int  mask_size_ratio = 2;
     bool load_from_checkpoint = false;
     std::cout << "Loading any checkpoints? [y/n] ";
     std::string response, checkpoint_dir;
@@ -353,8 +374,8 @@ int e23 () {
     Scheduler2 scheduler {};
 
     e23_Model model {};
-    model.init(200, 320, scheduler.maximum_number_of_frames_in_image);
-    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.001));
+    model.init(800 / mask_size_ratio, 1280 / mask_size_ratio, scheduler.maximum_number_of_frames_in_image);
+    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
     s4_Optimizer opt (adam, model);
 
     HComms comms {"192.168.193.20", 9001};
@@ -375,7 +396,7 @@ int e23 () {
         /* Camera */
         Height,
         Width,
-        59.0f,
+        150.0f, /* Exposure Time */
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
         3,  /* Line Trigger */
@@ -388,8 +409,8 @@ int e23 () {
 
         /* PEncoder properties */
         /* These actually determine the size of the texture */
-        1600/4,
-        2560/4,
+        1600/(mask_size_ratio),
+        2560/(mask_size_ratio),
 
         /* Optimizer */
         &opt,
@@ -401,31 +422,40 @@ int e23 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
-    int64_t n_training_samples = 10'000;
+    int64_t n_training_samples = 1'000;
     int64_t n_batch_size       = 100;
-    int64_t n_samples          = 16;    // Note actual number of samples is n_samples * 20
+    int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
 
     auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
 
     
-    int64_t n_validation_samples  = 1'000;
-    auto val_batches = Get_Data(n_validation_samples, n_batch_size, s2_DataTypes::VALID);
-
+    int64_t n_validation_samples  = 100;
+    int64_t n_validation_batch_size = 100;
+    auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::VALID);
 
     int64_t step=0;
     int64_t batch_sel=0;
 
+    auto Iterate = [&scheduler]->void {
+        for (int i = 0; i < 2; ++i) {
+            //scheduler.DrawTextureToScreenTiled();
+            scheduler.DrawTextureToScreenCentered();
+        }
+        scheduler.ReadFromCamera();
+    };
+
+
     /////////////////////////////////////////////////////
     // Obtaining Normalization Factor                  //
     /////////////////////////////////////////////////////
+    /*
     torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
     scheduler.SetTextureFromTensorTiled(action);
-    scheduler.DrawTextureToScreenTiled();
-    scheduler.DrawTextureToScreenTiled();
-    scheduler.ReadFromCamera();
+    Iterate();
     model.squash();
     scheduler.Dump();
+    */
 
 
     /////////////////////////////////////////////////////
@@ -449,7 +479,7 @@ int e23 () {
 
 
     int64_t iter = 0;
-    const int64_t val_interval = 10; // every ten
+    const int64_t val_interval = 1;
     int validation_accuracy = 0;
     int training_accuracy = 0;
 
@@ -468,14 +498,7 @@ int e23 () {
             for (int j = 0; j < n_batch_size; ++j) {
                 scheduler.SetSubTextures(batches[batch_sel].textures[j], 0);
                 scheduler.SetLabel(batches[batch_sel].labels[j]);
-
-                scheduler.DrawTextureToScreenTiled();
-                scheduler.DrawTextureToScreenTiled();
-
-                //scheduler.DrawTextureToScreenCentered();
-                //scheduler.DrawTextureToScreenCentered();
-
-                scheduler.ReadFromCamera();
+                Iterate();
                 ++step;
             }
         }
@@ -502,7 +525,7 @@ int e23 () {
 
         if (iter % val_interval == 0) {
             // Get std from model
-            double std = model.m_dist.m_std;
+            double std = model.m_dist.get_std();
             model.m_dist.set_std(0.0f);
 
             std::cout << "INFO: [e23] Running Validation...\n";
@@ -515,24 +538,18 @@ int e23 () {
 
 
             for (int i = 0; i < val_batches.size(); ++i) {
-                for (int j = 0; j < n_batch_size; ++j) {
+                for (int j = 0; j < n_validation_batch_size; ++j) {
                     scheduler.SetSubTextures(val_batches[i].textures[j], 0);
                     scheduler.SetLabel(val_batches[i].labels[j]);
-
-                    scheduler.DrawTextureToScreenTiled();
-                    scheduler.DrawTextureToScreenTiled();
-
-                    //scheduler.DrawTextureToScreenCentered();
-                    //scheduler.DrawTextureToScreenCentered();
-                    scheduler.ReadFromCamera();
+                    Iterate();
                 }
             }
-            validation_accuracy = 1000 * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
-
             // set the std back
             model.squash();
             model.m_dist.set_std(std);
             scheduler.Dump();
+            validation_accuracy = 1000 * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
+
 
             start_saving_data_points.store(false, std::memory_order_release);
             // save
@@ -546,7 +563,8 @@ int e23 () {
 
         // Combine the two scores and transmit it
         // we can reconstruct the training accuracy and validation accuracy
-        double combined_accuracy =  (training_accuracy << 10) | validation_accuracy;
+        double combined_accuracy =  ((static_cast<int>(-reward * 1000)) << 20) | (training_accuracy << 10) | validation_accuracy;
+        std::cout << "INFO: [e23] Reward: " << reward << '\n';
 
         // To reconstruct it, we know that
         // we can extract the training_accuracy by shifting right by 10 bits
@@ -575,11 +593,12 @@ int e23 () {
             cp.training_accuracy = training_accuracy;
             cp.validation_accuracy = validation_accuracy;
             cp.phase = model.get_parameters();
-            cp.kappa = 1/model.m_dist.m_std;
+            cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_08_25_001";
+            cp.checkpoint_dir = "./2025_08_26_001";
             cp.checkpoint_name = "";
+            cp.reward = reward;
             scheduler.SaveCheckpoint(cp);
         }
 

@@ -43,6 +43,7 @@ struct Scheduler2_CheckPoint {
     double kappa;
 
     int64_t step;
+    double reward;
 
 
     std::string dataset_path;
