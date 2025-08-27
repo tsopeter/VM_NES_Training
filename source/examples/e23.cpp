@@ -16,6 +16,10 @@
 namespace e23_global {
     static std::atomic<double> correct = 0;
     static std::atomic<double> total   = 0;
+    static std::atomic<bool> acc_norm {false};
+    static std::atomic<bool> enable_norm {false};
+    static double norms[10] = {0};
+    static double gains     = 1.0;
 }
 
 struct e23_Batch {
@@ -256,20 +260,17 @@ public:
 
 
 std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
-    static double norm_factors[] = {1, 1, 1, 1, 1, 
-                                    1, 1, 1, 1, 1};
-    static double gain = 1;
-    static double gain_factor = 0.9995;
     static int64_t process_count = 0;
-
     std::cout << "INFO: [e23_ProcessFunction]: Processed: " << process_count + 1 << " so far.\n";
 
     // Sum to [16]
+    /*
     if (ts.label <= 4) {
         ts.label = 0;
     } else {
         ts.label = 1;
     }
+    */
 
 
     auto t = ts.image;
@@ -281,29 +282,21 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 
     std::vector<torch::Tensor> t_vec;
 
-    for (int i = 0; i < 10; ++i) {
-        t_vec.push_back(gain * norm_factors[i] * sums[i].unsqueeze(0).to(torch::kFloat64));
-    }
-
-    // The first instance is used as a normalization factor
-    static bool first_instance = true;
-    if (first_instance) {
-        // compute normalization factors
+    if (e23_global::enable_norm)
         for (int i = 0; i < 10; ++i) {
-            norm_factors[i] = 1.0 / (sums[i].item<double>() + 1e-8);
+            t_vec.push_back(e23_global::gains * e23_global::norms[i] * sums[i].unsqueeze(0).to(torch::kFloat64));
+        }
+    else
+        for (int i = 0; i < 10; ++i) {
+            t_vec.push_back(e23_global::gains * sums[i].unsqueeze(0).to(torch::kFloat64));
         }
 
-        first_instance = false;
+    if (e23_global::acc_norm) {
+        // Sum up the values
+        for (int i = 0; i < 10; ++i) {
+            e23_global::norms[i] += t_vec[i].squeeze().item<double>();
+        }
     }
-
-    // Sum the rest as the 11'th vector
-    /*
-    torch::Tensor rest = torch::zeros({1}, torch::kFloat64);
-    for (int i = 10; i < 16; ++i) {
-        rest += sums[i].unsqueeze(0).to(torch::kFloat64);
-    }
-    t_vec.push_back(rest);
-    */
 
     // Concatenate along the first dimension
     auto predictions = torch::stack(t_vec, 1);  // [1, 11]
@@ -374,7 +367,11 @@ int e23 () {
     Scheduler2 scheduler {};
 
     e23_Model model {};
-    model.init(800 / mask_size_ratio, 1280 / mask_size_ratio, scheduler.maximum_number_of_frames_in_image);
+
+    int model_Height = 128; // = 800  / mask_size_ratio;
+    int model_Width  = 128; // = 1280 / mask_size_ratio;
+
+    model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
     torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
     s4_Optimizer opt (adam, model);
 
@@ -409,8 +406,8 @@ int e23 () {
 
         /* PEncoder properties */
         /* These actually determine the size of the texture */
-        1600/(mask_size_ratio),
-        2560/(mask_size_ratio),
+        model_Height * 2,
+        model_Width  * 2,
 
         /* Optimizer */
         &opt,
@@ -422,7 +419,7 @@ int e23 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
-    int64_t n_training_samples = 1'000;
+    int64_t n_training_samples = 10'000;
     int64_t n_batch_size       = 100;
     int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
 
@@ -449,13 +446,24 @@ int e23 () {
     /////////////////////////////////////////////////////
     // Obtaining Normalization Factor                  //
     /////////////////////////////////////////////////////
-    /*
+    e23_global::acc_norm.store(true, std::memory_order_release);
+    e23_global::enable_norm.store(false, std::memory_order_release);
     torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
     scheduler.SetTextureFromTensorTiled(action);
-    Iterate();
+    for (int i = 0; i < n_validation_batch_size; ++i) {
+        scheduler.SetSubTextures(val_batches[0].textures[i], 0);
+        Iterate();
+    }
     model.squash();
     scheduler.Dump();
-    */
+
+    // calculate norm
+    for (int i = 0; i < 10; ++i) {
+        e23_global::norms[i] = static_cast<double>(n_validation_batch_size) / e23_global::norms[i];
+    }
+
+    e23_global::acc_norm.store(false, std::memory_order_release);
+    e23_global::enable_norm.store(true, std::memory_order_release);
 
 
     /////////////////////////////////////////////////////
@@ -596,7 +604,7 @@ int e23 () {
             cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_08_26_001";
+            cp.checkpoint_dir = "./2025_08_27_005";
             cp.checkpoint_name = "";
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);

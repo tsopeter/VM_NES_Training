@@ -117,6 +117,7 @@ torch::Tensor s3_Camera::sread () {
             torch::kUInt8).clone();
             break;
         }
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
     return t;
 }
