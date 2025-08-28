@@ -23,6 +23,7 @@ private:
     s3_Window window;
 
     int port_number = 9001;
+    int screen_Height, screen_Width;
 };
 
 
