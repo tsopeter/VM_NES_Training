@@ -15,3 +15,5 @@ tensor.pt
 debug_image.png
 2025_08*/
 Checkpoints/*
+plm_test
+sync_test

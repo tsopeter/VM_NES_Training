@@ -272,6 +272,8 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     }
     */
 
+    ts.label = 0;
+
 
     auto t = ts.image;
     auto k = ts.full; // full image
@@ -368,8 +370,8 @@ int e23 () {
 
     e23_Model model {};
 
-    int model_Height = 128; // = 800  / mask_size_ratio;
-    int model_Width  = 128; // = 1280 / mask_size_ratio;
+    int model_Height  = 800  / mask_size_ratio;
+    int model_Width   = 1280 / mask_size_ratio;
 
     model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
     torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
@@ -604,7 +606,7 @@ int e23 () {
             cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_08_27_005";
+            cp.checkpoint_dir = "./2025_08_28_001";
             cp.checkpoint_name = "";
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);
