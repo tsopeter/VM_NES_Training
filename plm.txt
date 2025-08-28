@@ -1,0 +1,243 @@
+Screen 0: minimum 8 x 8, current 2560 x 1600, maximum 32767 x 32767
+DP-0 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x1bc
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: DisplayPort 
+		supported: DisplayPort
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 4 
+	_ConnectorLocation: 4 
+	non-desktop: 0 
+		supported: 0, 1
+DP-1 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x1bd
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 4 
+	_ConnectorLocation: 4 
+	non-desktop: 0 
+		supported: 0, 1
+HDMI-0 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x1be
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: HDMI 
+	ConnectorNumber: 1 
+	_ConnectorLocation: 1 
+	non-desktop: 0 
+		supported: 0, 1
+DP-2 connected primary 2560x1600+0+0 (0x1c1) normal (normal left inverted right x axis y axis) 2560mm x 1600mm
+	Identifier: 0x1bf
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Gamma:      1.0:1.0:1.0
+	Brightness: 1.0
+	Clones:    
+	CRTC:       0
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	EDID: 
+		00ffffffffffff001190c90300000000
+		15180103a55a38781aec18a354469825
+		0f484cffff8001010101010101010101
+		010101010101ee6800a0a0402e603020
+		36000040a6000018000000fc00444c50
+		393030302044500a2020000000fd0001
+		01010101000a20202020202000000010
+		00000000000000000000000000000009
+	_MUTTER_PRESENTATION_OUTPUT: 0 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: DisplayPort 
+		supported: DisplayPort
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 0 
+	_ConnectorLocation: 0 
+	non-desktop: 0 
+		supported: 0, 1
+  2560x1600 (0x1c1) 268.620MHz -HSync -VSync *current +preferred
+        h: width  2560 start 2608 end 2640 total 2720 skew    0 clock  98.76KHz
+        v: height 1600 start 1603 end 1609 total 1646           clock  60.00Hz
+  1280x1024 (0x1c2) 135.000MHz +HSync +VSync
+        h: width  1280 start 1296 end 1440 total 1688 skew    0 clock  79.98KHz
+        v: height 1024 start 1025 end 1028 total 1066           clock  75.02Hz
+  1024x768 (0x1c3) 78.750MHz +HSync +VSync
+        h: width  1024 start 1040 end 1136 total 1312 skew    0 clock  60.02KHz
+        v: height  768 start  769 end  772 total  800           clock  75.03Hz
+  1024x768 (0x1c4) 75.000MHz -HSync -VSync
+        h: width  1024 start 1048 end 1184 total 1328 skew    0 clock  56.48KHz
+        v: height  768 start  771 end  777 total  806           clock  70.07Hz
+  1024x768 (0x1c5) 65.000MHz -HSync -VSync
+        h: width  1024 start 1048 end 1184 total 1344 skew    0 clock  48.36KHz
+        v: height  768 start  771 end  777 total  806           clock  60.00Hz
+  800x600 (0x1c6) 49.500MHz +HSync +VSync
+        h: width   800 start  816 end  896 total 1056 skew    0 clock  46.88KHz
+        v: height  600 start  601 end  604 total  625           clock  75.00Hz
+  800x600 (0x1c7) 50.000MHz +HSync +VSync
+        h: width   800 start  856 end  976 total 1040 skew    0 clock  48.08KHz
+        v: height  600 start  637 end  643 total  666           clock  72.19Hz
+  800x600 (0x1c8) 40.000MHz +HSync +VSync
+        h: width   800 start  840 end  968 total 1056 skew    0 clock  37.88KHz
+        v: height  600 start  601 end  605 total  628           clock  60.32Hz
+  800x600 (0x1c9) 36.000MHz +HSync +VSync
+        h: width   800 start  824 end  896 total 1024 skew    0 clock  35.16KHz
+        v: height  600 start  601 end  603 total  625           clock  56.25Hz
+  640x480 (0x1ca) 31.500MHz -HSync -VSync
+        h: width   640 start  656 end  720 total  840 skew    0 clock  37.50KHz
+        v: height  480 start  481 end  484 total  500           clock  75.00Hz
+  640x480 (0x1cb) 31.500MHz -HSync -VSync
+        h: width   640 start  656 end  696 total  832 skew    0 clock  37.86KHz
+        v: height  480 start  481 end  484 total  520           clock  72.81Hz
+  640x480 (0x1cc) 25.175MHz -HSync -VSync
+        h: width   640 start  656 end  752 total  800 skew    0 clock  31.47KHz
+        v: height  480 start  490 end  492 total  525           clock  59.94Hz
+DP-3 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x1cd
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 0 
+	_ConnectorLocation: 0 
+	non-desktop: 0 
+		supported: 0, 1
+DP-4 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x1ce
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	_MUTTER_PRESENTATION_OUTPUT: 0 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: DisplayPort 
+		supported: DisplayPort
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 2 
+	_ConnectorLocation: 2 
+	non-desktop: 0 
+		supported: 0, 1
+DP-5 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x1cf
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 2 
+	_ConnectorLocation: 2 
+	non-desktop: 0 
+		supported: 0, 1
+USB-C-0 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x1d0
+	Timestamp:  177924156
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1 2 3
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: DisplayPort 
+		supported: DisplayPort
+	ConnectorType: USB-C 
+	ConnectorNumber: 3 
+	_ConnectorLocation: 3 
+	non-desktop: 0 
+		supported: 0, 1
