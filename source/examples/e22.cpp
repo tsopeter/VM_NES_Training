@@ -399,6 +399,9 @@ int e22 () {
             break;
 
         if (ping_pong%3==0) {
+            // Some random delay between 500 us to 10,000 us to simulate processing
+            std::this_thread::sleep_for(std::chrono::microseconds(500 + rand() % 9500));
+
             // Draw
             auto &texture = textures[frame_counter % n_textures];
             e22_DrawToScreen(texture, window, ignoreAlphaShader);

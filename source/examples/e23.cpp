@@ -20,6 +20,11 @@ namespace e23_global {
     static std::atomic<bool> enable_norm {false};
     static double norms[10] = {0};
     static double gains     = 1.0;
+    static torch::Tensor noise_bg = torch::tensor(
+        std::vector<double>{837, 765, 714, 788, 353, 342, 314, 371, 365, 354,
+        0, 0, 0, 0, 0, 0},
+        torch::dtype(torch::kFloat64)
+    ).reshape({16});
 }
 
 struct e23_Batch {
@@ -279,7 +284,10 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     auto k = ts.full; // full image
     auto l = torch::tensor({ts.label}); // label
 
-    auto sums = t.sum({1,2});
+    auto sums = t.sum({1,2});   // [16]
+
+    sums = sums - e23_global::noise_bg;
+
     auto ksum = k.sum() - sums.sum();
 
     std::vector<torch::Tensor> t_vec;
@@ -301,7 +309,10 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     }
 
     // Concatenate along the first dimension
-    auto predictions = torch::stack(t_vec, 1);  // [1, 11]
+    auto predictions = torch::stack(t_vec, 1);  // [1, 10]
+
+
+
     // take the argmax
     auto preds = predictions.argmax(1); // [1]
 
@@ -335,7 +346,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 }
 
 int e23 () {
-    int  mask_size_ratio = 4;
+    int  mask_size_ratio = 2;
     bool load_from_checkpoint = false;
     std::cout << "Loading any checkpoints? [y/n] ";
     std::string response, checkpoint_dir;
@@ -421,16 +432,16 @@ int e23 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
-    int64_t n_training_samples = 10'000;
-    int64_t n_batch_size       = 200;
+    int64_t n_training_samples = 100;
+    int64_t n_batch_size       = 10;
     int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
 
     auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
 
     
-    int64_t n_validation_samples  = 100;
-    int64_t n_validation_batch_size = 100;
+    int64_t n_validation_samples  = 10;
+    int64_t n_validation_batch_size = 10;
     auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::VALID);
 
     int64_t step=0;
@@ -438,8 +449,8 @@ int e23 () {
 
     auto Iterate = [&scheduler]->void {
         for (int i = 0; i < 2; ++i) {
-            scheduler.DrawTextureToScreenTiled();
-            //scheduler.DrawTextureToScreenCentered();
+            //scheduler.DrawTextureToScreenTiled();
+            scheduler.DrawTextureToScreenCentered();
         }
         scheduler.ReadFromCamera();
     };
