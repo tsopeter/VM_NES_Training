@@ -272,7 +272,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     }
     */
 
-    ts.label = 0;
+    //ts.label = 0;
 
 
     auto t = ts.image;
@@ -335,7 +335,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 }
 
 int e23 () {
-    int  mask_size_ratio = 2;
+    int  mask_size_ratio = 4;
     bool load_from_checkpoint = false;
     std::cout << "Loading any checkpoints? [y/n] ";
     std::string response, checkpoint_dir;
@@ -422,7 +422,7 @@ int e23 () {
 
     // Get image data
     int64_t n_training_samples = 10'000;
-    int64_t n_batch_size       = 100;
+    int64_t n_batch_size       = 200;
     int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
 
     auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
@@ -438,8 +438,8 @@ int e23 () {
 
     auto Iterate = [&scheduler]->void {
         for (int i = 0; i < 2; ++i) {
-            //scheduler.DrawTextureToScreenTiled();
-            scheduler.DrawTextureToScreenCentered();
+            scheduler.DrawTextureToScreenTiled();
+            //scheduler.DrawTextureToScreenCentered();
         }
         scheduler.ReadFromCamera();
     };
@@ -449,6 +449,7 @@ int e23 () {
     // Obtaining Normalization Factor                  //
     /////////////////////////////////////////////////////
     
+    /*
     e23_global::acc_norm.store(true, std::memory_order_release);
     e23_global::enable_norm.store(false, std::memory_order_release);
     torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
@@ -467,7 +468,7 @@ int e23 () {
 
     e23_global::acc_norm.store(false, std::memory_order_release);
     e23_global::enable_norm.store(true, std::memory_order_release);
-    
+    */
 
     /////////////////////////////////////////////////////
     // Checkpoint                                      //
@@ -607,7 +608,7 @@ int e23 () {
             cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_08_28_001";
+            cp.checkpoint_dir = "./2025_08_29_001";
             cp.checkpoint_name = "";
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);
