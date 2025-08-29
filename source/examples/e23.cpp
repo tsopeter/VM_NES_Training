@@ -448,6 +448,7 @@ int e23 () {
     /////////////////////////////////////////////////////
     // Obtaining Normalization Factor                  //
     /////////////////////////////////////////////////////
+    
     e23_global::acc_norm.store(true, std::memory_order_release);
     e23_global::enable_norm.store(false, std::memory_order_release);
     torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
@@ -466,7 +467,7 @@ int e23 () {
 
     e23_global::acc_norm.store(false, std::memory_order_release);
     e23_global::enable_norm.store(true, std::memory_order_release);
-
+    
 
     /////////////////////////////////////////////////////
     // Checkpoint                                      //
