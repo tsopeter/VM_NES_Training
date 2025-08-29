@@ -24,6 +24,8 @@ private:
 
     int port_number = 9001;
     int screen_Height, screen_Width;
+
+    uint64_t GetCurrentTime_S ();
 };
 
 

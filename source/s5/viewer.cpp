@@ -1,6 +1,7 @@
 #include "viewer.hpp"
 
 #include <torch/torch.h>
+#include <chrono>
 
 Viewer::Viewer(int height, int width, int port_number)
 : port_number(port_number) {
@@ -10,7 +11,7 @@ Viewer::Viewer(int height, int width, int port_number)
     screen_Height = height;
     screen_Width  = width;
 
-    window.Height = height + 100;
+    window.Height = height + 200;
     window.Width = width;
     window.wmode = WINDOWED;
     window.fmode = NO_TARGET_FPS;
@@ -34,18 +35,20 @@ void Viewer::run() {
 
     double input  = 0;
     int64_t step  = 0;
-    int64_t delta = 0;
+    int64_t current_time = 0;
 
 
     double train_accuracy = 0.0f;
     double val_accuracy   = 0.0f;
     double rewards        = 0.0f;
+    int64_t start_time    = GetCurrentTime_S();
     try {
         while (!WindowShouldClose()) {
             HCommsDataPacket_Inbound packet = comms->Receive();
             input = packet.reward;
             step = packet.step;
             m_texture = packet.image;
+            current_time = GetCurrentTime_S();
 
             val_accuracy   = (static_cast<int64_t>(input) & 0x3FF) / 10;
             train_accuracy = ((static_cast<int64_t>(input) >> 10) & 0x3FF) / 10;
@@ -60,12 +63,12 @@ void Viewer::run() {
                 {0, 0}, 0.0f, WHITE
             );
             DrawText(TextFormat("Step: %d", step), 10, 10+screen_Height, 20, RED);
-            DrawText(TextFormat("Delta: %lld", delta/10), 10, 70+screen_Height, 20, BLUE);
+            DrawText(TextFormat("Time: %lld", current_time - start_time), 10, 30+screen_Height, 20, BLUE);
 
             // Print Training, validation, and rewards to user
-            DrawText(TextFormat("Train: %.2f", train_accuracy), 10, 130+screen_Height, 20, GREEN);
-            DrawText(TextFormat("Val: %.2f", val_accuracy), 10, 150+screen_Height, 20, YELLOW);
-            DrawText(TextFormat("Reward: %.2f", rewards), 10, 170+screen_Height, 20, BLUE);
+            DrawText(TextFormat("Train: %.2f", train_accuracy), 10, 50+screen_Height, 20, GREEN);
+            DrawText(TextFormat("Val: %.2f", val_accuracy), 10, 70+screen_Height, 20, YELLOW);
+            DrawText(TextFormat("Reward: %.2f", rewards), 10, 90+screen_Height, 20, BLUE);
             EndDrawing();
             UnloadTexture(m_texture);
         }
@@ -75,4 +78,10 @@ void Viewer::run() {
 
     std::cout << "INFO: [Viewer] Exiting viewer loop...\n";
     std::cout << "INFO: [Viewer] Window closed.\n";
+}
+
+uint64_t Viewer::GetCurrentTime_S () {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::high_resolution_clock::now().time_since_epoch()
+    ).count();
 }
