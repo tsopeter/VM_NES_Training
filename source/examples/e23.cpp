@@ -257,7 +257,7 @@ public:
     //VonMises m_dist {};
     e23_Normal m_dist {};
 
-    const double std = 0.05;
+    const double std = 0.5;
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -385,7 +385,7 @@ int e23 () {
     int model_Width   = 1280 / mask_size_ratio;
 
     model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
-    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
+    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.1));
     s4_Optimizer opt (adam, model);
 
     HComms comms {"192.168.193.20", 9001};
