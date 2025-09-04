@@ -257,7 +257,7 @@ public:
     //VonMises m_dist {};
     e23_Normal m_dist {};
 
-    const double std = 0.5;
+    const double std = 0.1 * (2 * M_PI); // 10% of the range
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -385,7 +385,7 @@ int e23 () {
     int model_Width   = 1280 / mask_size_ratio;
 
     model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
-    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.1));
+    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
     s4_Optimizer opt (adam, model);
 
     HComms comms {"192.168.193.20", 9001};
@@ -432,25 +432,25 @@ int e23 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
-    int64_t n_training_samples = 100;
-    int64_t n_batch_size       = 10;
-    int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
+    int64_t n_training_samples = 640;
+    int64_t n_batch_size       = 32;
+    int64_t n_samples          = 8;    // Note actual number of samples is n_samples * 20
 
     auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
 
     
-    int64_t n_validation_samples  = 10;
-    int64_t n_validation_batch_size = 10;
-    auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::VALID);
+    int64_t n_validation_samples  = 100;
+    int64_t n_validation_batch_size = 100;
+    auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::TRAIN);
 
     int64_t step=0;
     int64_t batch_sel=0;
 
     auto Iterate = [&scheduler]->void {
         for (int i = 0; i < 2; ++i) {
-            //scheduler.DrawTextureToScreenTiled();
-            scheduler.DrawTextureToScreenCentered();
+            scheduler.DrawTextureToScreenTiled();
+            //scheduler.DrawTextureToScreenCentered();
         }
         scheduler.ReadFromCamera();
     };
@@ -619,7 +619,7 @@ int e23 () {
             cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_08_29_001";
+            cp.checkpoint_dir = "./2025_09_04_001";
             cp.checkpoint_name = "";
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);

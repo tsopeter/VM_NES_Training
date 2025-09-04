@@ -363,6 +363,8 @@ int e22 () {
     #if defined(__APPLE__)
         auto &texture = textures[frame_counter % n_textures];
 
+        // Simulate processing varying processing delay from 1 ms to 10 ms
+        std::this_thread::sleep_for(std::chrono::microseconds(1000 + rand() % 9000));
         if (kill_process.load(std::memory_order_acquire))
             break;
         

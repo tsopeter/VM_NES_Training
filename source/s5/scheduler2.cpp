@@ -194,7 +194,17 @@ void Scheduler2::SetTextureFromTensor(const torch::Tensor &tensor) {
 
 void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
     auto timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // same-size
-    m_texture = pen->u8Tensor_Texture(timage);
+    //auto timage = pen->MEncode_u8Tensor2(tensor).contiguous().to(torch::kInt32); // CPU-only
+    //m_texture = pen->u8Tensor_Texture(timage);
+
+    if (m_texture.width > 0 && m_texture.height > 0) {
+        printf("Texture is valid!\n");
+        UnloadTexture(m_texture);
+    } else {
+        printf("Texture not loaded.\n");
+    }
+
+    m_texture = pen->u8Tensor_Texture_CPU(timage);
     std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture set from tensor (tiled).\n";
     std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture size: " << m_texture.width << "x" << m_texture.height << '\n';
 }

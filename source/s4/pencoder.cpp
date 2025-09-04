@@ -23,6 +23,8 @@ constexpr int32_t shifted_values[24] =
     static_cast<int32_t>(1u << 9),  static_cast<int32_t>(1u << 8)
 };
 */
+
+
 constexpr int32_t shifted_values[24] = 
 {
     static_cast<int32_t>(1u << 0),  static_cast<int32_t>(1u << 1),
@@ -38,6 +40,7 @@ constexpr int32_t shifted_values[24] =
     static_cast<int32_t>(1u << 20), static_cast<int32_t>(1u << 21),
     static_cast<int32_t>(1u << 22), static_cast<int32_t>(1u << 23)
 };
+
 
 
 constexpr uint8_t logical_masks[16][2][2] = {
@@ -150,7 +153,7 @@ torch::Tensor PEncoder::Encode_u8Tensor (torch::Tensor &x) {
     auto x_w = x.size(1);
     plane.slice(0, m_x, m_x + x_h).slice(1, m_y, m_y + x_w) = x;
 
-    auto qplane = q(plane, true);  // [H/2, W/2], indices into logical_masks
+    auto qplane = q[plane];  // [H/2, W/2], indices into logical_masks
     auto logical = masks.index_select(0, qplane.view(-1)).to(x.device());         // [H/2 * W/2, 2, 2]
     logical = logical.view({qplane.size(0), qplane.size(1), 2, 2}); // [H/2, W/2, 2, 2]
     logical = logical.permute({0, 2, 1, 3}).contiguous();           // [H/2,2,W/2,2]
@@ -171,7 +174,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor (torch::Tensor &x) {
     for (int64_t i = 0; i < N; ++i) {
         torch::Tensor xi = x[i];                       // [h, w]
         torch::Tensor yi = Encode_u8Tensor(xi);        // [H, W]
-        image = image | (yi.to(torch::kInt32).mul_(1u << (32-i))); // Avoid << on tensors, use mul_ with shifted scalar
+        image = image | (yi.to(torch::kInt32).mul_(1u << i)); // Avoid << on tensors, use mul_ with shifted scalar
     }
 
     // This encodes [N, H, W] to binary [H, W] for each pixel, it leaves the alpha channel alone (only 24-bits)
@@ -357,8 +360,6 @@ torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
     return image;
 }
 
-
-
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
     torch::Tensor encoding = MEncode_u8Tensor(x).contiguous();
     return u8MTensor_Image (encoding);
@@ -430,6 +431,13 @@ Texture PEncoder::u8Tensor_Texture (torch::Tensor &encoding) {
     return texture;
 }
 #endif
+
+Texture PEncoder::u8Tensor_Texture_CPU (torch::Tensor &encoding) {
+    Image image = u8MTensor_Image (encoding);
+    Texture texture = LoadTextureFromImage (image);
+    UnloadImage (image);
+    return texture;
+}
 
 torch::Tensor PEncoder::ImageTensorMap (torch::Tensor &x1, torch::Tensor &i0) {
     auto s1 = x1.sizes();

@@ -43,8 +43,8 @@ int e25 () {
     cam.BinningHorizontal = 1;
     cam.BinningVertical   = 1;
     cam.UseCentering = false;
-    cam.OffsetX = 272;
-    cam.OffsetY = 256;
+    cam.OffsetX = 432;
+    cam.OffsetY = 172;
     cam.UseZones = false;
     cam.NumberOfZones = 4;
     cam.ZoneSize = 65;

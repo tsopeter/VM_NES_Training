@@ -121,6 +121,12 @@ public:
     Texture       u8Tensor_Texture (torch::Tensor &x);
 
     /**
+     * @brief Takes in a modified image, and returns as whatevery shape it was originally as 24-bit Texture using
+     *        CPU-only operations. Modification must be done via Encode_u8Tensor or MEncode_u8Tensor
+     */
+    Texture       u8Tensor_Texture_CPU (torch::Tensor &x);
+
+    /**
      * @brief Takes in images stored as [n, H/2, W/2] and maps it to each phase candidate
      * 
      */
