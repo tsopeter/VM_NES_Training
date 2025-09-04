@@ -356,6 +356,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
     torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
     encoded = encoded.to(torch::kInt32);
     torch::Tensor image = torch::sum(encoded * shifts_used, 0);
+    image = torch::fliplr(image);
 
     return image;
 }
