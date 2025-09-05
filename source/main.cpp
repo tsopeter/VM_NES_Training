@@ -13,6 +13,7 @@
 #include "examples/e23.hpp"
 #include "examples/e24.hpp"
 #include "examples/e25.hpp"
+#include "examples/e26.hpp"
 #include "s3/IP.hpp"
 #include "utils/utils.hpp"
 #include "s3/window.hpp"
@@ -27,7 +28,8 @@ void run_code () {
 #ifdef __linux__    // Linux is used as the machine for running the system
     //e22(); //e17();    // Synchronization Test
     e23(); //e18();
-    //e25();
+    //e25(); // PLM working test
+    //e26(); // New Sync Test
 #else   // everything else is used as the machine to display results
     Viewer viewer(240*2, 320*2, 9001);
     viewer.run();

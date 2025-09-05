@@ -197,12 +197,14 @@ void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
     //auto timage = pen->MEncode_u8Tensor2(tensor).contiguous().to(torch::kInt32); // CPU-only
     //m_texture = pen->u8Tensor_Texture(timage);
 
+    
     if (m_texture.width > 0 && m_texture.height > 0) {
         printf("Texture is valid!\n");
         UnloadTexture(m_texture);
     } else {
         printf("Texture not loaded.\n");
     }
+    
 
     m_texture = pen->u8Tensor_Texture_CPU(timage);
     std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture set from tensor (tiled).\n";
@@ -488,6 +490,7 @@ void Scheduler2::send_ready_to_capture () {
 }
 
 void Scheduler2::schedule_camera_capture(std::atomic<uint64_t>& counter) {
+    m_vsync_count.store(counter.load(std::memory_order_acquire), std::memory_order_release);
     if (!enable_capture.load(std::memory_order_acquire))
         return;
 
@@ -858,4 +861,18 @@ Scheduler2_CheckPoint Scheduler2::LoadCheckpoint(const std::string &cp) {
     torch::load(checkpoint.phase, phase_path);
 
     return checkpoint;
+}
+
+uint64_t Scheduler2::GetVSYNC_count () {
+    return m_vsync_count.load(std::memory_order_acquire);
+}
+
+void Scheduler2::SetVSYNC_Marker () {
+    m_vsync_marker = GetVSYNC_count();
+}
+
+void Scheduler2::WaitVSYNC_Diff (uint64_t diff) {
+    while (GetVSYNC_count() - m_vsync_marker < diff) {
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+    }
 }

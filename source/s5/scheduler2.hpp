@@ -175,6 +175,10 @@ public:
     void SetAction_Id(int);
     void SetBatchSize(int);
 
+
+    void SetVSYNC_Marker ();
+    void WaitVSYNC_Diff  (uint64_t diff=1);
+
     void Start (
         /* Windowing */
         int monitor=0,
@@ -208,7 +212,6 @@ public:
         /* Processing function */
         PDFunction process_function=nullptr
     );
-
 
     void SaveCheckpoint(Scheduler2_CheckPoint);
     Scheduler2_CheckPoint LoadCheckpoint(const std::string&);
@@ -309,6 +312,11 @@ private:
     int m_batch_size = 0;
 
     void BindShader (Shader&, float,float,Texture,Texture);
+
+    uint64_t GetVSYNC_count ();
+    std::atomic<uint64_t> m_vsync_count {0};
+    
+    uint64_t m_vsync_marker;
 
 };
 

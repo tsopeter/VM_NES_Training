@@ -277,16 +277,19 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     }
     */
 
-    //ts.label = 0;
+    ts.label = 0;
 
 
     auto t = ts.image;
     auto k = ts.full; // full image
     auto l = torch::tensor({ts.label}); // label
 
-    auto sums = t.sum({1,2});   // [16]
+    auto sums = t.sum({1,2}).to(torch::kFloat64);   // [16]
 
-    sums = sums - e23_global::noise_bg;
+    //sums = sums - e23_global::noise_bg;
+
+    // Each area is 60x60 = 3600 pixels
+    sums /= 255.0;
 
     auto ksum = k.sum() - sums.sum();
 
@@ -346,7 +349,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 }
 
 int e23 () {
-    int  mask_size_ratio = 2;
+    int  mask_size_ratio = 4;
     bool load_from_checkpoint = false;
     std::cout << "Loading any checkpoints? [y/n] ";
     std::string response, checkpoint_dir;
@@ -432,9 +435,9 @@ int e23 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
-    int64_t n_training_samples = 640;
-    int64_t n_batch_size       = 32;
-    int64_t n_samples          = 8;    // Note actual number of samples is n_samples * 20
+    int64_t n_training_samples = 1'000;
+    int64_t n_batch_size       = 100;
+    int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
 
     auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
@@ -451,6 +454,9 @@ int e23 () {
         for (int i = 0; i < 2; ++i) {
             scheduler.DrawTextureToScreenTiled();
             //scheduler.DrawTextureToScreenCentered();
+
+            scheduler.SetVSYNC_Marker();
+            scheduler.WaitVSYNC_Diff(1);
         }
         scheduler.ReadFromCamera();
     };
