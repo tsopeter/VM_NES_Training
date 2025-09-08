@@ -257,7 +257,7 @@ public:
     //VonMises m_dist {};
     e23_Normal m_dist {};
 
-    const double std = 0.1 * (2 * M_PI); // 10% of the range
+    const double std = 0.05 * (2 * M_PI); // 10% of the range
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -276,13 +276,50 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
         ts.label = 1;
     }
     */
-
-    ts.label = 0;
-
-
     auto t = ts.image;
     auto k = ts.full; // full image
     auto l = torch::tensor({ts.label}); // label
+
+
+    //
+    // Regions are organized as the following zones
+    // 0 1 2 3
+    // 4 5 6 7
+    // 8 9 A B
+    // C D E F
+
+    // Let the zones we actually care about be
+    // 5   7
+    // 9 A B
+
+    // Divide the 4 zones into 10 labels as such
+    // 5 -> [0, 1]
+    // 7 -> [2, 3]
+    // 9 -> [4, 5]
+    // A -> [6, 7]
+    // B -> [8, 9]
+
+    // Each zone is 60x60
+    // so we can divide each zone into 2 areas of 30x60
+    auto lb_0 = t[5].slice(1, 0, 30);   // left half (60x30)
+    auto lb_1 = t[5].slice(1, 30, 60);  // right half (60x30)
+
+    auto lb_2 = t[7].slice(1, 0, 30);
+    auto lb_3 = t[7].slice(1, 30, 60);
+
+    auto lb_4 = t[9].slice(1, 0, 30);
+    auto lb_5 = t[9].slice(1, 30, 60);
+
+    auto lb_6 = t[10].slice(1, 0, 30);
+    auto lb_7 = t[10].slice(1, 30, 60);
+
+    auto lb_8 = t[11].slice(1, 0, 30);
+    auto lb_9 = t[11].slice(1, 30, 60);
+
+    // get label 0 and 1
+
+    // Cat together
+    t = torch::stack({lb_0, lb_1, lb_2, lb_3, lb_4, lb_5, lb_6, lb_7, lb_8, lb_9}, 0); // [10, 30, 60]
 
     auto sums = t.sum({1,2}).to(torch::kFloat64);   // [16]
 
@@ -388,7 +425,7 @@ int e23 () {
     int model_Width   = 1280 / mask_size_ratio;
 
     model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
-    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(0.01));
+    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(10));
     s4_Optimizer opt (adam, model);
 
     HComms comms {"192.168.193.20", 9001};
@@ -409,7 +446,7 @@ int e23 () {
         /* Camera */
         Height,
         Width,
-        150.0f, /* Exposure Time */
+        200.0f, /* Exposure Time */
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
         3,  /* Line Trigger */
@@ -625,7 +662,7 @@ int e23 () {
             cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_09_04_001";
+            cp.checkpoint_dir = "./2025_09_07_001";
             cp.checkpoint_name = "";
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);
