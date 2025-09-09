@@ -300,21 +300,20 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     // B -> [8, 9]
 
     // Each zone is 60x60
-    // so we can divide each zone into 2 areas of 30x60
-    auto lb_0 = t[5].slice(1, 0, 30);   // left half (60x30)
-    auto lb_1 = t[5].slice(1, 30, 60);  // right half (60x30)
+    // so we can divide each zone into 4 areas of 30x30
+    auto lb_0 = t[5].slice(0, 0, 30).slice(1, 0, 30);   // get label 0
+    auto lb_1 = t[5].slice(0, 0, 30).slice(1, 30, 60);  // get label 1
+    auto lb_2 = t[5].slice(0, 30, 60).slice(1, 0, 30);  // get label 2
+    auto lb_3 = t[5].slice(0, 30, 60).slice(1, 30, 60); // get label 3
 
-    auto lb_2 = t[7].slice(1, 0, 30);
-    auto lb_3 = t[7].slice(1, 30, 60);
+    auto lb_4 = t[6].slice(0, 0, 30).slice(1, 0, 30);   // get label 4
+    auto lb_5 = t[6].slice(0, 0, 30).slice(1, 30, 60);  // get label 5
+    auto lb_6 = t[6].slice(0, 30, 60).slice(1, 0, 30);  // get label 6
+    auto lb_7 = t[6].slice(0, 30, 60).slice(1, 30, 60); // get label 7
 
-    auto lb_4 = t[9].slice(1, 0, 30);
-    auto lb_5 = t[9].slice(1, 30, 60);
+    auto lb_8 = t[10].slice(0, 0, 30).slice(1, 0, 30);   // get label 8
+    auto lb_9 = t[10].slice(0, 0, 30).slice(1, 30, 60); // get label 9
 
-    auto lb_6 = t[10].slice(1, 0, 30);
-    auto lb_7 = t[10].slice(1, 30, 60);
-
-    auto lb_8 = t[11].slice(1, 0, 30);
-    auto lb_9 = t[11].slice(1, 30, 60);
 
     // get label 0 and 1
 
@@ -425,8 +424,9 @@ int e23 () {
     int model_Width   = 1280 / mask_size_ratio;
 
     model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
-    torch::optim::Adam adam (model.parameters(), torch::optim::AdamOptions(10));
-    s4_Optimizer opt (adam, model);
+    //torch::optim::Adam opt_m (model.parameters(), torch::optim::AdamOptions(0.01));
+    torch::optim::SGD opt_m (model.parameters(), torch::optim::SGDOptions(100.0f));
+    s4_Optimizer opt (opt_m, model);
 
     HComms comms {"192.168.193.20", 9001};
 
@@ -446,7 +446,7 @@ int e23 () {
         /* Camera */
         Height,
         Width,
-        200.0f, /* Exposure Time */
+        150.0f, /* Exposure Time */
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
         3,  /* Line Trigger */
@@ -472,17 +472,18 @@ int e23 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
-    int64_t n_training_samples = 1'000;
-    int64_t n_batch_size       = 100;
-    int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
+    int64_t n_training_samples = 32;
+    int64_t n_batch_size       = 32;
+    int64_t n_samples          = 64;    // Note actual number of samples is n_samples * 20
 
     auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
 
     
-    int64_t n_validation_samples  = 100;
-    int64_t n_validation_batch_size = 100;
-    auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::TRAIN);
+    int64_t n_validation_samples  = 32;
+    int64_t n_validation_batch_size = 32;
+    //auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::TRAIN);
+    auto val_batches = batches;
 
     int64_t step=0;
     int64_t batch_sel=0;
@@ -662,7 +663,7 @@ int e23 () {
             cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_09_07_001";
+            cp.checkpoint_dir = "./2025_09_09_002";
             cp.checkpoint_name = "";
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);
