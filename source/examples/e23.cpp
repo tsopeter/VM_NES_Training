@@ -428,7 +428,7 @@ int e23 () {
     //torch::optim::SGD opt_m (model.parameters(), torch::optim::SGDOptions(100.0f));
     s4_Optimizer opt (opt_m, model);
 
-    HComms comms {"192.168.193.20", 9001};
+    HComms comms {"192.168.193.136", 9001};
 
     PDFunction process_function = [](CaptureData ts)->std::pair<torch::Tensor, bool> {
         return e23_ProcessFunction(ts);
@@ -487,6 +487,8 @@ int e23 () {
 
     int64_t step=0;
     int64_t batch_sel=0;
+
+    double  mean_reward = 0.0f;
 
     auto Iterate = [&scheduler]->void {
         for (int i = 0; i < 2; ++i) {
@@ -571,8 +573,6 @@ int e23 () {
         }
 
         //TakeScreenshot("train_screen.png");
-
-        batch_sel = (batch_sel + 1) % batches.size();
         std::cout << "INFO: [e23] Training step " << step << " completed...\n";
 
         model.squash();
@@ -625,6 +625,7 @@ int e23 () {
             }
         }
         
+        /////////////////////////////////////////////////////
         // Networking                                      //
         /////////////////////////////////////////////////////
 
@@ -669,6 +670,17 @@ int e23 () {
             scheduler.SaveCheckpoint(cp);
         }
 
+        batch_sel = (batch_sel + 1) % batches.size();
+
+        mean_reward += reward;
+
+        if (batch_sel == 0) {
+            mean_reward /= static_cast<double>(batches.size());
+            // Save mean reward to file (append)
+            std::ofstream ofs("./2025_09_09_002/mean_reward.txt", std::ios::app);
+            ofs << mean_reward << std::endl;
+            mean_reward = 0.0f;
+        }
     }
 
     scheduler.StopThreads();
