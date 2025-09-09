@@ -7,7 +7,7 @@ APP_TARGET := app
 
 # Debugging and Macros
 DEBUGFLAGS := -g -O0
-MACROS := -DDEVICE=torch::kCUDA
+MACROS := -DDEVICE=torch::kCUDA -DVIEWER
 
 # Paths to Libraries
 HOME  := /home/petertso
