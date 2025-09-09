@@ -808,7 +808,7 @@ void Scheduler2::SaveCheckpoint (
     std::string name = cp.checkpoint_name;
 
     // if name not given, assign current date and time
-    name = name + "checkpoint_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+    name = name + "checkpoint_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + "_" + std::to_string(cp.batch_id);
 
     // create the directory if it doesn't exist
     if (!std::filesystem::exists(dir)) {
