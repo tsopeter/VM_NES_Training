@@ -1,0 +1,92 @@
+# Compiler
+CXX := g++
+CXXFLAGS := -std=c++23 -O0 -march=native -funroll-loops -pthread
+
+# Application Target
+APP_TARGET := app
+
+# Debugging and Macros
+DEBUGFLAGS := -g -O0
+MACROS := -DDEVICE=torch::kCUDA
+
+# Paths to Libraries
+HOME  := /home/petertso
+DOWN  := /home/petertso/Downloads
+OPT   := /opt
+LOCAL := /usr/local
+
+CNPY_PATH := $(LOCAL)/
+LIBTORCH_PATH := $(OPT)/libtorch
+RAYLIB_PATH := $(LOCAL)/
+PYLON_PATH := $(OPT)/pylon/
+NV_PATH := $(LOCAL)/cuda/
+
+# Include and library directories
+INCLUDE_DIRS := $(LIBTORCH_PATH)/include \
+                $(LIBTORCH_PATH)/include/torch/csrc/api/include \
+                $(CNPY_PATH)/include \
+                $(RAYLIB_PATH)/include \
+                $(PYLON_PATH)/include \
+                $(PYLON_PATH)/include/GenICam \
+                $(NV_PATH)/include
+
+LIBRARY_DIRS := $(LIBTORCH_PATH)/lib \
+                $(CNPY_PATH)/lib \
+                $(RAYLIB_PATH)/lib \
+                $(PYLON_PATH)/lib \
+                $(NV_PATH)/lib64
+
+# Libraries
+LIBRARIES := -Wl,--no-as-needed -ltorch -ltorch_cpu -ltorch_cuda -lc10 -lc10_cuda -lcnpy -lz -lraylib -lcuda \
+             -lpylonbase -lpylonutility -lGenApi_gcc_v3_1_Basler_pylon_v3 \
+             -lGCBase_gcc_v3_1_Basler_pylon_v3 \
+             -lGL -lGLX -lX11 -lcudart
+
+# Flags
+INCLUDE_FLAGS := $(addprefix -I, $(INCLUDE_DIRS))
+
+LIBRARY_FLAGS := $(addprefix -L, $(LIBRARY_DIRS))
+
+LDFLAGS := $(LIBRARY_FLAGS) $(LIBRARIES) $(FRAMEWORKS) \
+           -Wl,-rpath,$(LIBTORCH_PATH)/lib \
+           -Wl,-rpath,$(CNPY_PATH)/lib \
+           -Wl,-rpath,$(RAYLIB_PATH)/lib \
+           -Wl,-rpath,$(PYLON_PATH)/lib \
+           -Wl,-rpath,$(NV_PATH)/lib64
+           
+
+# Directories
+SRC_DIR := source
+BUILD_DIR := build
+
+# Find all source files recursively
+APP_SOURCES := $(shell find $(SRC_DIR) -type f -name '*.cpp')
+
+# Convert source file paths to object file paths
+APP_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(APP_SOURCES))
+
+# Default target: Build application (depends on libperfH.o)
+all: $(APP_TARGET)
+
+# Build Application (Uses libperfH.o)
+$(APP_TARGET): $(LIB_OBJECT) $(APP_OBJECTS)
+	@echo "Building application: $(APP_TARGET)"
+	$(CXX) $(CXXFLAGS) $(MACROS) $^ $(LDFLAGS) -o $@
+
+# Compile all source files from source/
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(MACROS) $(INCLUDE_FLAGS) -c $< -o $@
+
+# Create necessary directories
+$(BUILD_DIR):
+	mkdir -p $@
+
+# Clean all build files
+clean:
+	rm -rf $(BUILD_DIR) $(APP_TARGET)
+
+# Debug build
+debug: CXXFLAGS += $(DEBUGFLAGS)
+debug: clean all
+	@echo "Debug build complete."
