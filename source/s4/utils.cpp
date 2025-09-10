@@ -60,3 +60,35 @@ torch::Tensor s4_Utils::GSAlgorithm(const torch::Tensor &target, int iterations)
     std::cout << "INFO: [GSAlgorithm] Completed " << iterations << " iterations of Gerchberg-Saxton algorithm.\n";
     return torch::angle(Object);
 }
+
+torch::Tensor s4_Utils::GSAlgorithm(const torch::Tensor &target, const torch::Tensor &initial, int iterations) {
+    using namespace torch::indexing;
+
+    // Ensure target is float32
+    torch::Tensor Target = target.to(torch::kFloat32);
+    torch::Tensor Initial = initial.to(torch::kFloat32);
+    Initial = Initial.to(Target.device());
+
+    int Height = Target.size(0);
+    int Width  = Target.size(1);
+
+    // Define phase-normalization function
+    auto phase = [](const torch::Tensor& p) {
+        return p / (p.abs() + 1e-8);
+    };
+
+    // Initialize with random phase
+    auto rand_phase = torch::rand({Height, Width}, torch::kFloat32) * 2 * M_PI;
+    rand_phase = rand_phase.to(Target.device());
+    auto Object = Initial * torch::polar(torch::ones_like(rand_phase), rand_phase); // magnitude 1, phase = rand_phase
+
+    for (int i = 0; i < iterations; ++i) {
+        auto U  = torch::fft::ifft2(Object);
+        auto Up = Target * phase(U);
+        auto D  = torch::fft::fft2(Up);
+        Object  = Initial * phase(D);
+    }
+
+    std::cout << "INFO: [GSAlgorithm] Completed " << iterations << " iterations of Gerchberg-Saxton algorithm.\n";
+    return torch::angle(Object);
+}

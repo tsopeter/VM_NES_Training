@@ -288,7 +288,10 @@ void Scheduler2::DrawTextureToScreen() {
             {0, 0}, 0.0f, WHITE
         );
         EndShaderMode();
-        DrawSubTexturesToScreen();
+        if (!m_blend_mode_enabled)
+            DrawSubTexturesToScreen();
+        else
+            DrawSubTexturesToScreen_BlendMode();
 
     EndDrawing();
     std::cout<< "INFO: [Scheduler2::DrawTextureToScreen] Texture drawn to screen.\n";
@@ -316,7 +319,10 @@ void Scheduler2::DrawTextureToScreenTiled() {
         }
         EndShaderMode();
 
-        DrawSubTexturesToScreen();
+        if (!m_blend_mode_enabled)
+            DrawSubTexturesToScreen();
+        else
+            DrawSubTexturesToScreen_BlendMode();
     EndDrawing();
 }
 
@@ -335,7 +341,10 @@ void Scheduler2::DrawTextureToScreenCentered () {
             {0, 0}, 0.0f, WHITE
         );
         EndShaderMode();
-        DrawSubTexturesToScreenCentered ();
+        if (!m_blend_mode_enabled)
+            DrawSubTexturesToScreenCentered();
+        else
+            DrawSubTexturesToScreenCentered_BlendMode();
     EndDrawing();
 }
 
@@ -942,4 +951,87 @@ void Scheduler2::WaitVSYNC_Diff (uint64_t diff) {
     while (GetVSYNC_count() - m_vsync_marker < diff) {
         std::this_thread::sleep_for(std::chrono::microseconds(50));
     }
+}
+
+void Scheduler2::EnableBlendMode () {
+    m_blend_mode_enabled = true;
+}
+
+void Scheduler2::DisableBlendMode () {
+    m_blend_mode_enabled = false;
+}
+
+void Scheduler2::DrawSubTexturesToScreen_BlendMode () {
+    // Blend mode places assumes the textures
+    // have the following properties:
+    // colors are only allowed for the last bit of blue channel
+
+    BeginBlendMode(BLEND_ADD_COLORS);
+
+    for (int i = 0; i < 10; ++i) {
+        if (m_sub_textures_enable[i]) {
+            std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
+            std::cout << "INFO: [Sub Texture " << i << "] (" 
+                << m_sub_textures[i].width 
+                << ", " 
+                << m_sub_textures[i].height 
+                << ") -> ("
+                << window.Width
+                << ", "
+                << window.Height
+                << ")\n";
+            DrawTexturePro(
+                m_sub_textures[i],
+                {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
+                {0, 0, static_cast<float>(window.Width), static_cast<float>(window.Height)},
+                {0, 0}, 0.0f, WHITE
+            );
+        }
+    }
+
+    EndBlendMode();
+}
+
+void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
+    // Blend mode places assumes the textures
+    // have the following properties:
+    // colors are only allowed for the last bit of blue channel
+    int centerX = (window.Width - m_texture.width) / 2;
+    int centerY = (window.Height - m_texture.height) / 2;
+
+    BeginBlendMode(BLEND_ADD_COLORS);
+
+    for (int i = 0; i < 10; ++i) {
+        if (m_sub_textures_enable[i]) {
+            std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
+            std::cout << "INFO: [Sub Texture " << i << "] (" 
+                << m_sub_textures[i].width 
+                << ", " 
+                << m_sub_textures[i].height 
+                << ") -> ("
+                << window.Width
+                << ", "
+                << window.Height
+                << ")\n";
+            DrawTexturePro (
+                m_sub_textures[i],
+                {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
+                {static_cast<float>(centerX), static_cast<float>(centerY),
+                 static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                {0, 0}, 0.0f, WHITE
+            );
+        }
+    }
+
+    EndBlendMode();
+}
+
+void Scheduler2::WaitUntilCameraIsIdle () {
+    wait_till_capture_pending_is_zero();
+    wait_till_capture_enable_is_false();
+}
+
+void Scheduler2::Capture () {
+    send_ready_to_capture();
+    ++number_of_frames_sent;
 }

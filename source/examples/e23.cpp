@@ -494,7 +494,7 @@ int e23 () {
     double  mean_reward = 0.0f;
 
     auto Iterate = [&scheduler]->void {
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i < 4; ++i) {
             //scheduler.DrawTextureToScreenTiled();
             scheduler.DrawTextureToScreenCentered();
 

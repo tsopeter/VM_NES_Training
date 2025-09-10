@@ -99,6 +99,9 @@ public:
         int pencoder_Width=2560
     );
 
+    void EnableBlendMode ();
+    void DisableBlendMode ();
+
     void StartWindow();
     void StopWindow();
 
@@ -218,6 +221,9 @@ public:
     void SaveCheckpoint(Scheduler2_CheckPoint);
     Scheduler2_CheckPoint LoadCheckpoint(const std::string&);
 
+    void WaitUntilCameraIsIdle();
+    void Capture();
+
 private:
     // Private methods 
     std::pair<torch::Tensor, torch::Tensor> ReadCamera();
@@ -252,6 +258,8 @@ private:
 
     void DrawSubTexturesToScreen();
     void DrawSubTexturesToScreenCentered();
+    void DrawSubTexturesToScreen_BlendMode();
+    void DrawSubTexturesToScreenCentered_BlendMode();
 
     torch::Tensor Uninterleave(torch::Tensor&);
 
@@ -324,6 +332,7 @@ private:
     
     uint64_t m_vsync_marker;
 
+    bool m_blend_mode_enabled = false;
 };
 
 
