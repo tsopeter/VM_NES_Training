@@ -13,7 +13,8 @@
 #include <functional>
 #include <stdexcept>
 
-using u8Image = std::vector<uint8_t>;
+using u8Image  = std::vector<uint8_t>;
+using u16Image = std::vector<uint16_t>;
 
 
 class Cam2_Handler : public Pylon::CImageEventHandler {
@@ -23,10 +24,12 @@ public:
         const Pylon::CGrabResultPtr &ptrGrabResult) override;
 
     moodycamel::ConcurrentQueue<u8Image> *images = nullptr;
+    moodycamel::ConcurrentQueue<u16Image> *images10 = nullptr;
     moodycamel::ConcurrentQueue<uint64_t> *system_timestamps = nullptr;
     moodycamel::ConcurrentQueue<uint64_t> *camera_timestamps = nullptr;
     std::atomic<int64_t> *image_count = nullptr;
     int *timestamp_sample_time = nullptr;
+    int pixel_format = 0;
 };
 
 /**
@@ -44,6 +47,9 @@ public:
     float ExposureTime = 59.0f;
     int BinningHorizontal = 1;
     int BinningVertical = 1;
+
+    // Pixel Format
+    int pixel_format = 8; // bits
 
     // If centering is used, OffsetX and OffsetY are disabled.
     bool UseCentering = true;
@@ -104,6 +110,7 @@ public:
      * It will return the image as a vector of uint8_t.
      */
     u8Image sread();
+    u16Image sread10 ();
 
     /**
      * @brief Read an image from the camera.
@@ -116,6 +123,7 @@ public:
      * square of NumberOfZones.
      */
     std::pair<u8Image, std::vector<u8Image>> pread();
+    std::pair<u16Image, std::vector<u16Image>> pread10();
 
     /**
      * @brief Read an image from the camera.
@@ -127,6 +135,7 @@ public:
      * The total number of zones is determined by the square of the NumberOfZones.
      */
     std::pair<u8Image, std::vector<int64_t>> pread2();
+    std::pair<u16Image, std::vector<int64_t>> pread210();
 
     /**
      * @brief Returns the total number of images captured by the camera.
@@ -168,6 +177,8 @@ private:
     moodycamel::ConcurrentQueue<uint64_t> camera_timestamps;
     std::atomic<int64_t> image_count {0};
 
+    moodycamel::ConcurrentQueue<u16Image> buffer10;
+
 
     // Camera
     Pylon::CBaslerUsbInstantCamera camera;
@@ -179,6 +190,9 @@ private:
     // Flags
     bool is_camera_open          = false;
     bool is_handle_attached      = false;
+
+    Basler_UsbCameraParams::PixelFormatEnums PixelFormat = 
+        Basler_UsbCameraParams::PixelFormat_Mono8;
 };
 
 #endif

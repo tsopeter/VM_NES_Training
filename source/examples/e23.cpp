@@ -200,7 +200,7 @@ public:
         std::cout<<"INFO: [e23_Model] Staging model...\n";
         std::cout<<"INFO: [e23_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
 
-        m_parameter = torch::rand({Height, Width}).to(DEVICE) * 2 * M_PI - M_PI;
+        m_parameter = torch::rand({Height, Width}, torch::kFloat16).to(DEVICE) * 2 * M_PI - M_PI;
         //m_parameter = torch::zeros({Height, Width}).to(DEVICE);
         m_parameter.set_requires_grad(true);
         std::cout<<"INFO: [e23_Model] Set parameters...\n";
@@ -214,6 +214,7 @@ public:
     torch::Tensor sample(int n) {
         torch::NoGradGuard no_grad;
         torch::Tensor action = m_dist.sample(n);
+
         m_action_s.push_back(action);
         return action;
     }
@@ -257,7 +258,7 @@ public:
     //VonMises m_dist {};
     e23_Normal m_dist {};
 
-    const double std = 0.1 * (2 * M_PI); // 10% of the range
+    const double std = 0.07 * (2 * M_PI); // 10% of the range
     const double kappa = 1.0f/std;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
@@ -300,19 +301,20 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     // B -> [8, 9]
 
     // Each zone is 60x60
-    // so we can divide each zone into 4 areas of 30x30
-    auto lb_0 = t[5].slice(0, 0, 30).slice(1, 0, 30);   // get label 0
-    auto lb_1 = t[5].slice(0, 0, 30).slice(1, 30, 60);  // get label 1
-    auto lb_2 = t[5].slice(0, 30, 60).slice(1, 0, 30);  // get label 2
-    auto lb_3 = t[5].slice(0, 30, 60).slice(1, 30, 60); // get label 3
+    // so we can divide each zone into 4 areas of 15x15
+    // where we have 15px padding between areas
+    auto lb_0 = t[5].slice(0, 0,  15).slice(1,  0, 15);   // get label 0
+    auto lb_1 = t[5].slice(0, 0,  15).slice(1, 45, 60);  // get label 1
+    auto lb_2 = t[5].slice(0, 45, 60).slice(1,  0, 15);  // get label 2
+    auto lb_3 = t[5].slice(0, 45, 60).slice(1, 45, 60); // get label 3
 
-    auto lb_4 = t[6].slice(0, 0, 30).slice(1, 0, 30);   // get label 4
-    auto lb_5 = t[6].slice(0, 0, 30).slice(1, 30, 60);  // get label 5
-    auto lb_6 = t[6].slice(0, 30, 60).slice(1, 0, 30);  // get label 6
-    auto lb_7 = t[6].slice(0, 30, 60).slice(1, 30, 60); // get label 7
+    auto lb_4 = t[6].slice(0, 0, 15).slice(1, 0, 15);   // get label 4
+    auto lb_5 = t[6].slice(0, 0, 15).slice(1, 45, 60);  // get label 5
+    auto lb_6 = t[6].slice(0, 45, 60).slice(1, 0, 15);  // get label 6
+    auto lb_7 = t[6].slice(0, 45, 60).slice(1, 45, 60); // get label 7
 
-    auto lb_8 = t[10].slice(0, 0, 30).slice(1, 0, 30);   // get label 8
-    auto lb_9 = t[10].slice(0, 0, 30).slice(1, 30, 60); // get label 9
+    auto lb_8 = t[10].slice(0, 0, 15).slice(1, 0, 15);   // get label 8
+    auto lb_9 = t[10].slice(0, 0, 15).slice(1, 45, 60); // get label 9
 
 
     // get label 0 and 1
@@ -385,7 +387,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 }
 
 int e23 () {
-    int  mask_size_ratio = 4;
+    int  mask_size_ratio = 4; // 8, 4, 2, 1
     bool load_from_checkpoint = false;
     std::cout << "Loading any checkpoints? [y/n] ";
     std::string response, checkpoint_dir;
@@ -424,7 +426,7 @@ int e23 () {
     int model_Width   = 1280 / mask_size_ratio;
 
     model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
-    torch::optim::Adam opt_m (model.parameters(), torch::optim::AdamOptions(0.05));
+    torch::optim::Adam opt_m (model.parameters(), torch::optim::AdamOptions(0.1));
     //torch::optim::SGD opt_m (model.parameters(), torch::optim::SGDOptions(100.0f));
     s4_Optimizer opt (opt_m, model);
 
@@ -446,7 +448,7 @@ int e23 () {
         /* Camera */
         Height,
         Width,
-        150.0f, /* Exposure Time */
+        59.0f, /* Exposure Time */
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
         3,  /* Line Trigger */
@@ -456,6 +458,7 @@ int e23 () {
         true, /* Use Centering */
         0, /* Offset X */
         0, /* Offset Y */
+        8, /* Pixel Format: 8 for Mono8, 10 for Mono10 */
 
         /* PEncoder properties */
         /* These actually determine the size of the texture */
@@ -474,7 +477,7 @@ int e23 () {
     // Get image data
     int64_t n_training_samples = 640;
     int64_t n_batch_size       = 32;
-    int64_t n_samples          = 16;    // Note actual number of samples is n_samples * 20
+    int64_t n_samples          = 64;    // Note actual number of samples is n_samples * 20
 
     auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
@@ -492,8 +495,8 @@ int e23 () {
 
     auto Iterate = [&scheduler]->void {
         for (int i = 0; i < 2; ++i) {
-            scheduler.DrawTextureToScreenTiled();
-            //scheduler.DrawTextureToScreenCentered();
+            //scheduler.DrawTextureToScreenTiled();
+            scheduler.DrawTextureToScreenCentered();
 
             scheduler.SetVSYNC_Marker();
             scheduler.WaitVSYNC_Diff(1);
@@ -548,7 +551,7 @@ int e23 () {
 
 
     int64_t iter = 0;
-    const int64_t val_interval = 1;
+    const int64_t val_interval = 10; // every 10 iterations
     int validation_accuracy = 0;
     int training_accuracy = 0;
 
@@ -664,7 +667,7 @@ int e23 () {
             cp.kappa = 1/model.m_dist.get_std();
             cp.step = step;
             cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_09_09_002";
+            cp.checkpoint_dir = "./2025_09_10_001";
             cp.checkpoint_name = "";
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);
@@ -677,7 +680,7 @@ int e23 () {
         if (batch_sel == 0) {
             mean_reward /= static_cast<double>(batches.size());
             // Save mean reward to file (append)
-            std::ofstream ofs("./2025_09_09_002/mean_reward.txt", std::ios::app);
+            std::ofstream ofs("./2025_09_10_001/mean_reward.txt", std::ios::app);
             ofs << mean_reward << std::endl;
             mean_reward = 0.0f;
         }

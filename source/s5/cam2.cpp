@@ -21,6 +21,14 @@ u8Image Cam2::sread() {
     return image;
 }
 
+u16Image Cam2::sread10() {
+    u16Image image;
+    while (!buffer10.try_dequeue(image)) {
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+    }
+    return image;
+}
+
 std::pair<u8Image, std::vector<u8Image>> Cam2::pread() {
     std::vector<u8Image> images;
     images.reserve(NumberOfZones * NumberOfZones);
@@ -49,8 +57,56 @@ std::pair<u8Image, std::vector<u8Image>> Cam2::pread() {
     return {image, images};
 }
 
+std::pair<u16Image, std::vector<u16Image>> Cam2::pread10() {
+    std::vector<u16Image> images;
+    images.reserve(NumberOfZones * NumberOfZones);
+    u16Image image = sread10();
+
+    // Partition the images into zones
+    for (int i = 0; i < NumberOfZones; ++i) {
+        for (int j = 0; j < NumberOfZones; ++j) {
+            u16Image zone_ij;
+            zone_ij.resize(ZoneSize * ZoneSize);
+
+            int y_start = i * ZoneSize;
+            int x_start = j * (ZoneSize + GapX);
+
+            int x_end   = x_start + ZoneSize;
+            for (int k = 0; k < ZoneSize; ++k) {
+                std::memcpy(
+                    zone_ij.data() + (k * ZoneSize),
+                    image.data() + (y_start * Width + x_start) + (k * Width),
+                    ZoneSize * sizeof(uint16_t)
+                );
+            }
+            images.push_back(std::move(zone_ij));
+        }
+    }
+    return {image, images};
+}
+
 std::pair<u8Image, std::vector<int64_t>> Cam2::pread2() {
     auto [full_image, zone_images] = pread();
+
+    std::vector<int64_t> sums;
+    sums.reserve(zone_images.size()+1);
+
+    int64_t total = 0;
+    for (const auto & zone : zone_images) {
+        int64_t sum = std::accumulate(zone.begin(), zone.end(), 0);
+        sums.push_back(sum);
+        total += sum;
+    }
+
+    // full sum
+    int64_t full_sum = std::accumulate(full_image.begin(), full_image.end(), 0);// - total;
+    sums.push_back(full_sum);
+
+    return {full_image, sums};
+}
+
+std::pair<u16Image, std::vector<int64_t>> Cam2::pread210() {
+    auto [full_image, zone_images] = pread10();
 
     std::vector<int64_t> sums;
     sums.reserve(zone_images.size()+1);
@@ -136,6 +192,16 @@ void Cam2::p_open () {
     // Set the exposure time
     std::cout << "INFO: [Cam2::p_open()] Setting Exposure Time to " << ExposureTime << " us\n";
     camera.ExposureTime.SetValue(ExposureTime);
+
+    // Set the bit resolution
+    if (pixel_format == 8) {
+        PixelFormat = Basler_UsbCameraParams::PixelFormat_Mono8;
+    } else if (pixel_format == 10) {
+        PixelFormat = Basler_UsbCameraParams::PixelFormat_Mono10;
+    } else {
+        throw std::runtime_error("Invalid pixel format. Use 8 or 10.");
+    }
+    camera.PixelFormat.SetValue(PixelFormat);
 
     // Set the dimensions of the camera
     std::cout << "INFO: [Cam2::p_open()] Setting Camera Dimensions to " << Width << "x" << Height << '\n';
@@ -371,6 +437,8 @@ void Cam2::create_handle() {
     handler.camera_timestamps = &camera_timestamps;
     handler.image_count = &image_count;
     handler.timestamp_sample_time = &timestamp_sample_time;
+    handler.pixel_format = pixel_format;
+    handler.images10 = &buffer10;
 
     camera.RegisterImageEventHandler(&handler, Pylon::RegistrationMode_Append, Pylon::Cleanup_None);
     is_handle_attached = true;
@@ -419,22 +487,28 @@ void Cam2_Handler::OnImageGrabbed(Pylon::CInstantCamera &camera,
     if (ptrGrabResult->GrabSucceeded()) {
         auto width = ptrGrabResult->GetWidth();
         auto height = ptrGrabResult->GetHeight();
-        auto size  = width * height * sizeof(uint8_t); // monochrome image
         
-        const uint8_t *raw_data = static_cast<uint8_t*>(ptrGrabResult->GetBuffer());
-        u8Image image(raw_data, raw_data + size);
 
-        images->enqueue(image);
+        if (pixel_format == 8) {
+            auto size  = width * height * sizeof(uint8_t); // monochrome image
+            const uint8_t *raw_data = static_cast<uint8_t*>(ptrGrabResult->GetBuffer());
+            u8Image image(raw_data, raw_data + size);
+            images->enqueue(image);
+        }
+        else if (pixel_format == 10) {
+            auto size = width * height * sizeof(uint16_t); // monochrome image
+            const uint16_t *raw_data = static_cast<uint16_t*>(ptrGrabResult->GetBuffer());
+            u16Image image(raw_data, raw_data + size);
+            images10->enqueue(image);
+        }
+
+
         image_count->fetch_add(1, std::memory_order_release);
 
         if (image_count->load(std::memory_order_acquire) % *timestamp_sample_time == 0) {
             system_timestamps->enqueue(Utils::GetCurrentTime_us());
             camera_timestamps->enqueue(ptrGrabResult->GetTimeStamp());
         }
-
-        // Print image count
-        //std::cout << "INFO: [Cam2_Handler::OnImageGrabbed] Image count: "
-        //          << image_count->load(std::memory_order_acquire) << '\n';
     }
 }
 

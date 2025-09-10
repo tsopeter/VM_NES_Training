@@ -122,6 +122,7 @@ int e26 () {
         true,
         0,
         0,
+        8,
 
         mask_Height * 2,
         mask_Width  * 2,

@@ -56,7 +56,8 @@ void Scheduler2::SetupCamera(
     int cam_ZoneSize,
     bool cam_use_centering,
     int cam_offset_x,
-    int cam_offset_y
+    int cam_offset_y,
+    int pixel_format
 ) {
     camera.Height = Height;
     camera.Width  = Width;
@@ -70,6 +71,7 @@ void Scheduler2::SetupCamera(
     camera.UseCentering = cam_use_centering;
     camera.OffsetX = cam_offset_x;
     camera.OffsetY = cam_offset_y;
+    camera.pixel_format = pixel_format;
 }
 
 void Scheduler2::SetupPEncoder(
@@ -176,10 +178,73 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_3() {
     return {tensor, zone_tensor};
 }
 
+std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera10_1 () {
+    u16Image image = camera.sread10();
+    
+    // Convert u16Image to torch::Tensor
+    torch::Tensor tensor = torch::from_blob(
+        image.data(), 
+        {camera.Height, camera.Width}, 
+        torch::kUInt16
+    ).clone();
+
+    return {tensor, tensor};
+}
+
+std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera10_2 () {
+    auto [image, zones] = camera.pread10();
+
+    std::vector<torch::Tensor> zone_tensors;
+    for (auto &zone : zones) {
+        // Convert u16Image to torch::Tensor
+        torch::Tensor tensor = torch::from_blob(
+            zone.data(),
+            {camera.ZoneSize, camera.ZoneSize},
+            torch::kUInt16
+        ).clone();
+        zone_tensors.push_back(tensor);
+    }
+
+    auto tensor = torch::from_blob(
+        image.data(),
+        {camera.Height, camera.Width},
+        torch::kUInt16
+    ).clone();
+
+    return {tensor, torch::stack(zone_tensors)};  // [N, H, W]
+}
+
+std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera10_3 () {
+    auto [image, zones] = camera.pread210();
+
+    // convert zones into tensors, zones is a vector of int64_t
+    torch::Tensor zone_tensor = torch::from_blob(
+        zones.data(),
+        {static_cast<int64_t>(zones.size())},
+        torch::kInt64
+    );
+
+    auto tensor = torch::from_blob(
+        image.data(),
+        {camera.Height, camera.Width},
+        torch::kUInt16
+    ).clone();
+
+    return {tensor, zone_tensor};
+}
+
 std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera() {
-    switch (camera.UseZones) {
-        case false: return ReadCamera_1();
-        case true : return ReadCamera_2();
+    if (camera.pixel_format == 8) {
+        switch (camera.UseZones) {
+            case false: return ReadCamera_1();
+            case true : return ReadCamera_2();
+        }
+    } 
+    else {
+        switch (camera.UseZones) {
+            case false: return ReadCamera10_1();
+            case true : return ReadCamera10_2();
+        }
     }
 }
 
@@ -556,6 +621,7 @@ void Scheduler2::Start (
         bool cam_use_centering,
         int cam_offset_x,
         int cam_offset_y,
+        int pixel_format,
 
         /* PEncoder properties */
         int pencoder_Height,
@@ -588,7 +654,8 @@ void Scheduler2::Start (
         cam_ZoneSize,
         cam_use_centering,
         cam_offset_x,
-        cam_offset_y
+        cam_offset_y,
+        pixel_format
     );
 
     StartWindow();
@@ -808,7 +875,7 @@ void Scheduler2::SaveCheckpoint (
     std::string name = cp.checkpoint_name;
 
     // if name not given, assign current date and time
-    name = name + "checkpoint_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + "_" + std::to_string(cp.batch_id);
+    name = name + "checkpoint_" + std::to_string(cp.step) + "_" + std::to_string(cp.batch_id);
 
     // create the directory if it doesn't exist
     if (!std::filesystem::exists(dir)) {

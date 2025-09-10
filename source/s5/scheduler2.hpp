@@ -90,7 +90,8 @@ public:
         int cam_ZoneSize=60,
         bool cam_use_centering=true,
         int cam_offset_x=0,
-        int cam_offset_y=0
+        int cam_offset_y=0,
+        int pixel_format=8
     );
 
     void SetupPEncoder (
@@ -201,6 +202,7 @@ public:
         bool cam_use_centering=true,
         int cam_offset_x=0,
         int cam_offset_y=0,
+        int pixel_format=8,
 
         /* PEncoder properties */
         int pencoder_Height=0,
@@ -223,6 +225,10 @@ private:
     std::pair<torch::Tensor, torch::Tensor> ReadCamera_1();
     std::pair<torch::Tensor, torch::Tensor> ReadCamera_2();
     std::pair<torch::Tensor, torch::Tensor> ReadCamera_3();
+
+    std::pair<torch::Tensor, torch::Tensor> ReadCamera10_1();
+    std::pair<torch::Tensor, torch::Tensor> ReadCamera10_2();
+    std::pair<torch::Tensor, torch::Tensor> ReadCamera10_3();
 
     torch::Tensor GetSampleImage_1();
     torch::Tensor GetSampleImage_2();
