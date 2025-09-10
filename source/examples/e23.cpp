@@ -430,7 +430,7 @@ int e23 () {
     //torch::optim::SGD opt_m (model.parameters(), torch::optim::SGDOptions(100.0f));
     s4_Optimizer opt (opt_m, model);
 
-    HComms comms {"192.168.193.136", 9001};
+    HComms comms {"192.168.193.204", 9001};
 
     PDFunction process_function = [](CaptureData ts)->std::pair<torch::Tensor, bool> {
         return e23_ProcessFunction(ts);

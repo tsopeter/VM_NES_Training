@@ -28,10 +28,10 @@ std::ostream& operator<<(std::ostream &os, const Utils::data_structure &ds) {
 void run_code () {
 #if defined(MACHINE)
     //e22(); //e17();    // Synchronization Test
-    //e23(); //e18();
+    e23(); //e18();
     //e25(); // PLM working test
     //e26(); // New Sync Test
-    e27(); 
+    //e27(); 
 #elif defined(VIEWER)   // everything else is used as the machine to display results
     Viewer viewer(240*2, 320*2, 9001);
     viewer.run();
