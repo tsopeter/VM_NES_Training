@@ -21,6 +21,8 @@ using cudaGraphicsResource=int;
 #if defined(__linux__) && defined(__x86_64__)
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
+#else
+using cudaGraphicsResource=int;
 #endif
 
 
