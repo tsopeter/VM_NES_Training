@@ -7,7 +7,7 @@
 #include "../s2/quantize.hpp"
 #include "../s3/cam.hpp" /* u8Image */
 
-#if defined(__linux__)
+#if defined(__linux__) && defined(__x86_64__)
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glext.h>
