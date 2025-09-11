@@ -7,7 +7,7 @@ uint64_t Utils::GetCurrentTime_us () {
     ).count();
 }
 
-#ifdef __linux__
+#if defined(__linux__) && defined(__x86_64__)
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h> 
 #include <GL/glext.h>
