@@ -7,18 +7,20 @@
 #include "../s2/quantize.hpp"
 #include "../s3/cam.hpp" /* u8Image */
 
-#if defined(__linux__) && defined(__x86_64__)
+#if defined(__linux__)
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glext.h>
-
-#include <cuda_runtime.h>
-#include <cuda_gl_interop.h>
 #endif
 #if defined(__APPLE__)
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 using cudaGraphicsResource=int;
+#endif
+
+#if defined(__linux__) && defined(__x86_64__)
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
 #endif
 
 
