@@ -1,7 +1,11 @@
 UNAME_S := $(shell uname -s)
-DISTRO := $(shell lsb_release -si 2>/dev/null)
+DISTRO  := $(shell lsb_release -si 2>/dev/null)
+ARCH    := $(shell uname -m)
 
-ifeq ($(UNAME_S),Darwin)
+ifeq ($(ARCH),aarch64)
+$(info Using Makefile.aarch64)
+include Makefile.aarch64
+else ifeq ($(UNAME_S),Darwin)
 $(info Using Makefile.OSX)
 include Makefile.OSX
 else ifeq ($(DISTRO),Ubuntu)
