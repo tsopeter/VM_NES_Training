@@ -1,4 +1,4 @@
-#include "e23.hpp"
+#include "e28.hpp"
 
 #include <torch/torch.h>
 
@@ -13,7 +13,7 @@
 #include <fstream>
 #include <ostream>
 
-namespace e23_global {
+namespace e28_global {
     static std::atomic<double> correct = 0;
     static std::atomic<double> total   = 0;
     static std::atomic<bool> acc_norm {false};
@@ -27,29 +27,29 @@ namespace e23_global {
     ).reshape({16});
 }
 
-struct e23_Batch {
+struct e28_Batch {
     std::vector<Texture> textures;
     std::vector<int>     labels;
 };
 
 
-struct e23_Validation_Batch {
+struct e28_Validation_Batch {
     Texture texture;
     std::vector<int> labels;
 };
 
-struct e23_DataPoints {
+struct e28_DataPoints {
     double results[10];
     int    label;
 };
 
-static std::vector<e23_DataPoints> data_points;
-std::atomic<bool> start_saving_data_points {false};
+static std::vector<e28_DataPoints> e28_data_points;
+std::atomic<bool> e28_start_saving_e28_data_points {false};
 
-void e23_SaveDataPoints () {
+void e28_SaveDataPoints () {
     // Save it to a file
-    std::ofstream ofs("data_points.txt");
-    for (const auto& dp : data_points) {
+    std::ofstream ofs("e28_data_points.txt");
+    for (const auto& dp : e28_data_points) {
         ofs << dp.label << " ";
         for (const auto& r : dp.results) {
             ofs << r << " ";
@@ -59,15 +59,15 @@ void e23_SaveDataPoints () {
 }
 
 
-std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
+std::vector<e28_Batch> e28_Get_Data(int n_e28_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
     s2_Dataloader data_loader {"./Datasets/"};
-    auto data = data_loader.load(dtype, n_data_points);
-    std::cout << "INFO: [e23] Loaded data with " << data.len() << " samples.\n";
+    auto data = data_loader.load(dtype, n_e28_data_points);
+    std::cout << "INFO: [e28] Loaded data with " << data.len() << " samples.\n";
 
-    std::vector<e23_Batch> batches;
-    batches.resize(n_data_points / batch_size);
+    std::vector<e28_Batch> batches;
+    batches.resize(n_e28_data_points / batch_size);
 
-    for (int i = 0; i < n_data_points; i += batch_size) {
+    for (int i = 0; i < n_e28_data_points; i += batch_size) {
         for (int j = 0; j < batch_size; ++j) {
             auto [d, l] = data[i + j];
             // Process the data
@@ -89,9 +89,9 @@ std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes 
     return batches;
 }
 
-std::vector<e23_Validation_Batch> e23_Pack20 (int n) {
+std::vector<e28_Validation_Batch> e28_Pack20 (int n) {
     s2_Dataloader dataloader {"./Datasets"};
-    std::vector<e23_Validation_Batch> batches;
+    std::vector<e28_Validation_Batch> batches;
 
     auto dl = dataloader.load(s2_DataTypes::VALID, n*20);
 
@@ -119,7 +119,7 @@ std::vector<e23_Validation_Batch> e23_Pack20 (int n) {
         Texture texture = LoadTextureFromImage(image);
         SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR); 
         batches.push_back(
-            e23_Validation_Batch{.texture = texture, .labels = labels}
+            e28_Validation_Batch{.texture = texture, .labels = labels}
         );
     }
 
@@ -127,14 +127,14 @@ std::vector<e23_Validation_Batch> e23_Pack20 (int n) {
 }
 
 
-class e23_Normal : public Dist {
+class e28_Normal : public Dist {
 public:
-    e23_Normal () {}
+    e28_Normal () {}
 
-    e23_Normal (torch::Tensor &mu, double std) :
+    e28_Normal (torch::Tensor &mu, double std) :
     m_mu(mu), m_std(std) {}
 
-    ~e23_Normal () override {}
+    ~e28_Normal () override {}
 
     torch::Tensor sample (int n) override {
         torch::NoGradGuard no_grad;
@@ -176,12 +176,12 @@ public:
 
 };
 
-class e23_Model : public s4_Model {
+class e28_Model : public s4_Model {
 public:
 
-    e23_Model () {} /* Default constructor */
+    e28_Model () {} /* Default constructor */
 
-    e23_Model (int64_t Height, int64_t Width, int64_t n) :
+    e28_Model (int64_t Height, int64_t Width, int64_t n) :
     m_Height(Height), m_Width(Width), m_n(n) {
         init (Height, Width, n);
     }
@@ -197,8 +197,8 @@ public:
         m_Width  = Width;
         m_n      = n;
 
-        std::cout<<"INFO: [e23_Model] Staging model...\n";
-        std::cout<<"INFO: [e23_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
+        std::cout<<"INFO: [e28_Model] Staging model...\n";
+        std::cout<<"INFO: [e28_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
 
         //m_parameter = torch::rand({Height, Width}, torch::kFloat16).to(DEVICE) * 2 * M_PI - M_PI;
 
@@ -208,13 +208,13 @@ public:
 
         //m_parameter = torch::zeros({Height, Width}).to(DEVICE);
         m_parameter.set_requires_grad(true);
-        std::cout<<"INFO: [e23_Model] Set parameters...\n";
+        std::cout<<"INFO: [e28_Model] Set parameters...\n";
 
         m_dist.set_mu(m_parameter, kappa);
-        std::cout<<"INFO: [e23_Model] Created distribution...\n";
+        std::cout<<"INFO: [e28_Model] Created distribution...\n";
     }
 
-    ~e23_Model () override {}
+    ~e28_Model () override {}
 
     torch::Tensor sample(int n) {
         torch::NoGradGuard no_grad;
@@ -261,7 +261,7 @@ public:
     torch::Tensor m_action;
 
     //VonMises m_dist {};
-    e23_Normal m_dist {};
+    e28_Normal m_dist {};
 
     const double std = 0.05 * (2 * M_PI); // 10% of the range
     const double kappa = 1.0f/std;
@@ -270,9 +270,9 @@ public:
 };
 
 
-std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
+std::pair<torch::Tensor, bool> e28_ProcessFunction (CaptureData &ts) {
     static int64_t process_count = 0;
-    std::cout << "INFO: [e23_ProcessFunction]: Processed: " << process_count + 1 << " so far.\n";
+    std::cout << "INFO: [e28_ProcessFunction]: Processed: " << process_count + 1 << " so far.\n";
 
     // Sum to [16]
     /*
@@ -309,7 +309,6 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     // Each zone is 60x60
     // so we can divide each zone into 4 areas of 15x15
     // where we have 15px padding between areas
-    /*
     auto lb_0 = t[5].slice(0, 0,  15).slice(1,  0, 15);   // get label 0
     auto lb_1 = t[5].slice(0, 0,  15).slice(1, 45, 60);  // get label 1
     auto lb_2 = t[5].slice(0, 45, 60).slice(1,  0, 15);  // get label 2
@@ -322,24 +321,6 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 
     auto lb_8 = t[11].slice(0, 0, 15).slice(1, 0, 15);   // get label 8
     auto lb_9 = t[11].slice(0, 45, 60).slice(1, 0, 15); // get label 9
-    */
-
-    // 10x10 regions
-    auto lb_0 = t[5].slice(0, 0,  10).slice(1,  0, 10);   // get label 0
-    auto lb_1 = t[5].slice(0, 0,  10).slice(1, 50, 60);  // get label 1
-    auto lb_2 = t[5].slice(0, 50, 60).slice(1,  0, 10);  // get label 2
-    auto lb_3 = t[5].slice(0, 50, 60).slice(1, 50, 60); // get label 3
-
-    auto lb_4 = t[7].slice(0, 0, 10).slice(1, 0, 10);   // get label 4
-    auto lb_5 = t[7].slice(0, 50, 60).slice(1, 0, 10);  // get label 5
-    auto lb_6 = t[9].slice(0, 50, 60).slice(1, 0, 10);  // get label 6
-    auto lb_7 = t[9].slice(0, 50, 60).slice(1, 50, 60); // get label 7
-
-    auto lb_8 = t[11].slice(0, 0, 10).slice(1, 0, 10);   // get label 8
-    auto lb_9 = t[11].slice(0, 50, 60).slice(1, 0, 10); // get label 9
-
-
-
 
 
     // get label 0 and 1
@@ -349,7 +330,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 
     auto sums = t.sum({1,2}).to(torch::kFloat64);   // [16]
 
-    //sums = sums - e23_global::noise_bg;
+    //sums = sums - e28_global::noise_bg;
 
     // Each area is 60x60 = 3600 pixels
     sums /= 255.0;
@@ -358,19 +339,19 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 
     std::vector<torch::Tensor> t_vec;
 
-    if (e23_global::enable_norm)
+    if (e28_global::enable_norm)
         for (int i = 0; i < 10; ++i) {
-            t_vec.push_back(e23_global::gains * e23_global::norms[i] * sums[i].unsqueeze(0).to(torch::kFloat64));
+            t_vec.push_back(e28_global::gains * e28_global::norms[i] * sums[i].unsqueeze(0).to(torch::kFloat64));
         }
     else
         for (int i = 0; i < 10; ++i) {
-            t_vec.push_back(e23_global::gains * sums[i].unsqueeze(0).to(torch::kFloat64));
+            t_vec.push_back(e28_global::gains * sums[i].unsqueeze(0).to(torch::kFloat64));
         }
 
-    if (e23_global::acc_norm) {
+    if (e28_global::acc_norm) {
         // Sum up the values
         for (int i = 0; i < 10; ++i) {
-            e23_global::norms[i] += t_vec[i].squeeze().item<double>();
+            e28_global::norms[i] += t_vec[i].squeeze().item<double>();
         }
     }
 
@@ -384,17 +365,17 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 
     if (process_count % 20 == 0) {
         if (preds.item<int>() == ts.label) {
-            e23_global::correct.fetch_add(1, std::memory_order_release);
+            e28_global::correct.fetch_add(1, std::memory_order_release);
         }
-        e23_global::total.fetch_add(1, std::memory_order_release);
+        e28_global::total.fetch_add(1, std::memory_order_release);
 
-        if (start_saving_data_points.load(std::memory_order_acquire)) {
-            e23_DataPoints dp;
+        if (e28_start_saving_e28_data_points.load(std::memory_order_acquire)) {
+            e28_DataPoints dp;
             dp.label = ts.label;
             for (int i = 0; i < 10; ++i) {
                 dp.results[i] = predictions[0][i].item<double>();
             }
-            data_points.push_back(dp);
+            e28_data_points.push_back(dp);
         }
     }
 
@@ -411,7 +392,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     return {-loss, true};
 }
 
-int e23 () {
+int e28 () {
     int  mask_size_ratio = 4; // 8, 4, 2, 1
     bool load_from_checkpoint = false;
     std::cout << "Loading any checkpoints? [y/n] ";
@@ -432,12 +413,12 @@ int e23 () {
     bool use_tiles        = true;
 
     if (use_partitioning) {
-        std::cout << "INFO: [e23] Using partitioning mode.\n";
+        std::cout << "INFO: [e28] Using partitioning mode.\n";
         Height = 480;
         Width  = 640;
     }
     else {
-        std::cout << "INFO: [e23] Using non-partitioning mode.\n";
+        std::cout << "INFO: [e28] Using non-partitioning mode.\n";
         Height = 480 / 2;
         Width  = 640 / 2;
     }
@@ -445,7 +426,7 @@ int e23 () {
     Pylon::PylonAutoInitTerm init {};
     Scheduler2 scheduler {};
 
-    e23_Model model {};
+    e28_Model model {};
 
     int model_Height  = 800  / mask_size_ratio;
     int model_Width   = 1280 / mask_size_ratio;
@@ -455,13 +436,11 @@ int e23 () {
     //torch::optim::SGD opt_m (model.parameters(), torch::optim::SGDOptions(100.0f));
     s4_Optimizer opt (opt_m, model);
 
-    HComms comms {"192.168.193.20", 9001};
-
     // macbook-pro 192.168.193.20
     // pop-os      192.168.103.204
 
     PDFunction process_function = [](CaptureData ts)->std::pair<torch::Tensor, bool> {
-        return e23_ProcessFunction(ts);
+        return e28_ProcessFunction(ts);
     };
 
     scheduler.Start(
@@ -505,14 +484,15 @@ int e23 () {
     // Get image data
     int64_t n_training_samples = 640;
     int64_t n_batch_size       = 32;
-    int64_t n_samples          =16;    // Note actual number of samples is n_samples * 20
+    int64_t n_samples          = 16;    // Note actual number of samples is n_samples * 20
 
-    auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
+    auto batches = e28_Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
+
     
     int64_t n_validation_samples  = 256;
     int64_t n_validation_batch_size = 256;
-    auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::TRAIN);
+    auto val_batches = e28_Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::VALID);
     //auto val_batches = batches;
 
     int64_t step=0;
@@ -531,31 +511,6 @@ int e23 () {
         scheduler.ReadFromCamera();
     };
 
-
-    /////////////////////////////////////////////////////
-    // Obtaining Normalization Factor                  //
-    /////////////////////////////////////////////////////
-    
-    /*
-    e23_global::acc_norm.store(true, std::memory_order_release);
-    e23_global::enable_norm.store(false, std::memory_order_release);
-    torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
-    scheduler.SetTextureFromTensorTiled(action);
-    for (int i = 0; i < n_validation_batch_size; ++i) {
-        scheduler.SetSubTextures(val_batches[0].textures[i], 0);
-        Iterate();
-    }
-    model.squash();
-    scheduler.Dump();
-
-    // calculate norm
-    for (int i = 0; i < 10; ++i) {
-        e23_global::norms[i] = static_cast<double>(n_validation_batch_size) / e23_global::norms[i];
-    }
-
-    e23_global::acc_norm.store(false, std::memory_order_release);
-    e23_global::enable_norm.store(true, std::memory_order_release);
-    */
 
     /////////////////////////////////////////////////////
     // Checkpoint                                      //
@@ -578,139 +533,42 @@ int e23 () {
 
 
     int64_t iter = 0;
-    const int64_t val_interval = 10; // every 10 iterations
+    const int64_t val_interval = 0; // every 10 iterations
     int validation_accuracy = 0;
     int training_accuracy = 0;
 
     while (!WindowShouldClose()) {
 
         /////////////////////////////////////////////////////
-        // Training                                        //
-        /////////////////////////////////////////////////////
-
-        int64_t time_0 = Utils::GetCurrentTime_us();
-
-        for (int i =0; i < n_samples; ++i) {
-            torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
-            scheduler.SetTextureFromTensorTiled(action);
-
-            for (int j = 0; j < n_batch_size; ++j) {
-                scheduler.SetSubTextures(batches[batch_sel].textures[j], 0);
-                scheduler.SetLabel(batches[batch_sel].labels[j]);
-                Iterate();
-                ++step;
-            }
-        }
-
-        //TakeScreenshot("train_screen.png");
-        std::cout << "INFO: [e23] Training step " << step << " completed...\n";
-
-        model.squash();
-        auto reward = scheduler.Update();
-        //scheduler.Dump();
-        int64_t time_1 = Utils::GetCurrentTime_us();
-
-        int64_t delta = time_1 - time_0;
-        training_accuracy = 1000 * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
-
-        /////////////////////////////////////////////////////
         // Validation                                      //
         /////////////////////////////////////////////////////
         
-        e23_global::correct.store(0, std::memory_order_release);
-        e23_global::total.store(0, std::memory_order_release);
+        e28_global::correct.store(0, std::memory_order_release);
+        e28_global::total.store(0, std::memory_order_release);
+        model.m_dist.set_std(0.0f);
 
-        if (iter % val_interval == 0) {
-            // Get std from model
-            double std = model.m_dist.get_std();
-            model.m_dist.set_std(0.0f);
-
-            std::cout << "INFO: [e23] Running Validation...\n";
-            torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
-            scheduler.SetTextureFromTensorTiled(action);
-
-            if (iter == 0) {
-                start_saving_data_points.store(true, std::memory_order_release);
-            }
+        std::cout << "INFO: [e28] Running Validation...\n";
+        torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
+        scheduler.SetTextureFromTensorTiled(action);
 
 
-            for (int i = 0; i < val_batches.size(); ++i) {
-                for (int j = 0; j < n_validation_batch_size; ++j) {
-                    scheduler.SetSubTextures(val_batches[i].textures[j], 0);
-                    scheduler.SetLabel(val_batches[i].labels[j]);
-                    Iterate();
-                }
-            }
-            // set the std back
-            model.squash();
-            model.m_dist.set_std(std);
-            scheduler.Dump();
-            validation_accuracy = 1000 * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
-
-
-            start_saving_data_points.store(false, std::memory_order_release);
-            // save
-            if (iter == 0) {
-                e23_SaveDataPoints();
+        for (int i = 0; i < val_batches.size(); ++i) {
+            for (int j = 0; j < n_validation_batch_size; ++j) {
+                scheduler.SetSubTextures(val_batches[i].textures[j], 0);
+                scheduler.SetLabel(val_batches[i].labels[j]);
+                Iterate();
             }
         }
-        
-        /////////////////////////////////////////////////////
-        // Networking                                      //
-        /////////////////////////////////////////////////////
 
-        // Combine the two scores and transmit it
-        // we can reconstruct the training accuracy and validation accuracy
-        double combined_accuracy =  ((static_cast<int>(-reward * 1000)) << 20) | (training_accuracy << 10) | validation_accuracy;
-        std::cout << "INFO: [e23] Reward: " << reward << '\n';
+        // set the std back
+        model.squash();
+        scheduler.Dump();
+        validation_accuracy = 1000 * e28_global::correct.load(std::memory_order_acquire) / e28_global::total.load(std::memory_order_acquire);
 
-        // To reconstruct it, we know that
-        // we can extract the training_accuracy by shifting right by 10 bits
-        // and validation_accuracy is the lower 10 bits
 
-        // Transmit the data to remote server
-        HCommsDataPacket_Outbound packet;
-        packet.reward = combined_accuracy; // = reward;
-        packet.step   = step;
-        packet.image  = scheduler.GetSampleImage().contiguous().to(torch::kUInt8);
-
-        // Send the packet
-        comms.Transmit(packet);
-        scheduler.DisposeSampleImages();
-
-        e23_global::correct.store(0, std::memory_order_release);
-        e23_global::total.store(0, std::memory_order_release);
-        ++iter;
-
-        /////////////////////////////////////////////////////
-        // Saving checkpoints                              //
-        /////////////////////////////////////////////////////
-        if (save_checkpoints) {
-            Scheduler2_CheckPoint cp;
-            cp.batch_id = batch_sel;
-            cp.training_accuracy = training_accuracy;
-            cp.validation_accuracy = validation_accuracy;
-            cp.phase = model.get_parameters();
-            cp.kappa = 1/model.m_dist.get_std();
-            cp.step = step;
-            cp.dataset_path = "./Datasets";
-            cp.checkpoint_dir = "./2025_09_11_001_s16";
-            cp.checkpoint_name = "";
-            cp.reward = reward;
-            scheduler.SaveCheckpoint(cp);
-        }
-
-        batch_sel = (batch_sel + 1) % batches.size();
-
-        mean_reward += reward;
-
-        if (batch_sel == 0) {
-            mean_reward /= static_cast<double>(batches.size());
-            // Save mean reward to file (append)
-            std::ofstream ofs("./2025_09_11_001_s16/mean_reward.txt", std::ios::app);
-            ofs << mean_reward << std::endl;
-            mean_reward = 0.0f;
-        }
+        e28_start_saving_e28_data_points.store(false, std::memory_order_release);
+ 
+        break;
     }
 
     scheduler.StopThreads();
@@ -722,5 +580,9 @@ int e23 () {
             UnloadTexture(t);
         }
     }
+
+    // Print out validation accuracy
+    std::cout << "INFO: [e28] Validation accuracy: " << validation_accuracy / 10.0f << "%\n";
+
     return 0;
 }

@@ -15,6 +15,7 @@
 #include "examples/e25.hpp"
 #include "examples/e26.hpp"
 #include "examples/e27.hpp"
+#include "examples/e28.hpp"
 #include "s3/IP.hpp"
 #include "utils/utils.hpp"
 #include "s3/window.hpp"
@@ -32,6 +33,7 @@ void run_code () {
     //e25(); // PLM working test
     //e26(); // New Sync Test
     //e27(); 
+    //e28();
 #elif defined(VIEWER)   // everything else is used as the machine to display results
     Viewer viewer(240*2, 320*2, 9001);
     viewer.run();
