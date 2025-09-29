@@ -33,7 +33,7 @@ void run_code () {
     //e25(); // PLM working test
     //e26(); // New Sync Test
     //e27(); 
-    //e28();
+    //e28(); // Inference
 #elif defined(VIEWER)   // everything else is used as the machine to display results
     Viewer viewer(240*2, 320*2, 9001);
     viewer.run();

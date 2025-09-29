@@ -7,6 +7,7 @@
 #include "../s4/pencoder.hpp"
 #include "../s3/window.hpp"
 #include "../s4/optimizer.hpp"
+#include "../s2/np2lt.hpp"
 
 #include <iostream>
 #include <vector>
@@ -44,6 +45,7 @@ struct Scheduler2_CheckPoint {
 
     int64_t step;
     double reward;
+    double val_reward;
 
 
     std::string dataset_path;
@@ -125,6 +127,7 @@ public:
     void SetOptimizer(s4_Optimizer *opt);
 
     double Update ();
+    double Loss ();
     void   Dump ();
     void   Dump (int);
 
@@ -174,6 +177,7 @@ public:
     void DrawSubTexturesOnly();
 
     void SetLabel(int);
+    void SetLabel(int label, int count);
     void SetLabel(std::vector<int>);
     void SetBatch_Id(int);
     void SetAction_Id(int);
@@ -224,6 +228,13 @@ public:
     void WaitUntilCameraIsIdle();
     void Capture();
 
+    int64_t GetNumberOfFramesSent() const;
+
+    void EnableLabelQueueing ();
+    void DisableLabelQueueing ();
+
+    void EnableAntiTheticSampling ();
+    void DisableAntiTheticSampling ();
 private:
     // Private methods 
     std::pair<torch::Tensor, torch::Tensor> ReadCamera();
@@ -333,6 +344,13 @@ private:
     uint64_t m_vsync_marker;
 
     bool m_blend_mode_enabled = false;
+
+    torch::Tensor noise_bg;
+
+    moodycamel::ConcurrentQueue<int> label_queue;
+
+    bool label_queueing_enabled = false;
+    bool use_anti = false;
 };
 
 

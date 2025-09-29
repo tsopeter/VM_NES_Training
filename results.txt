@@ -1,0 +1,17 @@
+loss   , anti   , d1        , d2        , ratio , samples , opt , lr   , std   , tr_loss   , vd_loss  , tr_acc , vd_acc
+mse    , false  , Balanced_1, Balanced_2, 8     , 8       , adam, 0.1  , 0.1   , -9102.69  , -9177.38 , 26.3   , 17
+mse    , false  , Balanced_1, Balanced_2, 8     , 32      , adam, 0.1  , 0.1   , -8938.41  , -9106.12 , 31.5   , 22
+mse    , false  , Balanced_1, Balanced_2, 4     , 8       , adam, 0.1  , 0.1   , -8826.68  , -9017.8  , 36.8   , 20
+mse    , false  , Balanced_1, Balanced_2, 4     , 16      , adam, 0.1  , 0.1   , -8095.49  , -8608.38 , 42.1   , 25
+ces    , true   , Balanced_1, Balanced_2, 4     , 32      , adam, 0.01 , 0.05  , -0.1767   , -1.44    , 94.7   , 52
+ces    , true   , Balanced_1, Balanced_2, 4     , 32      , adam, 0.05 , 0.2   , -0.9708   , -1.7719  , 68.4   , 47
+ces    , true   , Balanced_1, Balanced_2, 4     , 32      , adam, 0.2  , 0.3   , -2.0401   , -2.1754  , 42.1   , 24
+ces    , true   , Balanced_1, Balanced_2, 4     , 32      , adam, 0.05 , 0.2   , -1.08622  , -1.87637 , 78.9   , 40
+hybrid , true   , 1k        ,  1k       , 4     , 32      , adam, 0.05 , 0.05, 
+hybrid , true   , Balanced_1, Balanced_2, 4     , 32      , adam, 0.05 , 0.3   , -0.73995  , -0.8862  , 31.5   , 23
+mse    , true   , Balanced_1, Balanced_2, 4     , 64      , adam, 0.1  , 0.1   , na        , na       , na     , na
+mse    , false  , Balanced_1, Balanced_2, 2     , 32      , adam, 0.1  , 0.1   , -8685.52  , -8960.53 , 31.5   , 19 
+
+mse    , false  , Balanced_1, Balanced_2, 4     , 32      , sgd , 200  , 0.1   , na        , na       , na     , na
+mse    , false  , Balanced_1, Balanced_2, 4     , 32      , sgd , 25   , 0.1   , na        , na       , na     , na
+mse    , false  , Balanced_1, Balanced_2, 4     , 32      , sgd , 10   , 0.1   , na        , na       , na     , na

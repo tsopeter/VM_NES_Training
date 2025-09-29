@@ -23,6 +23,12 @@ s2_Data s2_Dataloader::load (s2_DataTypes type, int sz) {
         case s2_DataTypes::VALID:
             filenames = "Validation_Dataset.npy";
             break;
+        case s2_DataTypes::BALANCED_1:
+            filenames = "Balanced_1.npy";
+            break;
+        case s2_DataTypes::BALANCED_2:
+            filenames = "Balanced_2.npy";
+            break;
         default:
             filenames = "Validation_Dataset.npy";
     }

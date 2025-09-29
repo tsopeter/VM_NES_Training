@@ -11,6 +11,7 @@ public:
     ~s4_Optimizer ();
 
     void step (torch::Tensor &rewards);
+    void step_a (torch::Tensor &rewards);
 
 private:
     torch::optim::Optimizer &m_opt;

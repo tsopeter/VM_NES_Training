@@ -17,3 +17,4 @@ LOAD_DEFINITION(i32, int32_t, kInt32);
 LOAD_DEFINITION(i64, int64_t, kInt64);
 LOAD_DEFINITION(u32, uint32_t, kUInt32);
 LOAD_DEFINITION(u64, uint64_t, kUInt64);
+LOAD_DEFINITION(u8,  uint8_t,  kUInt8);

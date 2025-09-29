@@ -6,6 +6,9 @@ Scheduler2::Scheduler2() {
     for (int i = 0; i < 10; i++) {
         m_sub_textures_enable[i] = false;
     }
+
+    // Load noise background
+    noise_bg = np2lt::u8("source/Assets/noise_bg.npy").to(torch::kFloat32);
 }
 
 Scheduler2::~Scheduler2() {
@@ -422,11 +425,22 @@ void Scheduler2::ProcessDataPipeline(
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
                 continue;
             }
+
+            int label;
+            if (label_queueing_enabled) {
+                while (!label_queue.try_dequeue(label)) {
+                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+                }
+            }
+            else {
+                label = m_label.load(std::memory_order_acquire);
+            }
+
             // Process the data using the provided function
             auto [result, valid] = process_function(CaptureData{
                 .image     = data[1],
                 .full      = data[0],
-                .label     = m_label.load(std::memory_order_acquire),
+                .label     = label,
                 .batch_id  = m_batch_id,
                 .action_id = m_action_id 
             });
@@ -523,7 +537,42 @@ double Scheduler2::Update() {
     double total_rewards = stacked_rewards.mean().item<double>();
 
     stacked_rewards = stacked_rewards.to(reward_device);
-    opt->step(stacked_rewards);
+    if (use_anti)
+        opt->step_a(stacked_rewards);
+    else
+        opt->step(stacked_rewards);
+
+    // Reset this back to zero
+    number_of_frames_sent = 0;
+    return total_rewards;
+}
+
+double Scheduler2::Loss() {
+    std::cout << "INFO: [Scheduler2::Update] Updating scheduler...\n";
+    // Calculate the number of rewards we need
+    int64_t required_rewards = number_of_frames_sent * maximum_number_of_frames_in_image;
+    std::vector<torch::Tensor> rewards_collected;
+    rewards_collected.reserve(required_rewards);
+
+    for (int i =0; i < required_rewards; ++i) {
+        torch::Tensor reward;
+        while (!outputs.try_dequeue(reward)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
+        rewards_collected.push_back(reward);
+    }
+
+    auto stacked_rewards = torch::stack(rewards_collected).view({-1});
+
+    stacked_rewards = Uninterleave(stacked_rewards);
+    std::cout << stacked_rewards.sizes() << '\n';
+
+
+    stacked_rewards = stacked_rewards.mean({1});
+
+    double total_rewards = stacked_rewards.mean().item<double>();
+
+    stacked_rewards = stacked_rewards.to(reward_device);
 
     // Reset this back to zero
     number_of_frames_sent = 0;
@@ -908,6 +957,7 @@ void Scheduler2::SaveCheckpoint (
         ofs << cp.kappa << "\n";
         ofs << cp.step << "\n";
         ofs << cp.reward << "\n";
+        ofs << cp.val_reward << "\n";
     }
 
     // save the phase information as torch tensor
@@ -930,6 +980,7 @@ Scheduler2_CheckPoint Scheduler2::LoadCheckpoint(const std::string &cp) {
         ifs >> checkpoint.kappa;
         ifs >> checkpoint.step;
         ifs >> checkpoint.reward;
+        ifs >> checkpoint.val_reward;
     }
 
     // Load the phase information as torch tensor
@@ -1034,4 +1085,32 @@ void Scheduler2::WaitUntilCameraIsIdle () {
 void Scheduler2::Capture () {
     send_ready_to_capture();
     ++number_of_frames_sent;
+}
+
+int64_t Scheduler2::GetNumberOfFramesSent () const {
+    return number_of_frames_sent;
+}
+
+void Scheduler2::SetLabel(int label, int count) {
+    // Place onto label queue count times
+    for (int i = 0; i < count; ++i) {
+        label_queue.enqueue(label);
+    }
+}
+
+void Scheduler2::EnableLabelQueueing () {
+    label_queueing_enabled = true;
+}
+
+void Scheduler2::DisableLabelQueueing () {
+    label_queueing_enabled = false;
+}
+
+
+void Scheduler2::EnableAntiTheticSampling () {
+    use_anti = true;
+}
+
+void Scheduler2::DisableAntiTheticSampling () {
+    use_anti = false;
 }

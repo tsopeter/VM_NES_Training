@@ -25,6 +25,9 @@ namespace e28_global {
         0, 0, 0, 0, 0, 0},
         torch::dtype(torch::kFloat64)
     ).reshape({16});
+    std::vector<torch::Tensor> images;
+    std::vector<int> labels;
+    std::vector<int> preds;
 }
 
 struct e28_Batch {
@@ -43,13 +46,13 @@ struct e28_DataPoints {
     int    label;
 };
 
-static std::vector<e28_DataPoints> e28_data_points;
-std::atomic<bool> e28_start_saving_e28_data_points {false};
+static std::vector<e28_DataPoints> e28_e28_data_points;
+std::atomic<bool> e28_start_saving_e28_e28_data_points {false};
 
 void e28_SaveDataPoints () {
     // Save it to a file
-    std::ofstream ofs("e28_data_points.txt");
-    for (const auto& dp : e28_data_points) {
+    std::ofstream ofs("e28_e28_data_points.txt");
+    for (const auto& dp : e28_e28_data_points) {
         ofs << dp.label << " ";
         for (const auto& r : dp.results) {
             ofs << r << " ";
@@ -59,15 +62,15 @@ void e28_SaveDataPoints () {
 }
 
 
-std::vector<e28_Batch> e28_Get_Data(int n_e28_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
+std::vector<e28_Batch> e28_Get_Data(int n_e28_e28_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
     s2_Dataloader data_loader {"./Datasets/"};
-    auto data = data_loader.load(dtype, n_e28_data_points);
+    auto data = data_loader.load(dtype, n_e28_e28_data_points);
     std::cout << "INFO: [e28] Loaded data with " << data.len() << " samples.\n";
 
     std::vector<e28_Batch> batches;
-    batches.resize(n_e28_data_points / batch_size);
+    batches.resize(n_e28_e28_data_points / batch_size);
 
-    for (int i = 0; i < n_e28_data_points; i += batch_size) {
+    for (int i = 0; i < n_e28_e28_data_points; i += batch_size) {
         for (int j = 0; j < batch_size; ++j) {
             auto [d, l] = data[i + j];
             // Process the data
@@ -84,43 +87,6 @@ std::vector<e28_Batch> e28_Get_Data(int n_e28_data_points, int batch_size, s2_Da
             batches[i / batch_size].labels.push_back(li);
         }
 
-    }
-
-    return batches;
-}
-
-std::vector<e28_Validation_Batch> e28_Pack20 (int n) {
-    s2_Dataloader dataloader {"./Datasets"};
-    std::vector<e28_Validation_Batch> batches;
-
-    auto dl = dataloader.load(s2_DataTypes::VALID, n*20);
-
-    for (int i = 0; i < n * 20; i += 20) {
-        uint8_t data[28 * 28 * 20]; // 1 channel, R32B32G32A32, 20 images
-        std::vector<int> labels;
-
-        // Each image is 28x28 of uint8_t
-        for (int j = 0; j < 20; ++j) {
-            auto [image, l] = dl[i + j];
-            labels.push_back(l.argmax().item<int>());
-            image = image.to(torch::kUInt8).contiguous(); // [28 x 28]
-
-            // copy sequentially
-            std::memcpy(data + j * 28 * 28, image.data_ptr<uint8_t>(), 28 * 28);
-
-        }
-        Image image;
-        image.data = data;
-        image.width = 28;
-        image.height = 28 * 20;
-        image.mipmaps = 1;
-        image.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
-
-        Texture texture = LoadTextureFromImage(image);
-        SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR); 
-        batches.push_back(
-            e28_Validation_Batch{.texture = texture, .labels = labels}
-        );
     }
 
     return batches;
@@ -309,6 +275,7 @@ std::pair<torch::Tensor, bool> e28_ProcessFunction (CaptureData &ts) {
     // Each zone is 60x60
     // so we can divide each zone into 4 areas of 15x15
     // where we have 15px padding between areas
+    /*
     auto lb_0 = t[5].slice(0, 0,  15).slice(1,  0, 15);   // get label 0
     auto lb_1 = t[5].slice(0, 0,  15).slice(1, 45, 60);  // get label 1
     auto lb_2 = t[5].slice(0, 45, 60).slice(1,  0, 15);  // get label 2
@@ -321,7 +288,23 @@ std::pair<torch::Tensor, bool> e28_ProcessFunction (CaptureData &ts) {
 
     auto lb_8 = t[11].slice(0, 0, 15).slice(1, 0, 15);   // get label 8
     auto lb_9 = t[11].slice(0, 45, 60).slice(1, 0, 15); // get label 9
+    */
 
+    // 10x10 regions
+    const int region_size = 10;
+    const int region_area = region_size * region_size;
+    auto lb_0 = t[5].slice(0, 0,  region_size).slice(1,  0, region_size);   // get label 0
+    auto lb_1 = t[5].slice(0, 0,  region_size).slice(1, 60-region_size, 60);  // get label 1
+    auto lb_2 = t[5].slice(0, 60-region_size, 60).slice(1,  0, region_size);  // get label 2
+    auto lb_3 = t[5].slice(0, 60-region_size, 60).slice(1, 60-region_size, 60); // get label 3
+
+    auto lb_4 = t[7].slice(0, 0, region_size).slice(1, 0, region_size);   // get label 4
+    auto lb_5 = t[7].slice(0, 60-region_size, 60).slice(1, 0, region_size);  // get label 5
+    auto lb_6 = t[9].slice(0, 60-region_size, 60).slice(1, 0, region_size);  // get label 6
+    auto lb_7 = t[9].slice(0, 60-region_size, 60).slice(1, 60-region_size, 60); // get label 7
+
+    auto lb_8 = t[11].slice(0, 0, region_size).slice(1, 0, region_size);   // get label 8
+    auto lb_9 = t[11].slice(0, 60-region_size, 60).slice(1, 0, region_size); // get label 9
 
     // get label 0 and 1
 
@@ -364,48 +347,58 @@ std::pair<torch::Tensor, bool> e28_ProcessFunction (CaptureData &ts) {
     auto preds = predictions.argmax(1); // [1]
 
     if (process_count % 20 == 0) {
+        std::cout << "Predicted: " << preds.item<int>() << ", Actual: " << ts.label << '\n';
         if (preds.item<int>() == ts.label) {
             e28_global::correct.fetch_add(1, std::memory_order_release);
         }
         e28_global::total.fetch_add(1, std::memory_order_release);
+        e28_global::preds.push_back(preds.item<int>());
+        e28_global::labels.push_back(ts.label);
 
-        if (e28_start_saving_e28_data_points.load(std::memory_order_acquire)) {
-            e28_DataPoints dp;
-            dp.label = ts.label;
-            for (int i = 0; i < 10; ++i) {
-                dp.results[i] = predictions[0][i].item<double>();
-            }
-            e28_data_points.push_back(dp);
-        }
+        // Save torch as image
+        e28_global::images.push_back(k);
     }
 
     auto targets = l.to(torch::kLong).to(t.device()); // [1]
 
     // score is the cross entropy loss
+    /*
     auto loss = torch::nn::functional::cross_entropy(
         predictions,
         targets,
         torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
     );  // [1]
+    */
+    
+    // score is MSE
+    torch::Tensor one_hot_targets = torch::nn::functional::one_hot(targets, 10).to(torch::kFloat64) * region_area;
+    // Compute predictions as probabilities
+    //auto prob_predictions = torch::nn::functional::softmax(predictions, 1).unsqueeze(1);
+    auto loss = torch::nn::functional::mse_loss(
+        predictions,
+        one_hot_targets
+    );  // [1]
+    
+    /*
+    std::cout << "Loss: " << loss.item<double>() << '\n';
+    std::cout << "One Hot Targets: " << one_hot_targets << '\n';
+    std::cout << "Predictions: " << prob_predictions << '\n';
+    */
 
     ++process_count;
     return {-loss, true};
 }
 
 int e28 () {
-    int  mask_size_ratio = 4; // 8, 4, 2, 1
+    std::string checkpoint_dir;
+    int  mask_size_ratio = 2; // 8, 4, 2, 1
     bool load_from_checkpoint = false;
-    std::cout << "Loading any checkpoints? [y/n] ";
-    std::string response, checkpoint_dir;
-    std::cin >> response;
-    load_from_checkpoint = (response == "y");
+    load_from_checkpoint = true;
     if (load_from_checkpoint) {
         std::cout << "Enter checkpoint directory: ";
         std::cin >> checkpoint_dir;
     }
-    std::cout << "Do you want to save checkpoints during training? [y/n] ";
-    std::cin >> response;
-    bool save_checkpoints = (response == "y");
+    bool save_checkpoints = false;
 
     /* Camera Parameters */
     int Height = 480, Width = 640;
@@ -482,23 +475,24 @@ int e28 () {
     scheduler.SetRewardDevice(DEVICE);
 
     // Get image data
-    int64_t n_training_samples = 640;
-    int64_t n_batch_size       = 32;
-    int64_t n_samples          = 16;    // Note actual number of samples is n_samples * 20
+    int64_t n_training_samples = 100;
+    int64_t n_batch_size       = 20;
+    int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
 
     auto batches = e28_Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
     scheduler.SetBatchSize(n_batch_size);
 
     
-    int64_t n_validation_samples  = 256;
-    int64_t n_validation_batch_size = 256;
-    auto val_batches = e28_Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::VALID);
+    int64_t n_validation_samples  = 100;
+    int64_t n_validation_batch_size = 20;
+    auto val_batches = e28_Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::TRAIN);
     //auto val_batches = batches;
 
     int64_t step=0;
     int64_t batch_sel=0;
 
     double  mean_reward = 0.0f;
+    std::vector<int> labels;
 
     auto Iterate = [&scheduler]->void {
         for (int i = 0; i < 4; ++i) {
@@ -557,6 +551,7 @@ int e28 () {
                 scheduler.SetSubTextures(val_batches[i].textures[j], 0);
                 scheduler.SetLabel(val_batches[i].labels[j]);
                 Iterate();
+                labels.push_back(val_batches[i].labels[j]);
             }
         }
 
@@ -566,10 +561,13 @@ int e28 () {
         validation_accuracy = 1000 * e28_global::correct.load(std::memory_order_acquire) / e28_global::total.load(std::memory_order_acquire);
 
 
-        e28_start_saving_e28_data_points.store(false, std::memory_order_release);
+        e28_start_saving_e28_e28_data_points.store(false, std::memory_order_release);
  
         break;
     }
+
+    // Wait
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     scheduler.StopThreads();
     scheduler.StopCamera();
@@ -581,7 +579,20 @@ int e28 () {
         }
     }
 
+    // Save to folder called export, where
+    // each image is saved as index.png
+    for (int i = 0; i < e28_global::images.size(); ++i) {
+        auto img = e28_global::images[i];
+        Image im = s4_Utils::TensorToImage(img);
+        std::string filename = "./export/" + std::to_string(i) + "_" + std::to_string(e28_global::labels[i]) + "_p" + std::to_string(e28_global::preds[i]) + ".png";
+        ExportImage(im, filename.c_str());
+        UnloadImage(im);
+    }
+
     // Print out validation accuracy
+    std::cout << "INFO: [e28] Total samples: " << e28_global::total.load(std::memory_order_acquire) << '\n';
+    std::cout << "Total Labels: " << e28_global::labels.size() << '\n';
+    std::cout << "Total Predictions: " << e28_global::preds.size() << '\n';
     std::cout << "INFO: [e28] Validation accuracy: " << validation_accuracy / 10.0f << "%\n";
 
     return 0;

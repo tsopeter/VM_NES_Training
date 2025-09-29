@@ -7,7 +7,9 @@
 enum s2_DataTypes : unsigned {
     TRAIN = 0,
     TEST  = 1,
-    VALID = 2
+    VALID = 2,
+    BALANCED_1 = 3,
+    BALANCED_2 = 4
 };
 
 class s2_Data {
