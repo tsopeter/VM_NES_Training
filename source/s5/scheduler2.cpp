@@ -98,6 +98,7 @@ void Scheduler2::StartWindow() {
     shader = LoadShader(nullptr, "source/shaders/alpha_ignore.fs");
     sub_shader = LoadShader(nullptr, "source/shaders/alpha_mask.fs");
     val_shader = LoadShader(nullptr, "source/shaders/selective_mask.fs");
+    sub_shader_blend = LoadShader(nullptr, "source/shaders/alpha_mask_b4.fs");
     std::cout << "INFO: [Scheduler2::StartWindow] Shader loaded.\n";
     std::cout << "INFO: [Scheduler2::StartWindow] Window started.\n";
 }
@@ -283,7 +284,7 @@ void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
 void Scheduler2::DrawTextureToScreen() {
     BeginDrawing();
         BeginShaderMode(shader);
-        ClearBackground(BLACK);
+        ClearBackground(WHITE);
         DrawTexturePro(
             m_texture,
             {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
@@ -308,7 +309,7 @@ void Scheduler2::DrawTextureToScreenTiled() {
     
     BeginDrawing();
         BeginShaderMode(shader);
-        ClearBackground(BLACK);
+        ClearBackground(WHITE);
         for (int x = 0; x < tiles_x; ++x) {
             for (int y = 0; y < tiles_y; ++y) {
                 DrawTexturePro(
@@ -335,7 +336,7 @@ void Scheduler2::DrawTextureToScreenCentered () {
 
     BeginDrawing();
         BeginShaderMode(shader);
-        ClearBackground(BLACK);
+        ClearBackground(WHITE);
         DrawTexturePro(
             m_texture,
             {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
@@ -379,6 +380,12 @@ void Scheduler2::DrawSubTexturesToScreen() {
 void Scheduler2::DrawSubTexturesToScreenCentered () {
     int centerX = (window.Width - m_texture.width) / 2;
     int centerY = (window.Height - m_texture.height) / 2;
+
+    if (m_enable_different_sized_textures) {
+        centerX = (window.Width - m_digit_width) / 2;
+        centerY = (window.Height - m_digit_height) / 2;
+    }
+
     BeginShaderMode(sub_shader);
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
@@ -1018,6 +1025,7 @@ void Scheduler2::DrawSubTexturesToScreen_BlendMode () {
     // colors are only allowed for the last bit of blue channel
 
     BeginBlendMode(BLEND_ADD_COLORS);
+    BeginShaderMode(sub_shader_blend);
 
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
@@ -1040,6 +1048,7 @@ void Scheduler2::DrawSubTexturesToScreen_BlendMode () {
         }
     }
 
+    EndShaderMode();
     EndBlendMode();
 }
 
@@ -1050,7 +1059,13 @@ void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
     int centerX = (window.Width - m_texture.width) / 2;
     int centerY = (window.Height - m_texture.height) / 2;
 
+    if (m_enable_different_sized_textures) {
+        centerX = (window.Width - m_digit_width) / 2;
+        centerY = (window.Height - m_digit_height) / 2;
+    }
+
     BeginBlendMode(BLEND_ADD_COLORS);
+    BeginShaderMode(sub_shader_blend);
 
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
@@ -1074,6 +1089,7 @@ void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
         }
     }
 
+    EndShaderMode();
     EndBlendMode();
 }
 
@@ -1113,4 +1129,27 @@ void Scheduler2::EnableAntiTheticSampling () {
 
 void Scheduler2::DisableAntiTheticSampling () {
     use_anti = false;
+}
+
+Texture Scheduler2::MapToBlueLast4 (Texture tex) {
+    /* Takes in a texture that is
+       gray8 (alpha set to 255)
+       and maps it to a texture that is
+       r8g8b8a8, where
+       
+       [r0 - r7] is 0
+       [g0 - g7] is 0
+       [b0 - b3] is 0
+       [b4 - b7] is the quantized original
+     */
+}
+
+void Scheduler2::EnableDifferentSizedTextures(int height, int width) {
+    m_enable_different_sized_textures = true;
+    m_digit_width = width;
+    m_digit_height = height;
+}
+
+void Scheduler2::DisableDifferentSizedTextures() {
+    m_enable_different_sized_textures = false;
 }

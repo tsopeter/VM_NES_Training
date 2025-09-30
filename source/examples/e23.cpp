@@ -402,7 +402,7 @@ int e23 () {
     e23_global::masks = np2lt::f32("source/Assets/regions.npy"); // [10, 1, 240, 480]
     e23_global::noise_bg = np2lt::u8("source/Assets/noise_bg.npy");
 
-    int  mask_size_ratio = 4; // 8, 4, 2, 1
+    int  mask_size_ratio = 2; // 8, 4, 2, 1
     bool load_from_checkpoint = false;
     bool connect_to_server = false;
     std::cout << "Loading any checkpoints? [y/n] ";
@@ -507,6 +507,7 @@ int e23 () {
     scheduler.EnableSampleImageCapture();
     scheduler.SetRewardDevice(DEVICE);
     scheduler.EnableLabelQueueing();
+    scheduler.EnableBlendMode();    /* For use with DLP/PLM system */
 
     // Get image data
     int64_t n_training_samples = 1000;
@@ -534,7 +535,7 @@ int e23 () {
     double  mean_val_reward = 0.0f;
     double  val_reward = 0.0f;
 
-    std::string cp_dir = "./2025_09_28_002_s16-1";
+    std::string cp_dir = "./2025_09_29_002_s16-1";
     // Save dataset information to mean_reward.txt
     {
         std::ofstream ofs(cp_dir + "/a/mean_reward.txt", std::ios::app);

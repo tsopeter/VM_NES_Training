@@ -168,6 +168,9 @@ public:
     void EnableSampleImageCapture();
     void DisableSampleImageCapture();
 
+    void EnableDifferentSizedTextures (int,int);
+    void DisableDifferentSizedTextures ();
+
     void StopThreads();
     void SetRewardDevice(const torch::Device &device);
 
@@ -272,6 +275,8 @@ private:
     void DrawSubTexturesToScreen_BlendMode();
     void DrawSubTexturesToScreenCentered_BlendMode();
 
+    Texture MapToBlueLast4 (Texture tex);
+
     torch::Tensor Uninterleave(torch::Tensor&);
 
     //
@@ -299,6 +304,7 @@ private:
     Shader shader;
     Shader sub_shader;
     Shader val_shader;
+    Shader sub_shader_blend;
 
     //
     // Optimizer
@@ -351,6 +357,10 @@ private:
 
     bool label_queueing_enabled = false;
     bool use_anti = false;
+
+    bool m_enable_different_sized_textures = false;
+    int  m_digit_height = 0;
+    int  m_digit_width  = 0;
 };
 
 
