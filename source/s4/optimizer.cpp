@@ -76,13 +76,13 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
         throw std::runtime_error("Mismatch in reward size: got " + std::to_string(rewards.size(0)) +
                                  ", expected " + std::to_string(m_model.N_samples()));
     }
+    auto logp        = m_model.logp_action();
+    logp             = torch::sum(logp.view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
 
     auto sum_rewards = rewards.sum();
     auto baseline    = (sum_rewards - rewards)/(m_model.N_samples()-1);
     auto norm_sum    = (rewards - baseline)/rewards.std(true);
 
-    auto logp        = m_model.logp_action();
-    logp             = torch::sum(logp.view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
     auto loss        = -torch::mean(logp * norm_sum);
 
     m_opt.zero_grad();

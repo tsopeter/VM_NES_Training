@@ -3,6 +3,56 @@
 #include "../device.hpp"
 #include "../utils/utils.hpp"
 #include <fstream>
+#include <filesystem>
+
+Helpers::Parameters::Parameters () {
+     
+    process_fn = [this](CaptureData ts) -> std::pair<torch::Tensor, bool> {
+
+        auto img = ts.full.to(DEVICE);
+        auto l   = torch::tensor({ts.label}).to(DEVICE);
+
+        img      = torch::clamp(img, 0, 255).to(torch::kFloat32);
+        img      = torch::where(img < _PDF.min_limit, torch::zeros_like(img), img).to(torch::kFloat64);
+
+        img      = (img  - _PDF.min_limit) * (255.0 / (255.0 - _PDF.min_limit));
+        img      = torch::clamp(img, 0, 255) / 255.0f; // [0 - 1]
+
+        auto q    = img.unsqueeze(0).unsqueeze(0); // [1, 1, H, W]
+        auto sums = (q.unsqueeze(1) * _PDF.masks.to(img.device())).sum({2,3,4}); // [1, 10]
+
+        if (_PDF.process_count % _PDF.save_iter == 0) {
+            std::cout << "INFO: [process_fn] Processed " << _PDF.process_count << " samples so far.\n";
+            auto img_img = img * 255.0f;
+            img_img = img_img.contiguous().to(torch::kUInt8);
+
+            auto Img = s4_Utils::TensorToImage(img_img);
+            ExportImage(Img, "sample.bmp");
+            UnloadImage(Img);
+        }
+
+        auto preds = sums.argmax(1); // [1]
+
+        if (_PDF.process_count % _PDF.accuracy_interval == 0) {
+            if (preds.item<int>() == ts.label) {
+                _PDF.correct.fetch_add(1, std::memory_order_release);
+            }
+            _PDF.total.fetch_add(1, std::memory_order_release);
+
+            _PDF.label_counts[ts.label]++;
+            _PDF.label_freq[preds.item<int>()]++;
+        }
+
+        auto targets = l.to(torch::kLong).to(sums.device()); // [1]
+
+
+        auto loss = _PDF.loss_fn(sums, targets);  // [1]
+
+        ++_PDF.process_count;
+        return {loss, true};
+    };
+
+}
 
 void Helpers::Data::Delete (std::vector<Batch> &batches) {
     for (auto &batch : batches) {
@@ -15,40 +65,44 @@ void Helpers::Data::Delete (std::vector<Batch> &batches) {
     batches.clear();
 }
 
-std::vector<Helpers::Data::Batch> Helpers::Data::Get_Training () {
+std::vector<Helpers::Data::Batch> Helpers::Data::Get_Training (Parameters &params) {
     return Get (
-        Parameters::n_training_samples,
-        Parameters::n_batch_size,
+        params,
+        params.n_training_samples,
+        params.n_batch_size,
         s2_DataTypes::TRAIN,
-        Parameters::n_padding
+        params.n_padding
     );
 }
 
-std::vector<Helpers::Data::Batch> Helpers::Data::Get_Validation () {
+std::vector<Helpers::Data::Batch> Helpers::Data::Get_Validation (Parameters &params) {
     return Get (
-        Parameters::n_validation_samples,
-        Parameters::n_validation_batch_size,
+        params,
+        params.n_validation_samples,
+        params.n_validation_batch_size,
         s2_DataTypes::VALID,
-        Parameters::n_padding
+        params.n_padding
     );
 }
 
-std::vector<Helpers::Data::Batch> Helpers::Data::Get_Test () {
+std::vector<Helpers::Data::Batch> Helpers::Data::Get_Test (Parameters &params) {
     return Get (
-        Parameters::n_test_samples,
-        Parameters::n_test_batch_size,
+        params,
+        params.n_test_samples,
+        params.n_test_batch_size,
         s2_DataTypes::TEST,
-        Parameters::n_padding
+        params.n_padding
     );
 }
 
 std::vector<Helpers::Data::Batch> Helpers::Data::Get (
+    Parameters &params,
     int n_data_points,
     int batch_size,
     s2_DataTypes dtype,
     int padding
 ) {
-    s2_Dataloader data_loader {dataset_path};
+    s2_Dataloader data_loader {params.Training.dataset_path};
     auto data = data_loader.load(dtype, n_data_points);
     std::cout << "INFO: [Helpers::Data::Get] Loaded data with " << data.len() << " samples.\n";
 
@@ -89,6 +143,7 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
 }
 
 void Helpers::Run::Setup_Scheduler (
+    Parameters &params,
     Scheduler2 &scheduler,
     s4_Optimizer &opt,
     Distributions::Definition &dist,
@@ -106,11 +161,11 @@ void Helpers::Run::Setup_Scheduler (
 
         480,        /* Camera Height */
         640,        /* Camera Width */
-        Parameters::Camera::exposure_time_us,     /* Exposure Time (us) */
+        params.Camera.exposure_time_us,     /* Exposure Time (us) */
         1,          /* Binning Horizontal */
         1,          /* Binning Vertical */
         3,          /* Line Trigger */
-        Parameters::Camera::partitioning, /* Use Zones */
+        params.Camera.partitioning, /* Use Zones */
         4,          /* Number of Zones */
         60,         /* Zone Size */
         true,       /* Use Centering */
@@ -118,12 +173,12 @@ void Helpers::Run::Setup_Scheduler (
         0,          /* Offset Y */
         8,          /* Pixel Format: 8 for Mono8, 10 for Mono */
 
-        2 * Height * Parameters::upscale_amount,   /* PEncoder Height */
-        2 * Width  * Parameters::upscale_amount,   /* PEncoder Width */
-        
+        2 * Height * params.upscale_amount,   /* PEncoder Height */
+        2 * Width  * params.upscale_amount,   /* PEncoder Width */
+
         &opt,       /* Optimizer */
 
-        Parameters::process_fn  /* Processing function */
+        params.process_fn  /* Processing function */
 
     );
 
@@ -146,8 +201,8 @@ void Helpers::Run::Setup_Scheduler (
         std::cout << "INFO: [e23] Using unknown distribution (" << dist.get_name() << ") for the model.\n";
     }
 
-    scheduler.SetSubShaderThreshold(Parameters::sub_shader_threshold);
-    scheduler.SetBatchSize(Parameters::n_batch_size);
+    scheduler.SetSubShaderThreshold(params.sub_shader_threshold);
+    scheduler.SetBatchSize(params.n_batch_size);
 }
 
 void Helpers::Run::Performance::Save (
@@ -162,7 +217,7 @@ void Helpers::Run::Performance::Save (
         ofs << message << '\n';
     }
     ofs << "Epoch: " << Epoch << '\n';
-    ofs << "Compute Time (ms): " << compute_time_ms << '\n';
+    ofs << "Compute Time (s): " << compute_time_s << '\n';
     ofs << "Samples Total: " << samples_total << '\n';
     ofs << "Samples Correct: " << samples_correct << '\n';
     ofs << "Accuracy: " << accuracy << '\n';
@@ -174,23 +229,24 @@ void Helpers::Run::Performance::Save (
 }
 
 Helpers::Run::Performance Helpers::Run::Evaluate (
+    Parameters &params,
     Scheduler2 &scheduler,
     EvalFunctions &eval_fn,
     Data::Batch &batch
 ) {
     // Clear the PDF data
-    Parameters::_PDF::clear_data();
+    params._PDF.clear_data();
 
     // Get the batch size from batch
-    int64_t start_time = Utils::GetCurrentTime_us();
+    int64_t start_time = Utils::GetCurrentTime_s();
     int batch_size = batch.textures.size();
 
-    for (int i = 0; i < Parameters::n_samples; ++i) {
-        torch::Tensor action = eval_fn.sample(i);
+    for (int i = 0; i < params.n_samples; ++i) {
+        torch::Tensor action = eval_fn.sample(scheduler.maximum_number_of_frames_in_image);
 
         action = Utils::UpscaleTensor(
             action,
-            Parameters::upscale_amount
+            params.upscale_amount
         );
 
         scheduler.SetTextureFromTensorTiled (
@@ -201,8 +257,8 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
             int label = batch.labels[j];
             scheduler.SetLabel(label, 20);
             scheduler.SetSubTextures(batch.textures[j], 0);
-            Iterate(scheduler);
-            ++Parameters::steps;
+            Iterate(params, scheduler);
+            ++params.steps;
         }
 
     }
@@ -213,15 +269,15 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
 
     eval_fn.squash();
     double loss = scheduler.Update ();
-    int64_t end_time = Utils::GetCurrentTime_us();
+    int64_t end_time = Utils::GetCurrentTime_s ();
 
     int64_t delta = end_time - start_time;
-    delta /= 1'000; // Convert to ms
+    
     Helpers::Run::Performance perf;
 
-    perf.compute_time_ms = static_cast<double>(delta);
-    perf.samples_total   = Parameters::_PDF::total.load(std::memory_order_acquire);
-    perf.samples_correct = Parameters::_PDF::correct.load(std::memory_order_acquire);
+    perf.compute_time_s = static_cast<double>(delta);
+    perf.samples_total   = params._PDF.total.load(std::memory_order_acquire);
+    perf.samples_correct = params._PDF.correct.load(std::memory_order_acquire);
     perf.accuracy        = (static_cast<double>(perf.samples_correct) / static_cast<double>(perf.samples_total)) * 100.0;
     perf.entropy        = eval_fn.entropy();
     perf.loss           = loss;
@@ -230,27 +286,27 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
 }
 
 Helpers::Run::Performance Helpers::Run::Evaluate (
+    Parameters &params,
     Scheduler2 &scheduler,
     EvalFunctions &eval_fn,
     std::vector<Data::Batch> &batches
 ) {
-    int64_t start_time = Utils::GetCurrentTime_us();
+    int64_t start_time = Utils::GetCurrentTime_s();
 
     Helpers::Run::Performance perf;
 
     for (auto &batch : batches) {
-        auto pp = Evaluate(scheduler, eval_fn, batch);
+        auto pp = Evaluate(params, scheduler, eval_fn, batch);
         perf.samples_total   += pp.samples_total;
         perf.samples_correct += pp.samples_correct;
         perf.entropy        += pp.entropy;;
         perf.loss           += pp.loss;
     }
 
-    int64_t end_time   = Utils::GetCurrentTime_us();
+    int64_t end_time   = Utils::GetCurrentTime_s();
     int64_t delta = end_time - start_time;
-    delta /= 1'000; // Convert to ms
 
-    perf.compute_time_ms = static_cast<double>(delta);
+    perf.compute_time_s = static_cast<double>(delta);
     perf.accuracy        = (static_cast<double>(perf.samples_correct) / static_cast<double>(perf.samples_total)) * 100.0;
     perf.entropy       /= static_cast<double>(batches.size());
     perf.loss          /= static_cast<double>(batches.size());
@@ -258,37 +314,35 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
 }
 
 Helpers::Run::Performance Helpers::Run::Inference (
+    Parameters &params,
     Scheduler2 &scheduler,
     EvalFunctions &eval_fn,
     Data::Batch &batch
 ) {
     // Clear the PDF data
-    Parameters::_PDF::clear_data();
+    params._PDF.clear_data();
 
     // Get the batch size from batch
-    int64_t start_time = Utils::GetCurrentTime_us();
+    int64_t start_time = Utils::GetCurrentTime_s();
     int batch_size = batch.textures.size();
 
-    for (int i = 0; i < Parameters::n_samples; ++i) {
-        torch::Tensor action = eval_fn.base(i);
+    torch::Tensor action = eval_fn.base(scheduler.maximum_number_of_frames_in_image);
 
-        action = Utils::UpscaleTensor(
-            action,
-            Parameters::upscale_amount
-        );
+    action = Utils::UpscaleTensor(
+        action,
+        params.upscale_amount
+    );
 
-        scheduler.SetTextureFromTensorTiled (
-            action
-        );
+    scheduler.SetTextureFromTensorTiled (
+        action
+    );
 
-        for (int j = 0; j < batch_size; ++j) {
-            int label = batch.labels[j];
-            scheduler.SetLabel(label, 20);
-            scheduler.SetSubTextures(batch.textures[j], 0);
-            Iterate(scheduler);
-            ++Parameters::steps;
-        }
-
+    for (int j = 0; j < batch_size; ++j) {
+        int label = batch.labels[j];
+        scheduler.SetLabel(label, 20);
+        scheduler.SetSubTextures(batch.textures[j], 0);
+        Iterate(params, scheduler);
+        ++params.steps;
     }
 
     // Wait
@@ -297,15 +351,14 @@ Helpers::Run::Performance Helpers::Run::Inference (
 
     eval_fn.squash();
     double loss = scheduler.Loss ();
-    int64_t end_time = Utils::GetCurrentTime_us();
+    int64_t end_time = Utils::GetCurrentTime_s();
 
     int64_t delta = end_time - start_time;
-    delta /= 1'000; // Convert to ms
     Helpers::Run::Performance perf;
 
-    perf.compute_time_ms = static_cast<double>(delta);
-    perf.samples_total   = Parameters::_PDF::total.load(std::memory_order_acquire);
-    perf.samples_correct = Parameters::_PDF::correct.load(std::memory_order_acquire);
+    perf.compute_time_s = static_cast<double>(delta);
+    perf.samples_total   = params._PDF.total.load(std::memory_order_acquire);
+    perf.samples_correct = params._PDF.correct.load(std::memory_order_acquire);
     perf.accuracy        = (static_cast<double>(perf.samples_correct) / static_cast<double>(perf.samples_total)) * 100.0;
     perf.entropy        = eval_fn.entropy();
     perf.loss           = loss;
@@ -314,37 +367,55 @@ Helpers::Run::Performance Helpers::Run::Inference (
 }
 
 Helpers::Run::Performance Helpers::Run::Inference (
+    Parameters &params,
     Scheduler2 &scheduler,
     EvalFunctions &eval_fn,
     std::vector<Data::Batch> &batches
 ) {
-    int64_t start_time = Utils::GetCurrentTime_us();
+    int64_t start_time = Utils::GetCurrentTime_s();
 
     Helpers::Run::Performance perf;
+    perf.samples_total   = 0;
+    perf.samples_correct = 0;
+    perf.entropy        = 0.0;
+    perf.loss           = 0.0;
+
 
     for (auto &batch : batches) {
-        auto pp = Inference(scheduler, eval_fn, batch);
+        auto pp = Inference(params, scheduler, eval_fn, batch);
         perf.samples_total   += pp.samples_total;
         perf.samples_correct += pp.samples_correct;
         perf.entropy        += pp.entropy;;
         perf.loss           += pp.loss;
     }
 
-    int64_t end_time   = Utils::GetCurrentTime_us();
+    int64_t end_time   = Utils::GetCurrentTime_s();
     int64_t delta = end_time - start_time;
-    delta /= 1'000; // Convert to ms
 
-    perf.compute_time_ms = static_cast<double>(delta);
+    perf.compute_time_s = static_cast<double>(delta);
     perf.accuracy        = (static_cast<double>(perf.samples_correct) / static_cast<double>(perf.samples_total)) * 100.0;
     perf.entropy       /= static_cast<double>(batches.size());
     perf.loss          /= static_cast<double>(batches.size());
     return perf;
 }
 
-void Helpers::Parameters::_PDF::clear_data () {
+Helpers::_pdf::_pdf () {
+
+    masks = np2lt::f32("source/Assets/regions2.npy");
+
+    loss_fn = [](torch::Tensor &preds, torch::Tensor &targets) -> torch::Tensor {
+        return -torch::nn::functional::cross_entropy(
+            preds,
+            targets,
+            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+        );
+    };
+
+}
+
+void Helpers::_pdf::clear_data () {
     correct.store(0, std::memory_order_release);
     total.store(0, std::memory_order_release);
-    process_count = 0;
 
     // Clear label counts and frequencies
     for (int i = 0; i < 10; ++i) {
@@ -353,12 +424,69 @@ void Helpers::Parameters::_PDF::clear_data () {
     }
 }
 
-void Helpers::Run::Iterate (Scheduler2 &scheduler) {
-    for (int i = 0; i < Parameters::n_iterate_amount; ++i) {
+void Helpers::Run::Iterate (Parameters &params, Scheduler2 &scheduler) {
+    for (int i = 0; i < params.n_iterate_amount; ++i) {
         scheduler.DrawTextureToScreenCentered ();
 
         scheduler.SetVSYNC_Marker();
         scheduler.WaitVSYNC_Diff(1);
     }
     scheduler.ReadFromCamera ();
+}
+
+Helpers::Run::Performance::Performance () {
+    compute_time_s = 0.0;
+    samples_total   = 0;
+    samples_correct = 0;
+    entropy        = 0.0;
+    accuracy       = 0.0;
+    loss           = 0.0;
+}
+
+Helpers::Checkpoint::Checkpoint () {
+    Epoch = 0;
+    config_file = "";
+    mask = torch::Tensor();
+}
+
+void Helpers::Checkpoint::Save (const std::string &directory) {
+    // Create directory if it doesn't exist
+
+    if (!std::filesystem::exists(directory)) {
+        std::filesystem::create_directories(directory);
+    }
+
+    std::string sub_directory = directory + "/epoch_" + std::to_string(Epoch);
+    if (!std::filesystem::exists(sub_directory)) {
+        std::filesystem::create_directories(sub_directory);
+    }
+
+    // config file
+    std::string config_path = sub_directory + "/config.txt";
+    std::ofstream ofs(config_path);
+
+    // Load the original config file and save it to the checkpoint directory's config file
+    std::ifstream ifs(config_file);
+    if (ifs && ofs) {
+
+        // First line denotes that it is a checkpoint config file
+        ofs << CHECKPOINT_DENOTE << '\n';
+
+        std::string line;
+        while (std::getline(ifs, line)) {
+            ofs << line << '\n';
+        }
+        
+        // Extend the config file with checkpoint info
+        ofs << "CheckpointEpoch " << Epoch << '\n';
+
+        // Save path to mask file
+        ofs << "MaskLocation " << sub_directory + "/mask.pt" << '\n';
+
+        ofs.close ();
+    }
+
+    // Save the mask tensor
+    std::string mask_path = sub_directory + "/mask.pt";
+    torch::save({mask}, mask_path);
 }
