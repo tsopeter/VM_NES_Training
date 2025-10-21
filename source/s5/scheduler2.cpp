@@ -11,7 +11,7 @@ Scheduler2::Scheduler2() {
     noise_bg = np2lt::u8("source/Assets/noise_bg.npy").to(torch::kFloat32);
 }
 
-Scheduler2::~Scheduler2() {
+Scheduler2::~Scheduler2() { 
     if (pen) delete pen;
     if (mvt) delete mvt;
 
@@ -101,6 +101,8 @@ void Scheduler2::StartWindow() {
     sub_shader_blend = LoadShader(nullptr, "source/shaders/alpha_mask_b4.fs");
     std::cout << "INFO: [Scheduler2::StartWindow] Shader loaded.\n";
     std::cout << "INFO: [Scheduler2::StartWindow] Window started.\n";
+
+    SetSubShaderThreshold(m_sub_shader_threshold);
 }
 
 void Scheduler2::StopWindow() {
@@ -255,6 +257,7 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera() {
 
 // Set Texture from Tensor
 void Scheduler2::SetTextureFromTensor(const torch::Tensor &tensor) {
+
     auto timage = pen->MEncode_u8Tensor4(tensor).contiguous().to(torch::kInt32);  // faster speed
     //auto timage = pen->MEncode_u8Tensor3(tensor).contiguous().to(torch::kInt32);    // high resolution
     m_texture = pen->u8Tensor_Texture(timage);
@@ -262,10 +265,14 @@ void Scheduler2::SetTextureFromTensor(const torch::Tensor &tensor) {
 }
 
 void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
-    auto timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // same-size
-    //auto timage = pen->MEncode_u8Tensor2(tensor).contiguous().to(torch::kInt32); // CPU-only
-    //m_texture = pen->u8Tensor_Texture(timage);
-
+    torch::Tensor timage;
+    if (m_categorical_mode) {
+        timage = pen->MEncode_u8Tensor_Categorical(tensor).contiguous().to(torch::kInt32); // Categorical
+    } else if (m_binary_mode) {
+        timage = pen->MEncode_u8Tensor_Binary(tensor).contiguous().to(torch::kInt32); // Binary
+    } else {
+        timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // Tiled
+    }
     
     if (m_texture.width > 0 && m_texture.height > 0) {
         printf("Texture is valid!\n");
@@ -284,7 +291,7 @@ void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
 void Scheduler2::DrawTextureToScreen() {
     BeginDrawing();
         BeginShaderMode(shader);
-        ClearBackground(WHITE);
+        ClearBackground((m_blend_mode_enabled) ? WHITE : BLACK);
         DrawTexturePro(
             m_texture,
             {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
@@ -309,7 +316,7 @@ void Scheduler2::DrawTextureToScreenTiled() {
     
     BeginDrawing();
         BeginShaderMode(shader);
-        ClearBackground(WHITE);
+        ClearBackground((m_blend_mode_enabled) ? WHITE : BLACK);
         for (int x = 0; x < tiles_x; ++x) {
             for (int y = 0; y < tiles_y; ++y) {
                 DrawTexturePro(
@@ -336,7 +343,8 @@ void Scheduler2::DrawTextureToScreenCentered () {
 
     BeginDrawing();
         BeginShaderMode(shader);
-        ClearBackground(WHITE);
+        //ClearBackground((m_blend_mode_enabled) ? WHITE : BLACK);
+        ClearBackground(BLACK);
         DrawTexturePro(
             m_texture,
             {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
@@ -384,6 +392,8 @@ void Scheduler2::DrawSubTexturesToScreenCentered () {
     if (m_enable_different_sized_textures) {
         centerX = (window.Width - m_digit_width) / 2;
         centerY = (window.Height - m_digit_height) / 2;
+        centerX += m_digit_offset_w;
+        centerY += m_digit_offset_h;
     }
 
     BeginShaderMode(sub_shader);
@@ -552,6 +562,46 @@ double Scheduler2::Update() {
     // Reset this back to zero
     number_of_frames_sent = 0;
     return total_rewards;
+}
+
+double Scheduler2::UpdatePPO () {
+    auto rewards = GetRewards();
+    double total_rewards = rewards.mean().item<double>();
+
+    opt->step_ppo(rewards);
+
+    return total_rewards;
+}
+
+torch::Tensor Scheduler2::GetRewards () {
+    std::cout << "INFO: [Scheduler2::GetRewards] Getting rewards...\n";
+    // Calculate the number of rewards we need
+    int64_t required_rewards = number_of_frames_sent * maximum_number_of_frames_in_image;
+    std::vector<torch::Tensor> rewards_collected;
+    rewards_collected.reserve(required_rewards);
+
+    for (int i =0; i < required_rewards; ++i) {
+        torch::Tensor reward;
+        while (!outputs.try_dequeue(reward)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
+        rewards_collected.push_back(reward);
+    }
+
+    auto stacked_rewards = torch::stack(rewards_collected).view({-1});
+
+    stacked_rewards = Uninterleave(stacked_rewards);
+    std::cout << stacked_rewards.sizes() << '\n';
+
+
+    stacked_rewards = stacked_rewards.mean({1});
+
+    double total_rewards = stacked_rewards.mean().item<double>();
+
+    stacked_rewards = stacked_rewards.to(reward_device);
+
+    number_of_frames_sent = 0;
+    return stacked_rewards;
 }
 
 double Scheduler2::Loss() {
@@ -1058,13 +1108,27 @@ void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
     // colors are only allowed for the last bit of blue channel
     int centerX = (window.Width - m_texture.width) / 2;
     int centerY = (window.Height - m_texture.height) / 2;
+    int output_width = m_texture.width;
+    int output_height = m_texture.height;
 
     if (m_enable_different_sized_textures) {
         centerX = (window.Width - m_digit_width) / 2;
         centerY = (window.Height - m_digit_height) / 2;
+        centerX += m_digit_offset_w;
+        centerY += m_digit_offset_h;
+
+
     }
 
-    BeginBlendMode(BLEND_ADD_COLORS);
+    if (m_fullscreen_sub_textures) {
+        centerX = 0;
+        centerY = 0;
+        output_width = window.Width;
+        output_height = window.Height;
+    }
+
+    //BeginBlendMode(BLEND_ADD_COLORS);
+    BeginBlendMode(BLEND_ADDITIVE);
     BeginShaderMode(sub_shader_blend);
 
     for (int i = 0; i < 10; ++i) {
@@ -1083,7 +1147,7 @@ void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
                 m_sub_textures[i],
                 {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
                 {static_cast<float>(centerX), static_cast<float>(centerY),
-                 static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                 static_cast<float>(output_width), static_cast<float>(output_height)},
                 {0, 0}, 0.0f, WHITE
             );
         }
@@ -1152,4 +1216,44 @@ void Scheduler2::EnableDifferentSizedTextures(int height, int width) {
 
 void Scheduler2::DisableDifferentSizedTextures() {
     m_enable_different_sized_textures = false;
+}
+
+bool Scheduler2::IsBlendModeEnabled () const {
+    return m_blend_mode_enabled;
+}
+
+void Scheduler2::EnableBinaryMode () {
+    m_binary_mode = true;
+    m_categorical_mode = false;
+}
+
+void Scheduler2::DisableBinaryMode () {
+    m_binary_mode = false;
+}
+
+void Scheduler2::EnableCategoricalMode () {
+    m_binary_mode = false;
+    m_categorical_mode = true;
+}
+
+void Scheduler2::DisableCategoricalMode () {
+    m_categorical_mode = false;
+}
+
+void Scheduler2::EnableFullScreenSubTextures () {
+    m_fullscreen_sub_textures = true;
+}
+
+void Scheduler2::DisableFullScreenSubTextures () {
+    m_fullscreen_sub_textures = false;
+}
+
+void Scheduler2::SetSubShaderThreshold(float threshold) {
+    SetShaderValue(
+        sub_shader_blend,
+        GetShaderLocation(sub_shader_blend, "uThreshold"),
+        &threshold,
+        SHADER_UNIFORM_FLOAT
+    );
+    m_sub_shader_threshold = threshold;
 }

@@ -377,14 +377,18 @@ Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
     auto total_size = x.numel();
     if (!data_ptr) throw std::runtime_error("ERROR: [pencoder::u8MTensor_Image] data pointer is NULL\n");
 
+    // width and height are from last two dimensions of x
+    int64_t width = x.size(x.dim() - 1);
+    int64_t height = x.size(x.dim() - 2);
+
     uint8_t* data = new uint8_t[total_size*sizeof(int32_t)];
 
     std::memcpy(data, data_ptr, total_size*sizeof(int32_t));
 
     Image ret {
         .data    = data,
-        .width   = m_w,
-        .height  = m_h,
+        .width   = static_cast<int>(width),
+        .height  = static_cast<int>(height),
         .mipmaps = 1,
         .format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
     };
@@ -495,3 +499,45 @@ void PEncoder::init_pbo () {
     m_texture_initialized = true;
 }
 #endif
+
+torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &x) {
+    // x is [N, H, W] with values in [0, 15]
+    // This means, unlike MEncode_u8Tensor*, we do not need to quantize x first
+
+    int64_t N = x.size(0);
+    int64_t input_h = x.size(1);
+    int64_t input_w = x.size(2);
+
+    if (masks.device() != x.device())
+        masks = masks.to(x.device());
+
+    auto logical = masks.index_select(0, x.view({-1}));
+
+    logical = logical.view({N, input_h, input_w, 2, 2});
+    logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
+    torch::Tensor encoded = logical.view({N, input_h * 2, input_w * 2});
+
+    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor_Categorical] Generating bit representation...\n";
+
+    // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    encoded = encoded.to(torch::kInt32);
+    torch::Tensor image = torch::sum(encoded * shifts_used, 0);
+    image = torch::fliplr(image);
+    return image;
+}
+
+torch::Tensor PEncoder::MEncode_u8Tensor_Binary (const torch::Tensor &x) {
+    // x is [N, H, W] with values in {0, 1}
+    // This means, unlike MEncode_u8Tensor*, we do not need to quantize x first
+
+    int64_t N = x.size(0);
+    int64_t input_h = x.size(1);
+    int64_t input_w = x.size(2);
+
+    // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    torch::Tensor image = torch::sum(x.to(torch::kInt32) * shifts_used, 0).to(torch::kInt32);
+    image = torch::fliplr(image);
+    return image;
+}

@@ -103,6 +103,7 @@ public:
 
     void EnableBlendMode ();
     void DisableBlendMode ();
+    bool IsBlendModeEnabled() const;
 
     void StartWindow();
     void StopWindow();
@@ -127,6 +128,7 @@ public:
     void SetOptimizer(s4_Optimizer *opt);
 
     double Update ();
+    double UpdatePPO ();
     double Loss ();
     void   Dump ();
     void   Dump (int);
@@ -171,6 +173,15 @@ public:
     void EnableDifferentSizedTextures (int,int);
     void DisableDifferentSizedTextures ();
 
+    void EnableFullScreenSubTextures ();
+    void DisableFullScreenSubTextures ();
+
+    void EnableCategoricalMode ();
+    void DisableCategoricalMode ();
+
+    void EnableBinaryMode ();
+    void DisableBinaryMode ();
+
     void StopThreads();
     void SetRewardDevice(const torch::Device &device);
 
@@ -185,6 +196,8 @@ public:
     void SetBatch_Id(int);
     void SetAction_Id(int);
     void SetBatchSize(int);
+
+    void SetSubShaderThreshold(float threshold);
 
 
     void SetVSYNC_Marker ();
@@ -279,6 +292,8 @@ private:
 
     torch::Tensor Uninterleave(torch::Tensor&);
 
+    torch::Tensor GetRewards ();
+
     //
     // Sample image for viewing purposes
     moodycamel::ConcurrentQueue<torch::Tensor> sample_images;
@@ -361,6 +376,17 @@ private:
     bool m_enable_different_sized_textures = false;
     int  m_digit_height = 0;
     int  m_digit_width  = 0;
+    int  m_digit_offset_h = 0;
+    int  m_digit_offset_w = 0;
+
+    bool m_fullscreen_sub_textures = false;
+    
+    bool m_categorical_mode = false;
+    bool m_binary_mode = false;
+
+    float m_sub_shader_threshold = 0.5f;
+
+    Texture m_background_texture;
 };
 
 

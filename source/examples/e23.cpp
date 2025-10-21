@@ -12,6 +12,7 @@
 #include "../s2/von_mises.hpp"
 #include <fstream>
 #include <ostream>
+#include "../s5/distributions.hpp"
 
 namespace e23_global {
     static std::atomic<double> correct = 0;
@@ -38,7 +39,11 @@ namespace e23_global {
     int64_t label;
     int64_t process_count;
 
+    bool antithetic = false;
+
     std::vector<int> label_history;
+    Distributions::Definition* dist = nullptr;
+    double alpha = 1e-1;
 }
 
 struct e23_Batch {
@@ -73,7 +78,7 @@ void e23_SaveDataPoints () {
 }
 
 
-std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN) {
+std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes dtype=s2_DataTypes::TRAIN, int padding=0) {
     s2_Dataloader data_loader {"./Datasets/"};
     auto data = data_loader.load(dtype, n_data_points);
     std::cout << "INFO: [e23] Loaded data with " << data.len() << " samples.\n";
@@ -89,6 +94,15 @@ std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes 
             auto li = l.item<int>();
 
             d = 255.0 - d;
+
+            // Pad the image if padding > 0
+            if (padding > 0) {
+                d = torch::nn::functional::pad(
+                    d.unsqueeze(0).unsqueeze(0), // [1, 1, H, W]
+                    torch::nn::functional::PadFuncOptions({padding, padding, padding, padding}).mode(torch::kConstant).value(255)
+                ).squeeze(); // [H + 2*padding, W + 2*padding]
+            }
+
             Image di = s4_Utils::TensorToImage(d);
             Texture ti = LoadTextureFromImage(di);
             SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
@@ -103,77 +117,6 @@ std::vector<e23_Batch> Get_Data(int n_data_points, int batch_size, s2_DataTypes 
     return batches;
 }
 
-class e23_Normal : public Dist {
-public:
-    e23_Normal () {}
-
-    e23_Normal (torch::Tensor &mu, double std) :
-    m_mu(mu), m_std(std) {}
-
-    ~e23_Normal () override {}
-
-    torch::Tensor sample (int n) override {
-        torch::NoGradGuard no_grad;
-        
-        // Broadcast m_mu to match the sample shape
-        auto mu_shape = m_mu.sizes();
-        auto sample_shape = torch::IntArrayRef({n}).vec();
-        sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
-
-
-        torch::Tensor eps = torch::randn(sample_shape, m_mu.options());
-        return m_mu.unsqueeze(0).expand_as(eps) + m_std * eps;
-    }
-
-    torch::Tensor sample_antithetic (int n) {
-        torch::NoGradGuard no_grad;
-        int m = n / 2;
-        
-        // Broadcast m_mu to match the sample shape
-        auto mu_shape = m_mu.sizes();
-        auto sample_shape = torch::IntArrayRef({m}).vec();
-        sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
-
-        torch::Tensor eps = torch::randn(sample_shape, m_mu.options());
-        auto x1 = m_mu.unsqueeze(0).expand_as(eps) + m_std * eps;
-        auto x2 = m_mu.unsqueeze(0).expand_as(eps) - m_std * eps;
-        return torch::cat({x1, x2}, 0);
-    }
-
-    torch::Tensor log_prob(torch::Tensor &t) override {
-        // Compute log probability of t under Normal(m_mu, m_std)
-        auto var = m_std * m_std;
-        auto log_scale = std::log(m_std);
-
-        return (
-            -((t - m_mu).pow(2)) / (2 * var)
-            - log_scale
-            - std::log(2 * M_PI) / 2
-        );
-
-        //auto log_probs = -0.5 * ((t - m_mu).pow(2) / var + 2 * log_scale + std::log(2 * M_PI));
-        //return log_probs;
-    }
-
-    void set_mu (torch::Tensor &mu, double kappa) {
-        m_mu = mu;
-        m_std = 1.0f/kappa;
-    }
-
-    void set_std (double std) {
-        m_std = std;
-    }
-
-    double get_std () {
-        return m_std;
-    }
-
-    torch::Tensor m_mu;
-    double m_std;
-
-
-};
-
 class e23_Model : public s4_Model {
 public:
 
@@ -184,56 +127,58 @@ public:
         init (Height, Width, n);
     }
 
-    void set_params (torch::Tensor t, double kappa) {
-        m_parameter = t;
-        m_parameter.set_requires_grad(true);
-        m_dist.set_mu(m_parameter, kappa);
-    }
-
     void init (int64_t Height, int64_t Width, int64_t n) {
-        m_Height = Height;
-        m_Width  = Width;
+#define DIST_CATEGORICAL
+#undef  DIST_BINARY
+#undef  DIST_NORMAL
+
         m_n      = n;
+#if defined(DIST_BINARY)
+        m_Height  = 2*Height; //2*Height for binary or Height for categorical/normal
+        m_Width   = 2*Width; // 2*Width  for binary or Width for categorical/normal
+#elif defined(DIST_CATEGORICAL) || defined(DIST_NORMAL)
+        m_Height  = Height;
+        m_Width   = Width;
+#endif
+#if defined(DIST_CATEGORICAL)
+        n_classes = 16;
+#elif defined(DIST_BINARY)
+        n_classes = 2;
+#endif
+
+#if defined(DIST_CATEGORICAL) || defined(DIST_BINARY)
+        m_parameter = torch::zeros({m_Height,m_Width,n_classes}, torch::kFloat32).to(DEVICE);
+#elif defined(DIST_NORMAL)
+        m_parameter = torch::zeros({m_Height,m_Width}, torch::kFloat32).to(DEVICE) * 2 * M_PI - M_PI;
+#endif
+        m_parameter.set_requires_grad(true);
 
         std::cout<<"INFO: [e23_Model] Staging model...\n";
-        std::cout<<"INFO: [e23_Model] Height: " << Height << ", Width: " << Width << ", Number of Perturbations (samples): " << n << '\n';
+        std::cout<<"INFO: [e23_Model] Height: " << m_Height << ", Width: " << m_Width << ", Number of Perturbations (samples): " << n << '\n';
 
-        //m_parameter = torch::rand({Height, Width}, torch::kFloat16).to(DEVICE) * 2 * M_PI - M_PI;
-
-        // compute parameter with GSA
-        torch::Tensor ones = torch::ones({Height, Width}, torch::kFloat16).to(DEVICE);
-        m_parameter = s4_Utils::GSAlgorithm(ones, 50);
-
-        //m_parameter = torch::zeros({Height, Width}).to(DEVICE);
-        m_parameter.set_requires_grad(true);
-        std::cout<<"INFO: [e23_Model] Set parameters...\n";
-
-        m_dist.set_mu(m_parameter, kappa);
-        std::cout<<"INFO: [e23_Model] Created distribution...\n";
+#if defined(DIST_NORMAL)
+        m_dist = new Distributions::Normal(m_parameter, std);
+#elif defined(DIST_CATEGORICAL)
+        m_dist = new Distributions::Categorical(m_parameter);
+#elif defined(DIST_BINARY)
+        m_dist = new Distributions::Binary(m_parameter);
+#endif
     }
 
-    ~e23_Model () override {}
+    ~e23_Model () override {
+        delete m_dist;
+    }
 
     torch::Tensor sample(int n, bool antithetic=false) {
         torch::NoGradGuard no_grad;
-        torch::Tensor x;
-        if (antithetic) {
-            x = m_dist.sample_antithetic(n);
-        }
-        else {
-            x = m_dist.sample(n);
-        }
 
-        // Keep action in [-pi, pi] using where
-        x = torch::where(x > M_PI, M_PI, x);
-        x = torch::where(x < -M_PI, -M_PI, x);
+        auto action = m_dist->sample(n); // [n, H, W]
 
-        // Quantize the actions
-        // auto action = q(x, false);
-
-        auto action = x;
+        // Store into m_action_s
         m_action_s.push_back(action);
+
         return action;
+
     }
 
     void squash () {
@@ -245,12 +190,12 @@ public:
 
     torch::Tensor sample () {
         torch::NoGradGuard no_grad;
-        m_action = m_dist.sample(m_n);
+        m_action = m_dist->sample(m_n);
         return m_action;
     }
 
     torch::Tensor logp_action () override {
-        return m_dist.log_prob(m_action);
+        return m_dist->log_prob(m_action);
     }
 
     std::vector<torch::Tensor> parameters () {
@@ -269,15 +214,15 @@ public:
     int64_t m_Height;
     int64_t m_Width;
     int64_t m_n;
+    int64_t n_classes;
+
+    double kappa = 0.0f; // May be unused depending on model
+    double std   = 0.1f; // May be unused depending on model
 
     torch::Tensor m_parameter;
     torch::Tensor m_action;
 
-    //VonMises m_dist {};
-    e23_Normal m_dist {};
-
-    const double std = 0.05f;
-    const double kappa = 1.0f/std;
+    Distributions::Definition *m_dist = nullptr;
 
     std::vector<torch::Tensor> m_action_s;  /* Used for sequential creation. */
 };
@@ -286,14 +231,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     static int64_t process_count = 0;
     std::cout << "INFO: [e23_ProcessFunction]: Processed: " << process_count + 1 << " so far.\n";
 
-    // Sum to [16]
-    /*
-    if (ts.label <= 4) {
-        ts.label = 0;
-    } else {
-        ts.label = 1;
-    }
-    */
+
     //ts.label = e23_global::label;
     //assert (ts.label == e23_global::label);
     e23_global::label_history.push_back(ts.label);
@@ -306,23 +244,33 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     k = k.to(torch::kFloat32);// - e23_global::noise_bg.to(torch::kFloat32);
     // if k is negative, set to zero
     k = torch::clamp(k, 0, 255);
-    k = torch::where(k < 30, torch::zeros_like(k), k);
 
-    // if the first one, save the image
-    if (process_count % 10'000 == 0) {
-        auto kk = k.contiguous().to(torch::kUInt8);
-        auto img = s4_Utils::TensorToImage(kk);
-        ExportImage(img, "sample.bmp");
-        UnloadImage(img);
-    }
+    const double min_limit = 20;
+    k = torch::where(k < min_limit, torch::zeros_like(k), k);
+
+    // map from 10-255 to 0-255
+    k = (k - min_limit) * (255.0 / (255.0 - min_limit));
+    k = torch::clamp(k, 0, 255).to(torch::kFloat64) / 255.0f;
 
     // Use the full image (240x480)
     const int region_size = 10;
     const int region_area = region_size * region_size; // 100
-    k = k.unsqueeze(0).unsqueeze(0).to(torch::kFloat32); // [1, 1, 240, 480]
-    auto sums = (k.unsqueeze(1) * e23_global::masks.to(k.device())).sum({2,3,4}); // [1, 10]
+    auto qq = k.unsqueeze(0).unsqueeze(0); // [1, 1, 240, 480]
+    auto sums = (qq.unsqueeze(1) * e23_global::masks.to(k.device())).sum({2,3,4}); // [1, 10]
 
-    sums /= 255.0;
+    // if the first one, save the image
+    if (process_count % 10'000 == 0) {
+        auto kk = k * 255.0f;
+        kk = kk.contiguous().to(torch::kUInt8);
+        auto img = s4_Utils::TensorToImage(kk);
+        ExportImage(img, "sample.bmp");
+        UnloadImage(img);
+
+        // Save sums to a file called sample.bmp.sums.txt
+        std::ofstream ofs("sample.bmp.sums.txt");
+        ofs << sums;
+        ofs.close();
+    }
 
     if (e23_global::enable_norm.load(std::memory_order_acquire)) {
         for (int i = 0; i < 10; ++i) {
@@ -382,7 +330,7 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
     // What we have here is the average of the two losses
     // CES loss tries to quickly get the right answer
     // while MSE loss tries to maximize the power
-    double ces_weight = 1.0;
+    double ces_weight = 1.0f;
     double mse_weight = 1.0 - ces_weight;
     auto loss = ces_weight * loss_ces + mse_weight * loss_mse;
     
@@ -394,15 +342,19 @@ std::pair<torch::Tensor, bool> e23_ProcessFunction (CaptureData &ts) {
 
     ++process_count;
     e23_global::process_count = process_count;
-    return {-loss, true};
+    auto entropy = e23_global::dist->entropy_no_grad();
+    loss = -loss + e23_global::alpha * entropy.mean().to(loss.device());
+    return {loss, true};
 }
 
 int e23 () {
     // Load regions
-    e23_global::masks = np2lt::f32("source/Assets/regions.npy"); // [10, 1, 240, 480]
+    e23_global::masks = np2lt::f32("source/Assets/regions2.npy"); // [10, 1, 240, 480]
     e23_global::noise_bg = np2lt::u8("source/Assets/noise_bg.npy");
 
     int  mask_size_ratio = 2; // 8, 4, 2, 1
+    int  resize_amount   = 1;
+    int  upscale_amount  = 1;
     bool load_from_checkpoint = false;
     bool connect_to_server = false;
     std::cout << "Loading any checkpoints? [y/n] ";
@@ -448,11 +400,21 @@ int e23 () {
 #define OPT_ADAM
 
     model.init(model_Height, model_Width, scheduler.maximum_number_of_frames_in_image);
+    e23_global::dist = model.m_dist;
+    double lr;
 #if defined(OPT_ADAM)
-    double lr = 0.05f;
+    if (model.m_dist->get_name() == "categorical" ||
+        model.m_dist->get_name() == "binary") {
+        std::cout << "INFO: [e23] Using Adam optimizer with Categorical or Binary distribution.\n";
+        lr = 0.5f;
+    }
+    else {
+        std::cout << "INFO: [e23] Using Adam optimizer with Normal distribution.\n";
+        lr = 0.1f;
+    }
     torch::optim::Adam opt_m (model.parameters(), torch::optim::AdamOptions(lr));
 #else
-    double lr = 10.0f;
+    lr = 10.0f;
     torch::optim::SGD opt_m (model.parameters(), torch::optim::SGDOptions(lr));
 #endif
     s4_Optimizer opt (opt_m, model);
@@ -481,7 +443,7 @@ int e23 () {
         /* Camera */
         Height,
         Width,
-        59.0f, /* Exposure Time */
+        300.0f, /* Exposure Time */
         1,  /* Binning Horizontal */
         1,  /* Binning Vertical */
         3,  /* Line Trigger */
@@ -495,8 +457,8 @@ int e23 () {
 
         /* PEncoder properties */
         /* These actually determine the size of the texture */
-        model_Height * 2,
-        model_Width  * 2,
+        model_Height * 2 * upscale_amount,
+        model_Width  * 2 * upscale_amount,
 
         /* Optimizer */
         &opt,
@@ -507,25 +469,45 @@ int e23 () {
     scheduler.EnableSampleImageCapture();
     scheduler.SetRewardDevice(DEVICE);
     scheduler.EnableLabelQueueing();
-    scheduler.EnableBlendMode();    /* For use with DLP/PLM system */
+    scheduler.EnableBlendMode();    /* For use with DLP/PLM system, disable if only PLM */
+    scheduler.EnableFullScreenSubTextures();
+    if (model.m_dist->get_name() == "categorical") {
+        std::cout << "INFO: [e23] Using Categorical distribution for the model.\n";
+        scheduler.EnableCategoricalMode(); // For Categorical distribution
+    } else if (model.m_dist->get_name() == "normal") {
+        std::cout << "INFO: [e23] Using Normal distribution for the model.\n";
+    } else if (model.m_dist->get_name() == "bernoulli" || model.m_dist->get_name() == "binary") {
+        std::cout << "INFO: [e23] Using Binary distribution for the model.\n";
+        scheduler.EnableBinaryMode(); // For Binary distribution
+    }
+    else {
+        std::cout << "INFO: [e23] Using unknown distribution (" << model.m_dist->get_name() << ") for the model.\n";
+    }
+    opt.epsilon = 0.05;
 
-    // Get image data
+    // Parameters
     int64_t n_training_samples = 1000;
     int64_t n_batch_size       = 20;
-    int64_t n_samples          = 32;    // Note actual number of samples is n_samples * 20
-    bool    antithetic         = true;
+    int64_t n_samples          = 10;    // Note actual number of samples is n_samples * 20
+    //int64_t n_samples = 5; // 5 samples per image, total 100 frames per image
+    bool    antithetic         = false;
+    int64_t data_padding_amount = 5;
+    float sub_shader_threshold = 0.8;
+
+    scheduler.SetSubShaderThreshold(sub_shader_threshold);
+    e23_global::antithetic = antithetic;
     /*
     if (antithetic) {
         scheduler.EnableAntiTheticSampling();
     }
     */
 
-    auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN);
+    auto batches = Get_Data(n_training_samples, n_batch_size, s2_DataTypes::TRAIN, data_padding_amount);
     scheduler.SetBatchSize(n_batch_size);
     
     int64_t n_validation_samples  = 1000;
     int64_t n_validation_batch_size = 1000;
-    auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::VALID);
+    auto val_batches = Get_Data(n_validation_samples, n_validation_batch_size, s2_DataTypes::VALID, data_padding_amount);
     //auto val_batches = batches;
 
     int64_t step=0;
@@ -535,7 +517,8 @@ int e23 () {
     double  mean_val_reward = 0.0f;
     double  val_reward = 0.0f;
 
-    std::string cp_dir = "./2025_09_29_002_s16-1";
+    std::string cp_dir = "./2025_10_20_002_s16-1";
+    int64_t cp_interval = batches.size(); // in number batches
     // Save dataset information to mean_reward.txt
     {
         std::ofstream ofs(cp_dir + "/a/mean_reward.txt", std::ios::app);
@@ -572,6 +555,9 @@ int e23 () {
         ofs << "Number of perturbations per image: " << n_samples << '\n';
         ofs << "Antithetic sampling: " << (antithetic ? "Enabled" : "Disabled") << '\n';
         ofs << "Mask size ratio: " << mask_size_ratio << '\n';
+        ofs << "Resize ratio: " << resize_amount << '\n';
+        ofs << "Data Padding Amount: " << data_padding_amount << '\n';
+        ofs << "Sub-shader threshold: " << sub_shader_threshold << '\n';
         ofs << "Standard Deviation of action distribution: " << model.std << '\n';
         ofs << "Kappa (1/std): " << model.kappa << '\n';
         ofs << "Learning Rate: " << lr << '\n';
@@ -583,6 +569,8 @@ int e23 () {
         ofs << "Samples per image: " << scheduler.maximum_number_of_frames_in_image * n_samples << "\n";
         ofs << "Dataset 1 size: " << n_training_samples << ", Dataset 2 size: " << n_validation_samples << '\n';
         ofs << "Dataset 1 batch size: " << n_batch_size << ", Dataset 2 batch size: " << n_validation_batch_size << '\n';
+        ofs << (scheduler.IsBlendModeEnabled() ? "Blend mode enabled" : "Blend mode disabled") << '\n';
+        ofs << "Type of distribution used for model: " << model.m_dist->get_name() << '\n';
         ofs << "----------------------------------------\n";
     }
 
@@ -626,11 +614,15 @@ int e23 () {
     if (load_from_checkpoint) {
         auto cp = scheduler.LoadCheckpoint(checkpoint_dir);
 
+        throw std::runtime_error("Checkpoint loading not supported in this.");
+
         // Set model
+        /*
         model.set_params(
             cp.phase,
             cp.kappa
         );
+        */
 
         // set the batch_sel
         batch_sel = (cp.batch_id + 1) % batches.size();
@@ -671,6 +663,14 @@ int e23 () {
     int64_t n_sent = 0;
     int64_t n_processed = 0;
     int64_t n_previous_processed = 0;
+
+    double training_correct_f = 0.0f;
+    double training_count_f   = 0.0f;
+
+    double validation_correct_f = 0.0f;
+    double validation_count_f   = 0.0f;
+
+    int64_t start_time = Utils::GetCurrentTime_s ();
     while (!WindowShouldClose()) {
 
         /////////////////////////////////////////////////////
@@ -686,11 +686,16 @@ int e23 () {
         e23_global::enable_counts.store(true, std::memory_order_release);
         for (int i =0; i < n_samples; ++i) {
             torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image, antithetic);
+
+            action = Utils::UpscaleTensor(action, resize_amount);
+
             scheduler.SetTextureFromTensorTiled(action);
             //action = torch::fft::fftshift(action, {-2, -1});
 
             if (i == 1) {
-                training_accuracy = 1000 * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
+                training_accuracy = 1000.0f * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
+                training_correct_f += static_cast<double>(e23_global::correct.load(std::memory_order_acquire));
+                training_count_f   += static_cast<double>(e23_global::total.load(std::memory_order_acquire));
             }
 
             for (int j = 0; j < n_batch_size; ++j) {
@@ -710,6 +715,7 @@ int e23 () {
         model.squash();
         n_sent = scheduler.GetNumberOfFramesSent();
         auto reward = scheduler.Update();
+        //auto reward = scheduler.UpdatePPO();
         //scheduler.Dump();
         int64_t time_1 = Utils::GetCurrentTime_us();
 
@@ -734,12 +740,13 @@ int e23 () {
         if (iter % val_interval == (val_interval - 1)) {
             // Get std from model
             e23_global::enable_counts.store(true, std::memory_order_release);
-            double std = model.m_dist.get_std();
-            model.m_dist.set_std(0.0f);
 
             std::cout << "INFO: [e23] Running Validation...\n";
-            torch::Tensor action = model.sample(scheduler.maximum_number_of_frames_in_image);
-            //action = torch::fft::fftshift(action, {-2, -1});
+            torch::Tensor action = model.m_dist->base(scheduler.maximum_number_of_frames_in_image);
+            std::cout << "INFO: [e23] Validation action size: " << action.sizes() << '\n';
+
+            action = Utils::UpscaleTensor(action, resize_amount);
+
             scheduler.SetTextureFromTensorTiled(action);
 
             for (int i = 0; i < val_batches.size(); ++i) {
@@ -752,10 +759,11 @@ int e23 () {
             }
             // set the std back
             model.squash();
-            model.m_dist.set_std(std);
             val_reward = scheduler.Loss();
             validation_accuracy = 1000 * e23_global::correct.load(std::memory_order_acquire) / e23_global::total.load(std::memory_order_acquire);
 
+            validation_correct_f = static_cast<double>(e23_global::correct.load(std::memory_order_acquire));
+            validation_count_f   = static_cast<double>(e23_global::total.load(std::memory_order_acquire));
 
             start_saving_data_points.store(false, std::memory_order_release);
         }
@@ -803,19 +811,18 @@ int e23 () {
 
         e23_global::correct.store(0, std::memory_order_release);
         e23_global::total.store(0, std::memory_order_release);
-        ++iter;
 
         /////////////////////////////////////////////////////
         // Saving checkpoints                              //
         /////////////////////////////////////////////////////
-        if (save_checkpoints) {
+        if (save_checkpoints && (iter % cp_interval == (cp_interval - 1))) {
             Scheduler2_CheckPoint cp;
             cp.batch_id = batch_sel;
             cp.training_accuracy = training_accuracy;
             cp.validation_accuracy = validation_accuracy;
             cp.val_reward = mean_val_reward;
             cp.phase = model.get_parameters();
-            cp.kappa = 1/model.m_dist.get_std();
+            cp.kappa = 1/model.std;
             cp.step = step;
             cp.dataset_path = "./Datasets";
             cp.checkpoint_dir = cp_dir;
@@ -823,38 +830,9 @@ int e23 () {
             cp.reward = reward;
             scheduler.SaveCheckpoint(cp);
         }
+        ++iter;
 
         batch_sel = (batch_sel + 1) % batches.size();
-
-        // Logging
-        // Get the number of samples sent
-        /*
-        {
-            std::ofstream log_file(cp_dir + "/log.txt", std::ios::app);
-            log_file << "Iteration: " << iter << ", Step: " << step << "\n";
-            log_file << "Number Of Frames Sent: " << n_sent << '\n';
-            log_file << "Process Count: " << n_processed - n_previous_processed << '\n';
-
-            log_file << "Expected Process Count: " << (n_samples * scheduler.maximum_number_of_frames_in_image * n_batch_size) << '\n';
-
-            // Get Labels used
-            log_file << "Labels used in this iteration:\n";
-            // Print every maximum_number_of_frames_in_image labels
-            int j = 0;
-            for (int i = 0; i < e23_global::label_history.size(); ++i) {
-                if (i % (scheduler.maximum_number_of_frames_in_image * n_batch_size) == 0) {
-                    log_file << "Sample: " << j << '\n';
-                    ++j;
-                }
-                log_file << e23_global::label_history[i] << " ";
-                if ((i + 1) % scheduler.maximum_number_of_frames_in_image == 0) {
-                    log_file << '\n';
-                }
-            }
-            log_file << "\n";
-            n_previous_processed = n_processed;
-        }
-        */
 
         mean_reward += reward;
         mean_val_reward = val_reward;
@@ -866,7 +844,10 @@ int e23 () {
             std::ofstream ofs(cp_dir + "/a/mean_reward.txt", std::ios::app);
             ofs << "Epoch: " << iter / batches.size() << '\n';
             ofs << "Training Loss: "  << mean_reward << ", Validation Loss: " << mean_val_reward;
-            ofs << ", Training Acc: " << training_accuracy / 10.0f << "%, Validation Acc: " << validation_accuracy / 10.0f << "%\n";
+            ofs << ", Training Acc: " << 100.0f * (training_correct_f / training_count_f) << "%, Validation Acc: " << 100.0f * (validation_correct_f / validation_count_f) << "%\n";
+
+            // Save entropy of distribution
+            ofs << "Entropy: " << e23_global::dist->entropy_no_grad().mean().item<double>() << '\n';
 
             ofs << "Training Label Counts:\n";
             for (int i = 0; i < 10; ++i) {
@@ -890,10 +871,17 @@ int e23 () {
             for (int i = 0; i < 10; ++i) {
                 ofs << validation_label_freq[i] << " ";
             }
+
+            int64_t current_time = Utils::GetCurrentTime_s();
+            ofs << "\nElapsed Time (s): " << (current_time - start_time) << '\n';
             ofs << "\n---\n";
 
             mean_reward = 0.0f;
             mean_val_reward = 0.0f;
+            training_correct_f = 0.0f;
+            training_count_f = 0.0f;
+            validation_correct_f = 0.0f;
+            validation_count_f = 0.0f;
 
             // Clear both
             for (int i = 0; i < 10; ++i) {
@@ -902,6 +890,12 @@ int e23 () {
                 validation_label_counts[i] = 0;
                 validation_label_freq[i] = 0;
             }
+        }
+
+        if (model.get_parameters().isnan().any().item<bool>() ||
+            model.get_parameters().isinf().any().item<bool>()) {
+            std::cout << "WARNING: [e23] Model parameters contain NaN or Inf. Exiting...\n";
+            throw std::runtime_error("Model parameters contain NaN or Inf.");
         }
     }
 

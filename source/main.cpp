@@ -16,6 +16,7 @@
 #include "examples/e26.hpp"
 #include "examples/e27.hpp"
 #include "examples/e28.hpp"
+#include "examples/e29.hpp"
 #include "s3/IP.hpp"
 #include "utils/utils.hpp"
 #include "s3/window.hpp"
@@ -34,6 +35,7 @@ void run_code () {
     //e26(); // New Sync Test
     //e27(); 
     //e28(); // Inference
+    //e29 (); // Categorical Test
 #elif defined(VIEWER)   // everything else is used as the machine to display results
     Viewer viewer(240*2, 320*2, 9001);
     viewer.run();
