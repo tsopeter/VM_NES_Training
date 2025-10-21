@@ -1,7 +1,7 @@
-Height 200
-Width  320
+Height 100
+Width  160
 Distribution categorical
-LearningRate 1.0
+LearningRate 0.25
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -11,12 +11,12 @@ TestBatchSize 1000
 Samples 10
 Padding 1
 SubShaderThreshold 0.8
-UpscaleFactor 4
+UpscaleFactor 8
 IterationAmount 4
 RegionFile source/Assets/regions2.npy
 MinLimit 20
 SaveInterval 10000
-CheckpointDirectory 2025_10_21/2025_10_21_001
+CheckpointDirectory 2025_10_21/2025_10_21_002
 ExposureTime 300
 DatasetPath Datasets/
 Epochs 50

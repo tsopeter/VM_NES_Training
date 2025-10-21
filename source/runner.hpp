@@ -67,12 +67,14 @@ public:
 
 };
 
+bool m_inference = false;
 bool m_load_checkpoint = false;
 int  m_checkpoint_epoch = 0;
 void LoadCheckpointFile (const std::string &directory);
-torch::Tensor m_checkpoint_mask;
+torch::Tensor m_checkpoint_mask = torch::Tensor ();
 
 void Run (std::string config_file);
+void Inference (std::string config_file, s2_DataTypes data_type, int n_data_points);
 };
 
 

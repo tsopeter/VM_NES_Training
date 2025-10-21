@@ -112,6 +112,85 @@ void Runner::Run (std::string config_file) {
     Helpers::Data::Delete(val_data);
 }
 
+void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_data_points) {
+    Pylon::PylonAutoInitTerm init {};
+
+    Scheduler2 scheduler;
+    Model model;
+
+    std::cout << "INFO: [Runner::Inference] Starting Inference...\n";
+    InitConfigKeyMap(); 
+    ParseConfigFile(config_file);
+
+    if (!m_load_checkpoint) {
+        throw std::runtime_error("Runner::Inference: Inference mode requires a checkpoint to be loaded.");
+    }
+
+    LoadCheckpointFile(config_file);
+    model.init(m_checkpoint_mask, ModelDistribution);
+
+    torch::optim::Adam adam_opt(model.parameters(), torch::optim::AdamOptions(params.Training.lr));
+    s4_Optimizer optimizer(
+        adam_opt,
+        model
+    );
+
+    auto dataset = Helpers::Data::Get (
+        params,
+        n_data_points,
+        params.n_test_batch_size,
+        data_type,
+        params.n_padding
+    );
+
+    Helpers::Run::Setup_Scheduler(
+        params,
+        scheduler,
+        optimizer,
+        *model.m_dist,
+        model.m_Height,
+        model.m_Width
+    );
+
+    Helpers::Run::EvalFunctions eval_fn;
+
+    eval_fn.sample = [&model](int i) -> torch::Tensor {
+        return model.sample(i);
+    };
+    eval_fn.base = [&model](int i) -> torch::Tensor {
+        return model.m_dist->base(i);
+    };
+    eval_fn.squash = [&model]() -> void {
+        model.squash();
+    };
+    eval_fn.entropy = [&model]() -> double {
+        auto ent = model.m_dist->entropy().mean();
+        return ent.item<double>();
+    };
+
+    auto test_perf = Helpers::Run::Inference(
+        params,
+        scheduler,
+        eval_fn,
+        dataset
+    );
+
+    // Export the test performance to results.txt stored in ./
+
+
+    test_perf.Save(
+        "./results.txt",
+        0,
+        "Test Performance"
+    );
+
+    scheduler.StopThreads();
+    scheduler.StopCamera();
+    scheduler.StopWindow();
+
+    Helpers::Data::Delete(dataset);
+}
+
 Runner::Model::Model () {}
 Runner::Model::~Model () {
     if (m_dist != nullptr) {
