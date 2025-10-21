@@ -9,9 +9,9 @@ ValidationBatchSize 1000
 TestSamples 1000
 TestBatchSize 1000
 Samples 10
-Padding 5
+Padding 1
 SubShaderThreshold 0.8
-UpscaleFactor 1
+UpscaleFactor 2
 IterationAmount 4
 RegionFile source/Assets/regions2.npy
 MinLimit 20
