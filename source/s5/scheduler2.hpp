@@ -89,6 +89,7 @@ public:
         int cam_LineTrigger=3,
         bool cam_UseZones=false,
         int cam_NumberOfZones=4,
+        int cam_zone_offset_h=0,
         int cam_ZoneSize=60,
         bool cam_use_centering=true,
         int cam_offset_x=0,
@@ -126,10 +127,15 @@ public:
     void Validation_SaveMaskToDrive(const std::string&);
 
     void SetOptimizer(s4_Optimizer *opt);
+    void EnableStaticMode ();
+    void DisableStaticMode ();
 
     double Update ();
+    torch::Tensor Collect();
+    double Update (torch::Tensor);
     double UpdatePPO ();
     double Loss ();
+    double Loss (torch::Tensor);
     void   Dump ();
     void   Dump (int);
 
@@ -188,7 +194,6 @@ public:
     void SetSubTextures(Texture, int);
     void EnableSubTexture(int);
     void DisableSubTexture(int);
-    void DrawSubTexturesOnly();
 
     void SetLabel(int);
     void SetLabel(int label, int count);
@@ -221,6 +226,7 @@ public:
         int cam_LineTrigger=3,
         bool cam_UseZones=false,
         int cam_NumberOfZones=4,
+        int cam_zone_offset_h=0,
         int cam_ZoneSize=60,
         bool cam_use_centering=true,
         int cam_offset_x=0,
@@ -287,6 +293,7 @@ private:
     void DrawSubTexturesToScreenCentered();
     void DrawSubTexturesToScreen_BlendMode();
     void DrawSubTexturesToScreenCentered_BlendMode();
+    void DrawSubTexturesOnly ();
 
     Texture MapToBlueLast4 (Texture tex);
 
@@ -365,6 +372,7 @@ private:
     uint64_t m_vsync_marker;
 
     bool m_blend_mode_enabled = false;
+    bool m_static_mode = false;
 
     torch::Tensor noise_bg;
 

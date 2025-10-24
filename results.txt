@@ -15,3 +15,322 @@ mse    , false  , Balanced_1, Balanced_2, 2     , 32      , adam, 0.1  , 0.1   ,
 mse    , false  , Balanced_1, Balanced_2, 4     , 32      , sgd , 200  , 0.1   , na        , na       , na     , na
 mse    , false  , Balanced_1, Balanced_2, 4     , 32      , sgd , 25   , 0.1   , na        , na       , na     , na
 mse    , false  , Balanced_1, Balanced_2, 4     , 32      , sgd , 10   , 0.1   , na        , na       , na     , na
+----------------------------------------
+Performance
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 509
+Accuracy: 50.9
+Entropy: 0.0726981
+Loss: -1.7351
+----------------------------------------
+----------------------------------------
+Performance
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 526
+Accuracy: 52.6
+Entropy: 0.0726981
+Loss: -1.7446
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2025_10_22/2025_10_22_001/epoch_2/mask.pt
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 494
+Accuracy: 49.4
+Entropy: 0.0726981
+Loss: -1.81052
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2025_10_22/2025_10_22_003/epoch_15/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 121
+Accuracy: 12.1
+Entropy: 0.00440228
+Loss: -7.59142
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 2025_10_22/2025_10_22_003/epoch_15/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 124
+Accuracy: 12.4
+Entropy: 0.00440228
+Loss: -7.25823
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 2025_10_22/2025_10_22_003/epoch_15/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 120
+Accuracy: 12
+Entropy: 0.00440228
+Loss: -7.25387
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 2025_10_22/2025_10_22_003/epoch_15/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 112
+Accuracy: 11.2
+Entropy: 0.00440228
+Loss: -7.63056
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 2025_10_22/2025_10_22_001/epoch_2/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 102
+Accuracy: 10.2
+Entropy: 0.0726981
+Loss: -10.5243
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2025_10_22/2025_10_22_001/epoch_2/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 117
+Accuracy: 11.7
+Entropy: 0.0726981
+Loss: -10.3363
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2025_10_23/2025_10_23_001/epoch_0/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 254
+Accuracy: 25.4
+Entropy: 0.058759
+Loss: -3.37237
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 2025_10_23/2025_10_23_001/epoch_0/mask.pt
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 250
+Accuracy: 25
+Entropy: 0.058759
+Loss: -3.35193
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 107
+Accuracy: 10.7
+Entropy: 2.77259
+Loss: -10.0843
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 112
+Accuracy: 11.2
+Entropy: 2.77259
+Loss: -6.39253
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 113
+Accuracy: 11.3
+Entropy: 2.77259
+Loss: -9.81212
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 107
+Accuracy: 10.7
+Entropy: 2.77259
+Loss: -8.54687
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 133
+Accuracy: 13.3
+Entropy: 2.77259
+Loss: -8.57783
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 114
+Accuracy: 11.4
+Entropy: 2.77259
+Loss: -6.57128
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 117
+Accuracy: 11.7
+Entropy: 2.77259
+Loss: -7.00214
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 123
+Accuracy: 12.3
+Entropy: 2.77259
+Loss: -6.99991
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 131
+Accuracy: 13.1
+Entropy: 2.77259
+Loss: -7.10464
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 157
+Accuracy: 15.7
+Entropy: 2.77259
+Loss: -357.09
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 119
+Accuracy: 11.9
+Entropy: 2.77259
+Loss: -375.754
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 132
+Accuracy: 13.2
+Entropy: 2.77259
+Loss: -165.006
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 90
+Accuracy: 9
+Entropy: 2.77259
+Loss: -354.98
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 122
+Accuracy: 12.2
+Entropy: 2.77259
+Loss: -283.146
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 114
+Accuracy: 11.4
+Entropy: 2.77259
+Loss: -330.281
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 135
+Accuracy: 13.5
+Entropy: 2.77259
+Loss: -81.0093
+----------------------------------------

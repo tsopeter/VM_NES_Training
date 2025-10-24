@@ -63,6 +63,7 @@ public:
     bool UseZones      = false;
     int  NumberOfZones =  4;
     int  ZoneSize      = 65; // px
+    int  zone_offset_h = 10; // px
 
     //
     // This is used for triggering the camera

@@ -12,6 +12,9 @@ Helpers::Parameters::Parameters () {
         auto img = ts.full.to(DEVICE);
         auto l   = torch::tensor({ts.label}).to(DEVICE);
 
+        std::cout << "DEBUG: [process_fn] Received image tensor of shape: " << img.sizes() << "\n";
+        std::cout << "DEBUG: [process_fn] Mask is of shape: " << _PDF.masks.sizes() << "\n";
+
         img      = torch::clamp(img, 0, 255).to(torch::kFloat32);
         img      = torch::where(img < _PDF.min_limit, torch::zeros_like(img), img).to(torch::kFloat64);
 
@@ -126,6 +129,15 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
                 ).squeeze(); // [H + 2*padding, W + 2*padding]
             }
 
+            if (params.flip_input_H) {
+                d = torch::fliplr(d);
+            }
+
+            if (params.flip_input_V) {
+                d = torch::flipud(d);
+            }
+
+
             Image di = s4_Utils::TensorToImage(d);
             Texture ti = LoadTextureFromImage(di);
             SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
@@ -167,7 +179,8 @@ void Helpers::Run::Setup_Scheduler (
         3,          /* Line Trigger */
         params.Camera.partitioning, /* Use Zones */
         4,          /* Number of Zones */
-        60,         /* Zone Size */
+        10,         /* Zone Offset Height */
+        30,         /* Zone Size */
         true,       /* Use Centering */
         0,          /* Offset X */
         0,          /* Offset Y */
@@ -268,7 +281,7 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
     scheduler.WaitVSYNC_Diff(2);
 
     eval_fn.squash();
-    double loss = scheduler.Update ();
+    double loss = eval_fn.update();
     int64_t end_time = Utils::GetCurrentTime_s ();
 
     int64_t delta = end_time - start_time;
@@ -350,7 +363,7 @@ Helpers::Run::Performance Helpers::Run::Inference (
     scheduler.WaitVSYNC_Diff(2);
 
     eval_fn.squash();
-    double loss = scheduler.Loss ();
+    double loss = eval_fn.loss();
     int64_t end_time = Utils::GetCurrentTime_s();
 
     int64_t delta = end_time - start_time;

@@ -13,9 +13,8 @@ int main (int argc, char** argv) {
         config_file = argv[1];
         r.Run (config_file);
     }
-
     // If inference mode, the argument is structured as ./app -i <config> <dataset> <dataset size>
-    if (argc == 5 && std::string(argv[1]) == "-i") {
+    else if (argc == 5 && std::string(argv[1]) == "-i") {
         config_file = argv[2];
         r.m_inference = true;
 
@@ -38,6 +37,37 @@ int main (int argc, char** argv) {
 
         int n_data_points = std::stoi(argv[4]);
         r.Inference (config_file, dtype, n_data_points);
+    }
+    else if (argc == 5 && std::string(argv[1]) == "-s") {
+        config_file = argv[2];
+        r.m_inference = true;
+
+        // Parse dataset type
+        // Supported dataset types: train, valid, test
+        s2_DataTypes dtype;
+        std::string dataset_str = argv[3];
+        if (dataset_str == "train") {
+            dtype = s2_DataTypes::TRAIN;
+        }
+        else if (dataset_str == "valid") {
+            dtype = s2_DataTypes::VALID;
+        }
+        else if (dataset_str == "test") {
+            dtype = s2_DataTypes::TEST;
+        }
+        else {
+            throw std::runtime_error("Runner::StaticInference: Unsupported dataset type specified.");
+        }
+
+        int n_data_points = std::stoi(argv[4]);
+        r.StaticInference (config_file, dtype, n_data_points);
+    }
+    else {
+        // Invalid arguments
+        std::cerr << "Usage for training:  " << argv[0] << " <config>\n";
+        std::cerr << "\tExample usage: " << argv[0] << " config.txt\n";
+        std::cerr << "Usage for inference: " << argv[0] << " -i <checkpoint_config> <dataset> <dataset size>\n";
+        std::cerr << "\tExample usage: " << argv[0] << " -i checkpoint_config.txt test 1000\n";
     }
 
     return 0;

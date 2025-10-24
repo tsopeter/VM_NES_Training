@@ -31,9 +31,10 @@ u16Image Cam2::sread10() {
 
 std::pair<u8Image, std::vector<u8Image>> Cam2::pread() {
     std::vector<u8Image> images;
-    images.reserve(NumberOfZones * NumberOfZones);
+    //images.reserve(NumberOfZones * NumberOfZones);
     u8Image image = sread();
 
+    /*
     // Partition the images into zones
     for (int i = 0; i < NumberOfZones; ++i) {
         for (int j = 0; j < NumberOfZones; ++j) {
@@ -54,6 +55,7 @@ std::pair<u8Image, std::vector<u8Image>> Cam2::pread() {
             images.push_back(std::move(zone_ij));
         }
     }
+    */
     return {image, images};
 }
 
@@ -363,31 +365,17 @@ void Cam2::EnableZones() {
 
     // Set the Width and Height of the camera to be
     // the largest available...
-    Height = 480;
-    Width  = 640;
+    Height = 512;
+    Width  = 672;
 
     // Set the camera properties
     camera.Height.SetValue(Height);
     camera.Width.SetValue(Width);
 
-    // Calculate the new width of the image
-    // We know that the width of the new image will essentially be
-    // or Width = NumberOfZones * ZoneSize + (NumberOfZones + 1) * GapSize;
-    // This means that the gap size is
-    // GapSize = (Width - NumberOfZones * ZoneSize) / (NumberOfZones - 1);
-    int gap_size_w = (Width - NumberOfZones * ZoneSize) / (NumberOfZones + 1);
-    GapX = gap_size_w;
-
-    // Calculate the gap_size_h, for height
-    int gap_size_h = (Height - NumberOfZones * ZoneSize) / (NumberOfZones + 1);
-    GapY = gap_size_h;
-
-    // Reset the camera Width
-    Width = NumberOfZones * ZoneSize + (NumberOfZones - 1) * gap_size_w;
-    camera.Width.SetValue(Width);
+    // Calculate the gap size between zones
+    int GapH = (Height - (NumberOfZones * ZoneSize)) / (NumberOfZones - 1) - zone_offset_h;
 
     Height = NumberOfZones * ZoneSize;
-    // Height is automatically controlled by the zoning feature
 
     for (int i = 0; i < NumberOfZones; ++i) {
         // Select the zone and turn it on.
@@ -396,9 +384,7 @@ void Cam2::EnableZones() {
             Basler_UsbCameraParams::ROIZoneMode_On
         );
 
-
-        // Calculate the offset for the zone
-        int zone_offset = gap_size_h + i * (ZoneSize + gap_size_h);
+        int zone_offset = i * (ZoneSize + GapH);
 
         camera.ROIZoneSize.SetValue(ZoneSize);
         camera.ROIZoneOffset.SetValue(zone_offset);

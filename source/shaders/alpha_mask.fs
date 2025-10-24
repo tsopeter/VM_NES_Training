@@ -16,9 +16,9 @@ void main() {
 
     if (gray > 0.5) {
         // Black with full opacity
-        finalColor = vec4(0.0, 0.0, 0.0, 1.0);
+        finalColor = vec4(255.0, 255.0, 255.0, 1.0);
     } else {
         // Black with full transparency
-        finalColor = vec4(0.0, 0.0, 0.0, 0.0);
+        finalColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
 }

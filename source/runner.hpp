@@ -71,10 +71,27 @@ bool m_inference = false;
 bool m_load_checkpoint = false;
 int  m_checkpoint_epoch = 0;
 void LoadCheckpointFile (const std::string &directory);
-torch::Tensor m_checkpoint_mask = torch::Tensor ();
+torch::Tensor m_checkpoint_mask; 
+std::string m_checkpoint_mask_location;
+double m_std;
 
 void Run (std::string config_file);
 void Inference (std::string config_file, s2_DataTypes data_type, int n_data_points);
+void StaticInference (std::string config_file, s2_DataTypes data_type, int n_data_points);
+
+void PopulateNewDirectory (const std::string &directory);
+bool TestIfScreenIsOkay (Helpers::Parameters &, Scheduler2&);
+
+struct Time {
+    double hours;
+    double minutes;
+    double seconds;
+
+    std::string to_string () const;
+};
+
+Time GetCurrentTime ();
+
 };
 
 

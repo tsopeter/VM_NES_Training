@@ -56,6 +56,7 @@ void Scheduler2::SetupCamera(
     int cam_LineTrigger,
     bool cam_UseZones,
     int cam_NumberOfZone,
+    int cam_zone_offset_h,
     int cam_ZoneSize,
     bool cam_use_centering,
     int cam_offset_x,
@@ -75,6 +76,7 @@ void Scheduler2::SetupCamera(
     camera.OffsetX = cam_offset_x;
     camera.OffsetY = cam_offset_y;
     camera.pixel_format = pixel_format;
+    camera.zone_offset_h = cam_zone_offset_h;
 }
 
 void Scheduler2::SetupPEncoder(
@@ -145,6 +147,7 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_2() {
 
     auto [image, zones] = camera.pread();
 
+    /*
     std::vector<torch::Tensor> zone_tensors;
     for (auto &zone : zones) {
         // Convert u8Image to torch::Tensor
@@ -155,14 +158,16 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_2() {
         ).clone();
         zone_tensors.push_back(tensor);
     }
+    */
 
     auto tensor = torch::from_blob(
         image.data(), 
         {camera.Height, camera.Width}, 
         torch::kUInt8
     ).clone();
-
-    return {tensor, torch::stack(zone_tensors)};  // [N, H, W]
+    
+    //return {tensor, torch::stack(zone_tensors)};  // [N, H, W]
+    return {tensor, torch::empty({0})};
 }
 
 std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera_3() {
@@ -341,6 +346,11 @@ void Scheduler2::DrawTextureToScreenCentered () {
     int centerX = (window.Width - m_texture.width) / 2;
     int centerY = (window.Height - m_texture.height) / 2;
 
+    if (m_static_mode) {
+        DrawSubTexturesOnly();
+        return;
+    }
+
     BeginDrawing();
         BeginShaderMode(shader);
         //ClearBackground((m_blend_mode_enabled) ? WHITE : BLACK);
@@ -422,11 +432,6 @@ void Scheduler2::DrawSubTexturesToScreenCentered () {
     EndShaderMode();
 }
 
-void Scheduler2::DrawSubTexturesOnly () {
-    BeginDrawing();
-    DrawSubTexturesToScreen();
-    EndDrawing();
-}
 //
 // Processing
 void Scheduler2::ProcessDataPipeline(
@@ -564,6 +569,18 @@ double Scheduler2::Update() {
     return total_rewards;
 }
 
+double Scheduler2::Update (torch::Tensor t) {
+    std::cout << "INFO: [Scheduler2::Update] Updating scheduler with provided tensor...\n";
+
+    t = t.to(reward_device);
+    if (use_anti)
+        opt->step_a(t);
+    else
+        opt->step(t);
+
+    return t.mean().item<double>();
+}
+
 double Scheduler2::UpdatePPO () {
     auto rewards = GetRewards();
     double total_rewards = rewards.mean().item<double>();
@@ -634,6 +651,16 @@ double Scheduler2::Loss() {
     // Reset this back to zero
     number_of_frames_sent = 0;
     return total_rewards;
+}
+
+double Scheduler2::Loss (torch::Tensor t) {
+    std::cout << "INFO: [Scheduler2::Loss] Calculating loss...\n";
+
+    t = t.to(reward_device);
+
+    // Reset this back to zero
+    number_of_frames_sent = 0;
+    return t.mean().item<double>();
 }
 
 // VSYNC timer
@@ -732,6 +759,7 @@ void Scheduler2::Start (
         int cam_LineTrigger,
         bool cam_UseZones,
         int cam_NumberOfZones,
+        int cam_zone_offset_h,
         int cam_ZoneSize,
         bool cam_use_centering,
         int cam_offset_x,
@@ -766,6 +794,7 @@ void Scheduler2::Start (
         cam_LineTrigger,
         cam_UseZones,
         cam_NumberOfZones,
+        cam_zone_offset_h,
         cam_ZoneSize,
         cam_use_centering,
         cam_offset_x,
@@ -1256,4 +1285,67 @@ void Scheduler2::SetSubShaderThreshold(float threshold) {
         SHADER_UNIFORM_FLOAT
     );
     m_sub_shader_threshold = threshold;
+}
+
+torch::Tensor Scheduler2::Collect () {
+    return GetRewards ();
+}
+
+void Scheduler2::EnableStaticMode () {
+    m_static_mode = true;
+}
+
+void Scheduler2::DisableStaticMode () {
+    m_static_mode = false;
+}
+
+void Scheduler2::DrawSubTexturesOnly () {
+    BeginDrawing();
+    
+    int centerX = (window.Width - m_texture.width) / 2;
+    int centerY = (window.Height - m_texture.height) / 2;
+    int output_width = m_texture.width;
+    int output_height = m_texture.height;
+
+    if (m_enable_different_sized_textures) {
+        centerX = (window.Width - m_digit_width) / 2;
+        centerY = (window.Height - m_digit_height) / 2;
+        centerX += m_digit_offset_w;
+        centerY += m_digit_offset_h;
+    }
+
+    if (m_fullscreen_sub_textures) {
+        centerX = 0;
+        centerY = 0;
+        output_width = window.Width;
+        output_height = window.Height;
+    }
+
+    // No blend mode
+    BeginShaderMode(sub_shader);
+    for (int i = 0; i < 10; ++i) {
+        if (m_sub_textures_enable[i]) {
+            std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
+            std::cout << "INFO: [Sub Texture " << i << "] (" 
+                << m_sub_textures[i].width 
+                << ", " 
+                << m_sub_textures[i].height 
+                << ") -> ("
+                << window.Width
+                << ", "
+                << window.Height
+                << ")\n";
+            DrawTexturePro (
+                m_sub_textures[i],
+                {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
+                {static_cast<float>(centerX), static_cast<float>(centerY),
+                 static_cast<float>(output_width), static_cast<float>(output_height)},
+                {0, 0}, 0.0f, WHITE
+            );
+        }
+    }
+    EndShaderMode();
+
+
+    EndDrawing();
 }

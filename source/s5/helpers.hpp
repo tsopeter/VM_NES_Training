@@ -83,6 +83,8 @@ struct Parameters {
     int     n_iterate_amount     = 4;
 
     int64_t steps                = 0;
+    bool    flip_input_V         = false;
+    bool    flip_input_H         = false;
 
     _pdf _PDF;
 
@@ -165,8 +167,9 @@ struct EvalFunctions {
     std::function<torch::Tensor(int)> base;
     std::function<void()>             squash;
     std::function<double()>           entropy;
+    std::function<double()>           update;
+    std::function<double()>           loss;
 };
-
 
 Performance Evaluate (
     Parameters &,
