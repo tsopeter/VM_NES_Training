@@ -204,7 +204,6 @@ public:
 
     void SetSubShaderThreshold(float threshold);
 
-
     void SetVSYNC_Marker ();
     void WaitVSYNC_Diff  (uint64_t diff=1);
 

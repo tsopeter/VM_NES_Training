@@ -120,6 +120,7 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
             auto li = l.item<int>();
 
             d = 255.0 - d;
+            d = d.squeeze();
 
             // Pad the image if padding > 0
             if (padding > 0) {
@@ -180,7 +181,7 @@ void Helpers::Run::Setup_Scheduler (
         params.Camera.partitioning, /* Use Zones */
         4,          /* Number of Zones */
         10,         /* Zone Offset Height */
-        30,         /* Zone Size */
+        50,         /* Zone Size */
         true,       /* Use Centering */
         0,          /* Offset X */
         0,          /* Offset Y */
