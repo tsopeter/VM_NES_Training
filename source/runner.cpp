@@ -18,15 +18,16 @@ void Runner::Run (std::string config_file) {
 
     std::cout << "INFO: [Runner::Run] Exporting configuration to log file...\n";
     std::string log_file = checkpoint_directory + "/a/mean_reward.txt";
-    ExportConfig(log_file);
 
     if (!m_load_checkpoint) {
+        ExportConfig(log_file);
         epoch = 0;
         model.init(ModelHeight, ModelWidth, scheduler.maximum_number_of_frames_in_image, ModelDistribution);
     }
     else {
         LoadCheckpointFile(config_file);
-        epoch = m_checkpoint_epoch;
+        epoch = m_checkpoint_epoch + 1;
+        std::cout << "Epoch: " << epoch << '\n';
         model.init(m_checkpoint_mask, ModelDistribution);
     }
     torch::optim::Adam adam_opt(model.parameters(), torch::optim::AdamOptions(params.Training.lr));
@@ -353,13 +354,29 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
         return scheduler.Loss();
     };
 
+    double best_accuracy = 0.0f;
+    int    best_offset_h = 0;
+    int    best_offset_w = 0;
+    double best_scale_h  = 1.0;
+    double best_scale_w  = 1.0;
+
+    Helpers::Run::Performance best_perf;
+    scheduler.EnableAffineSubTextures ();
+    scheduler.SetAffineParams (m_affine_params);
+
+
     std::cout << "INFO: [Runner::Inference] Running inference...\n";
-    auto test_perf = Helpers::Run::Inference(
+    best_perf = Helpers::Run::Inference(
         params,
         scheduler,
         eval_fn,
         dataset
     );
+
+    best_offset_h = m_sub_texture_offset_h;
+    best_offset_w = m_sub_texture_offset_w;
+    best_scale_h  = m_sub_texture_scale_h;
+    best_scale_w  = m_sub_texture_scale_w;
 
     // Export the test performance to results.txt stored in ./
 
@@ -383,8 +400,13 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
     }
     msg += "Mask Location: " + m_checkpoint_mask_location + "\n";
 
+    // Also store the best offset and scale
+    msg += "Best Offset H: " + std::to_string(best_offset_h) + "\n";
+    msg += "Best Offset W: " + std::to_string(best_offset_w) + "\n";
+    msg += "Best Scale H: " + std::to_string(best_scale_h) + "\n";
+    msg += "Best Scale W: " + std::to_string(best_scale_w) + "\n";
 
-    test_perf.Save(
+    best_perf.Save(
         "./results.txt",
         0,
         msg
@@ -841,6 +863,69 @@ void Runner::InitConfigKeyMap () {
                 ifs >> params.flip_input_H;
                 std::cout << "Setting Flip Input Horizontal to " << (params.flip_input_H ? "true" : "false") << "...\n";
             }
+        },
+        {
+            "SubTextureOffsetH",
+            [this](std::ifstream &ifs) {
+                ifs >> m_sub_texture_offset_h;
+                std::cout << "Setting Sub Texture Offset X to " << m_sub_texture_offset_h << '\n';
+            }
+        },
+        {
+            "SubTextureOffsetW",
+            [this](std::ifstream &ifs) {
+                ifs >> m_sub_texture_offset_w;
+                std::cout << "Setting Sub Texture Offset Y to " << m_sub_texture_offset_w << '\n';
+            }
+        },
+        {
+            "SubTextureScaleW",
+            [this](std::ifstream &ifs) {
+                ifs >> m_sub_texture_scale_w;
+                std::cout << "Setting Sub Texture Scale X to " << m_sub_texture_scale_w << '\n';
+            }
+        },
+        {
+            "SubTextureScaleH",
+            [this](std::ifstream &ifs) {
+                ifs >> m_sub_texture_scale_h;
+                std::cout << "Setting Sub Texture Scale Y to " << m_sub_texture_scale_h << '\n';
+            }
+        },
+        {
+            "Auto",
+            [this](std::ifstream &ifs) {
+                ifs >> m_auto;
+                std::cout << "Setting Auto Mode to true...\n";
+            }
+        },
+        {
+            "AffineOffsetX",
+            [this](std::ifstream &ifs) {
+                ifs >> m_affine_params.offset_x;
+                std::cout << "Setting Affine Offset X to " << m_affine_params.offset_x << '\n';
+            }
+        },
+        {
+            "AffineOffsetY",
+            [this](std::ifstream &ifs) {
+                ifs >> m_affine_params.offset_y;
+                std::cout << "Setting Affine Offset Y to " << m_affine_params.offset_y << '\n';
+            }
+        },
+        {
+            "AffineScaleX",
+            [this](std::ifstream &ifs) {
+                ifs >> m_affine_params.scale_x;
+                std::cout << "Setting Affine Scale X to " << m_affine_params.scale_x << '\n';
+            }
+        },
+        {
+            "AffineScaleY",
+            [this](std::ifstream &ifs) {
+                ifs >> m_affine_params.scale_y;
+                std::cout << "Setting Affine Scale Y to " << m_affine_params.scale_y << '\n';
+            }
         }
     };
 }
@@ -858,11 +943,16 @@ void Runner::LoadCheckpointFile (const std::string &config_file) {
             std::cout << "Loaded checkpoint epoch: " << m_checkpoint_epoch << "...\n";
         }
         else if (key == "MaskLocation") {
+            std::cout << "Loading Mask Location...\n";
             ifs >> m_checkpoint_mask_location;
+            m_checkpoint_mask = torch::empty({});
             std::cout << "Loading checkpoint mask from " << m_checkpoint_mask_location << "...\n";
             torch::load(m_checkpoint_mask, m_checkpoint_mask_location);
             std::cout << "Loaded checkpoint size: " << m_checkpoint_mask.sizes() << "...\n";
         } 
+    }
+    if (m_checkpoint_mask_location.empty()) {
+        throw std::runtime_error("Runner::LoadCheckpointFile: Checkpoint mask location not found in config file.");
     }
 
 }
@@ -977,4 +1067,14 @@ bool Runner::TestIfScreenIsOkay (Helpers::Parameters &params, Scheduler2 &schedu
 
     UnloadImage(test_image);
     UnloadTexture(test_texture);
+}
+
+void Runner::Alignment () {
+    // Alignment does not depend on any configuration file
+    // and is a standalone procedure
+
+    Pylon::PylonAutoInitTerm init {};
+    
+
+
 }

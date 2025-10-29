@@ -8,6 +8,7 @@
 #include "../s3/window.hpp"
 #include "../s4/optimizer.hpp"
 #include "../s2/np2lt.hpp"
+#include "utils.hpp"
 
 #include <iostream>
 #include <vector>
@@ -106,6 +107,10 @@ public:
     void DisableBlendMode ();
     bool IsBlendModeEnabled() const;
 
+    void EnableAffineSubTextures ();
+    void SetAffineParams (s5_Utils::Affine params);
+    void DisableAffineSubTextures ();
+
     void StartWindow();
     void StopWindow();
 
@@ -203,6 +208,8 @@ public:
     void SetBatchSize(int);
 
     void SetSubShaderThreshold(float threshold);
+    void SetTextureOffset(int h, int w);
+    void SetTextureScale(double h, double w);
 
     void SetVSYNC_Marker ();
     void WaitVSYNC_Diff  (uint64_t diff=1);
@@ -392,6 +399,14 @@ private:
     bool m_binary_mode = false;
 
     float m_sub_shader_threshold = 0.5f;
+    int   m_sub_texture_offset_h = 0;
+    int   m_sub_texture_offset_w = 0;
+
+    double m_sub_texture_scale_h = 1.0;
+    double m_sub_texture_scale_w = 1.0;
+
+    bool m_affine = false;
+    s5_Utils::Affine m_affine_params;
 
     Texture m_background_texture;
 };

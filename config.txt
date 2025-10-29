@@ -17,9 +17,13 @@ IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 0
 SaveInterval 10000
-CheckpointDirectory 2025_10_24/002
-ExposureTime 100
+CheckpointDirectory 2025_10_28/003
+ExposureTime 59
 DatasetPath Datasets/
 Epochs 50
 InputFlipUD 0
 InputFlipLR 0
+AffineOffsetX -0.02496718056499958
+AffineOffsetY 0.08325961977243423
+AffineScaleX 0.8579343557357788
+AffineScaleY 1.0418670177459717

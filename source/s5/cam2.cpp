@@ -311,6 +311,9 @@ void Cam2::p_open () {
     std::cout << "INFO: [Cam2::p_open()] Setting Trigger Delay to 0\n";
     camera.TriggerDelay.SetValue(0.0f);
 
+    // ReverseY
+    camera.ReverseY.SetValue(true);
+
     if (UseZones) EnableZones();
 }
 

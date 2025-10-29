@@ -1301,46 +1301,22 @@ void Scheduler2::DisableStaticMode () {
 
 void Scheduler2::DrawSubTexturesOnly () {
     BeginDrawing();
-    
-    int centerX = (window.Width - m_texture.width) / 2;
-    int centerY = (window.Height - m_texture.height) / 2;
-    int output_width = m_texture.width;
-    int output_height = m_texture.height;
+    ClearBackground(WHITE);
 
-    if (m_enable_different_sized_textures) {
-        centerX = (window.Width - m_digit_width) / 2;
-        centerY = (window.Height - m_digit_height) / 2;
-        centerX += m_digit_offset_w;
-        centerY += m_digit_offset_h;
-    }
-
-    if (m_fullscreen_sub_textures) {
-        centerX = 0;
-        centerY = 0;
-        output_width = window.Width;
-        output_height = window.Height;
+    if (!m_affine) {
+        std::cerr << "Affine textures are recommended for DrawSubTexturesOnly.\n";
+        throw std::runtime_error("ERROR: [Scheduler2::DrawSubTexturesOnly] Affine sub-textures not enabled.");
     }
 
     // No blend mode
     BeginShaderMode(sub_shader);
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
-            std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
-            std::cout << "INFO: [Sub Texture " << i << "] (" 
-                << m_sub_textures[i].width 
-                << ", " 
-                << m_sub_textures[i].height 
-                << ") -> ("
-                << window.Width
-                << ", "
-                << window.Height
-                << ")\n";
-            DrawTexturePro (
+            s5_Utils::DrawTextureProAffine (
                 m_sub_textures[i],
-                {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
-                {static_cast<float>(centerX), static_cast<float>(centerY),
-                 static_cast<float>(output_width), static_cast<float>(output_height)},
-                {0, 0}, 0.0f, WHITE
+                m_affine_params,
+                window.Width,
+                window.Height
             );
         }
     }
@@ -1348,4 +1324,26 @@ void Scheduler2::DrawSubTexturesOnly () {
 
 
     EndDrawing();
+}
+
+void Scheduler2::SetTextureOffset (int offset_h, int offset_w) {
+    m_sub_texture_offset_h = offset_h;
+    m_sub_texture_offset_w = offset_w;
+}
+
+void Scheduler2::SetTextureScale (double scale_h, double scale_w) {
+    m_sub_texture_scale_h = scale_h;
+    m_sub_texture_scale_w = scale_w;
+}
+
+void Scheduler2::EnableAffineSubTextures () {
+    m_affine = true;
+}
+
+void Scheduler2::DisableAffineSubTextures () {
+    m_affine = false;
+}
+
+void Scheduler2::SetAffineParams (s5_Utils::Affine params) {
+    m_affine_params = params;
 }
