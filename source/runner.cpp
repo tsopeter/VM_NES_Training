@@ -11,7 +11,10 @@ void Runner::Run (std::string config_file) {
     Scheduler2 scheduler;
     Model model;
     std::cout << "INFO: [Runner::Run] Starting Runner...\n";
+    std::cout << "INFO: [Runner::Run] Initializing configuration key map...\n";
     InitConfigKeyMap(); 
+
+    std::cout << "INFO: [Runner::Run] Parsing configuration file: " << config_file << "...\n";
     ParseConfigFile(config_file);
     PopulateNewDirectory(checkpoint_directory);
     model.std = m_std;
@@ -30,6 +33,8 @@ void Runner::Run (std::string config_file) {
         std::cout << "Epoch: " << epoch << '\n';
         model.init(m_checkpoint_mask, ModelDistribution);
     }
+
+    std::cout << "INFO: [Runner::Run] Setting up optimizer...\n";
     torch::optim::Adam adam_opt(model.parameters(), torch::optim::AdamOptions(params.Training.lr));
     s4_Optimizer optimizer(
         adam_opt,
@@ -77,6 +82,12 @@ void Runner::Run (std::string config_file) {
     for (; epoch < n_epochs; ++epoch) {
         std::cout << "INFO: [Runner::Run] Starting Epoch " << epoch << "...\n";
 
+        // Create the checkpoint directory for this epoch
+        std::string epoch_checkpoint_dir = checkpoint_directory + "/epoch_" + std::to_string(epoch);
+        if (!std::filesystem::exists(epoch_checkpoint_dir)) {
+            std::filesystem::create_directories(epoch_checkpoint_dir);
+        }
+
         // Save the previous model parameters, so if 
         // validation loss increases, we can revert back
         auto prev_params = model.get_parameters().detach().cpu();
@@ -89,12 +100,25 @@ void Runner::Run (std::string config_file) {
             train_data
         );
 
+        // Export the results to .csv file within the checkpoint directory
+        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_results.csv", 0);
+
+        // Clear the params results for the next evaluation
+        //params.results.clear();
+
         auto val_perf = Helpers::Run::Inference(
             params,
             scheduler,
             eval_fn,
             val_data
         );
+
+        // Export the results to .csv file within the checkpoint directory
+        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/validation_results.csv", 1);
+
+        // Clear the params results for the next evaluation
+        //params.results.clear();
+
 
         if (epoch == 0) {
             previous_accuracy = train_perf.accuracy;
@@ -271,6 +295,12 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
         msg
     );
 
+    params.n_validation_batch_size = n_data_points;
+    params.n_validation_samples = n_data_points;
+
+    // Save the data
+    params.ExportResults("./inference_results.csv", 1);
+
     scheduler.StopThreads();
     scheduler.StopCamera();
     scheduler.StopWindow();
@@ -434,17 +464,17 @@ void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, Distribution
 
     // Initialize m_parameter based on distribution type
     if (dist_type == DistributionType::NORMAL) {
-        m_parameter = torch::zeros({Height, Width}, torch::kFloat32).to(DEVICE);
+        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Normal(m_parameter, std);
     }
     else if (dist_type == DistributionType::CATEGORICAL) {
-        m_parameter = torch::zeros({Height, Width, 16}, torch::kFloat32).to(DEVICE);
+        m_parameter = torch::randn({Height, Width, 16}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Categorical(m_parameter);
     }
     else if (dist_type == DistributionType::BINARY) {
         m_Height = 2 * Height;
         m_Width  = 2 * Width;
-        m_parameter = torch::zeros({m_Height, m_Width, 2}, torch::kFloat32).to(DEVICE);
+        m_parameter = torch::randn({m_Height, m_Width, 2}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Binary(m_parameter);
     }
     else {

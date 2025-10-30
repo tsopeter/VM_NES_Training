@@ -6,7 +6,7 @@
 #include <filesystem>
 
 Helpers::Parameters::Parameters () {
-     
+
     process_fn = [this](CaptureData ts) -> std::pair<torch::Tensor, bool> {
 
         auto img = ts.full.to(DEVICE);
@@ -32,7 +32,7 @@ Helpers::Parameters::Parameters () {
             auto Img = s4_Utils::TensorToImage(img_img);
             ExportImage(Img, "sample.bmp");
             UnloadImage(Img);
-        }
+        } 
 
         auto preds = sums.argmax(1); // [1]
 
@@ -50,6 +50,16 @@ Helpers::Parameters::Parameters () {
 
 
         auto loss = _PDF.loss_fn(sums, targets);  // [1]
+
+        // Save to results
+        Helpers::_Result result;
+        result.label      = ts.label;
+        result.prediction = preds.item<int>();
+        result.index      = _PDF.process_count;
+        result.batch_id   = ts.batch_id;
+        result.reward     = loss.item<double>();
+
+        results.push_back(result);
 
         ++_PDF.process_count;
         return {loss, true};
@@ -320,6 +330,16 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
     int64_t end_time   = Utils::GetCurrentTime_s();
     int64_t delta = end_time - start_time;
 
+    auto _results = params.GetResults(0);
+
+    perf.samples_total = _results.size();
+    perf.samples_correct = 0;
+    for (const auto &res : _results) {
+        if (res.label == res.prediction) {
+            ++perf.samples_correct;
+        }
+    }
+
     perf.compute_time_s = static_cast<double>(delta);
     perf.accuracy        = (static_cast<double>(perf.samples_correct) / static_cast<double>(perf.samples_total)) * 100.0;
     perf.entropy       /= static_cast<double>(batches.size());
@@ -369,7 +389,6 @@ Helpers::Run::Performance Helpers::Run::Inference (
 
     int64_t delta = end_time - start_time;
     Helpers::Run::Performance perf;
-
     perf.compute_time_s = static_cast<double>(delta);
     perf.samples_total   = params._PDF.total.load(std::memory_order_acquire);
     perf.samples_correct = params._PDF.correct.load(std::memory_order_acquire);
@@ -418,11 +437,38 @@ Helpers::_pdf::_pdf () {
     masks = np2lt::f32("source/Assets/regions2.npy");
 
     loss_fn = [](torch::Tensor &preds, torch::Tensor &targets) -> torch::Tensor {
+        
         return -torch::nn::functional::cross_entropy(
             preds,
             targets,
             torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
         );
+        
+
+        // targets [1]
+        // preds [1, 10]
+
+        // Use MSE loss
+        // note that each pred is summed over a 50x50 region
+        // so we need to divide by (50*50) to get the average
+        /*
+        preds = preds / (50.0 * 50.0);
+
+        auto target_one_hot = torch::nn::functional::one_hot(
+            targets,
+            preds.size(1)
+        ).to(torch::kFloat32); // [1, 10]
+
+        // MSE Loss
+        auto loss = torch::nn::functional::mse_loss(
+            preds,
+            target_one_hot,
+            torch::nn::functional::MSELossFuncOptions().reduction(torch::kNone)
+        ); // [1, 10]
+
+        // Return negative sum
+        return -loss.sum(); // [1]
+        */
     };
 
 }
@@ -503,4 +549,84 @@ void Helpers::Checkpoint::Save (const std::string &directory) {
     // Save the mask tensor
     std::string mask_path = sub_directory + "/mask.pt";
     torch::save({mask}, mask_path);
+}
+
+Helpers::_Result::_Result () {
+    label = 0;
+    prediction = 0;
+    index = 0;
+    batch_id = 0;
+    reward = 0.0;
+}
+
+void Helpers::Parameters::ExportResults (const std::string &filename, int mode) {
+    // Export as a CSV file
+    std::ofstream ofs(filename);
+
+    // The header is
+    // index, label, prediction, correct
+
+    ofs << "Index,Label,Prediction,Reward,Correct\n";
+
+    auto _results = GetResults(mode);
+
+    for (const auto &res : _results) {
+        ofs << res.index << ','
+            << res.label << ','
+            << res.prediction << ','
+            << res.reward << ','
+            << (res.label == res.prediction ? 1 : 0) << '\n';
+    }
+
+    results.clear();
+    ofs.close ();
+    
+}
+
+std::vector<Helpers::_Result> Helpers::Parameters::GetResults (int mode) {
+    std::vector<Helpers::_Result> output_results;
+
+    int dataset_size = 0;
+    int batch_size = 0;
+    switch (mode) {
+        case 0:
+            dataset_size = n_training_samples; 
+            batch_size   = n_batch_size;
+            break;
+        case 1:
+            dataset_size = n_validation_samples;
+            batch_size = n_validation_batch_size;
+            break;
+        case 2:
+            dataset_size = n_test_samples;
+            batch_size = n_test_batch_size;
+            break;
+        default:
+            throw std::runtime_error("Runner::GetResults: Unsupported mode for getting results.");
+    }
+
+    // Within a batch, stride by 20
+    // Between batches, stride by n_samples * 20
+
+    // How many batches are there?
+    int num_batches = dataset_size / batch_size;
+
+    // What strides are required to advance to the next batch?
+    int batch_stride = batch_size * n_samples * 20;
+
+    // What strides within a stride is required to advance to the next sample in a batch?
+    int sample_stride = 20;
+
+    for (int b = 0; b < num_batches; ++b) {
+        for (int i = 0; i < batch_size; ++i) {
+            int index = b * batch_stride + i * sample_stride;
+            if (index >= results.size()) {
+                throw std::runtime_error("Runner::GetResults: Index out of bounds while getting results.");
+            }
+            const auto &res = results[index];
+            output_results.push_back(res);
+        }
+    }
+
+    return output_results;
 }

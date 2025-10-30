@@ -312,7 +312,8 @@ void Cam2::p_open () {
     camera.TriggerDelay.SetValue(0.0f);
 
     // ReverseY
-    camera.ReverseY.SetValue(true);
+    camera.ReverseY.SetValue(false);
+    camera.ReverseX.SetValue(false);
 
     if (UseZones) EnableZones();
 }

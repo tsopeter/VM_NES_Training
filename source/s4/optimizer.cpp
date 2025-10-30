@@ -89,5 +89,8 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
     loss.backward();
     m_opt.step();
 
+    // Detach logp to avoid memory leak ??
+    // Maybe the optimizer holds onto the computation graph otherwise
+    logp.detach();
 
 }

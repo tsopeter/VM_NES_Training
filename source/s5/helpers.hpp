@@ -14,6 +14,8 @@
 #include "distributions.hpp"
 #include "../s2/np2lt.hpp"
 
+#include "../third-party/concurrentqueue.h"
+
 #include <functional>
 #include <iostream>
 #include <atomic>
@@ -28,6 +30,16 @@ struct _Training {
 struct _Camera {
     bool partitioning = true;
     double exposure_time_us = 300.0f;
+};
+
+struct _Result {
+    int label;
+    int prediction;
+    int index;
+    int batch_id;
+    double reward;
+
+    _Result ();
 };
 
 struct _pdf {
@@ -86,12 +98,17 @@ struct Parameters {
     bool    flip_input_V         = false;
     bool    flip_input_H         = false;
 
+    std::vector<_Result> results = {};
+
     _pdf _PDF;
 
     PDFunction process_fn;
 
     _Training Training;
     _Camera Camera;
+
+    void ExportResults (const std::string &filename, int mode=0);
+    std::vector<_Result> GetResults (int mode=0);
 };
 
 /**
