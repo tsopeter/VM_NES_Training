@@ -23,6 +23,7 @@ Helpers::Parameters::Parameters () {
 
         auto q    = img.unsqueeze(0).unsqueeze(0); // [1, 1, H, W]
         auto sums = (q.unsqueeze(1) * _PDF.masks.to(img.device())).sum({2,3,4}); // [1, 10]
+        sums = sums * _PDF.ratios.to(sums.device());
 
         if (_PDF.process_count % _PDF.save_iter == 0) {
             std::cout << "INFO: [process_fn] Processed " << _PDF.process_count << " samples so far.\n";
@@ -435,6 +436,7 @@ Helpers::Run::Performance Helpers::Run::Inference (
 Helpers::_pdf::_pdf () {
 
     masks = np2lt::f32("source/Assets/regions2.npy");
+    ratios = torch::ones({1, 10});
 
     loss_fn = [](torch::Tensor &preds, torch::Tensor &targets) -> torch::Tensor {
         

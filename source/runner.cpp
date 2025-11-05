@@ -308,7 +308,7 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
     Helpers::Data::Delete(dataset);
 }
 
-void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, int n_data_points) {
+void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, int n_data_points, const std::string &mask_file) {
     Pylon::PylonAutoInitTerm init {};
 
     Scheduler2 scheduler;
@@ -351,7 +351,15 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
         model.m_Height,
         model.m_Width
     );
+
+
+    // Load the mask file
+    std::cout << "INFO: [Runner::Inference] Loading static mask from " << mask_file << "...\n";
+    Image mask_image = LoadImage(mask_file.c_str());
+    Texture2D mask_texture = LoadTextureFromImage(mask_image);
+
     scheduler.EnableStaticMode();
+    scheduler.SetBackgroundTexture(mask_texture);
 
     std::cout << "INFO: [Runner::Inference] Setting up dataset...\n";
     auto dataset = Helpers::Data::Get (
@@ -442,12 +450,19 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
         msg
     );
 
+    params.n_validation_batch_size = n_data_points;
+    params.n_validation_samples = n_data_points;
+
+    // Save the data
+    params.ExportResults("./inference_results.csv", 1);
+
     scheduler.StopThreads();
     scheduler.StopCamera();
     scheduler.StopWindow();
 
     Helpers::Data::Delete(dataset);
-
+    UnloadImage (mask_image);
+    UnloadTexture (mask_texture);
 }
 
 Runner::Model::Model () {}
@@ -955,6 +970,19 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {
                 ifs >> m_affine_params.scale_y;
                 std::cout << "Setting Affine Scale Y to " << m_affine_params.scale_y << '\n';
+            }
+        },
+        {
+            "Ratios",
+            [this](std::ifstream &ifs) {
+                // If ratios are defined
+                // they are read in as a list of 10 floats
+                params._PDF.ratios = torch::empty({1, 10});
+                for (int i = 0; i < 10; ++i) {
+                    float x;
+                    ifs >> x;
+                    params._PDF.ratios[0][i] = x;
+                }
             }
         }
     };

@@ -263,6 +263,8 @@ public:
 
     void EnableAntiTheticSampling ();
     void DisableAntiTheticSampling ();
+
+    void SetBackgroundTexture (Texture tex);
 private:
     // Private methods 
     std::pair<torch::Tensor, torch::Tensor> ReadCamera();
@@ -409,6 +411,7 @@ private:
     s5_Utils::Affine m_affine_params;
 
     Texture m_background_texture;
+    bool m_use_background_texture = false;
 };
 
 

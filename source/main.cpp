@@ -38,7 +38,7 @@ int main (int argc, char** argv) {
         int n_data_points = std::stoi(argv[4]);
         r.Inference (config_file, dtype, n_data_points);
     }
-    else if (argc == 5 && std::string(argv[1]) == "-s") {
+    else if (argc == 6 && std::string(argv[1]) == "-s") {
         config_file = argv[2];
         r.m_inference = true;
 
@@ -60,7 +60,8 @@ int main (int argc, char** argv) {
         }
 
         int n_data_points = std::stoi(argv[4]);
-        r.StaticInference (config_file, dtype, n_data_points);
+        std::string mask_file = argv[5];
+        r.StaticInference (config_file, dtype, n_data_points, mask_file);
     }
     else {
         // Invalid arguments
@@ -68,6 +69,9 @@ int main (int argc, char** argv) {
         std::cerr << "\tExample usage: " << argv[0] << " config.txt\n";
         std::cerr << "Usage for inference: " << argv[0] << " -i <checkpoint_config> <dataset> <dataset size>\n";
         std::cerr << "\tExample usage: " << argv[0] << " -i checkpoint_config.txt test 1000\n";
+        std::cerr << "Usage for inference with mask from image file: " << argv[0] << " -s <checkpoint_config> <dataset> <dataset size> <mask file>\n";
+        std::cerr << "\tExample usage: " << argv[0] << " -s checkpoint_config.txt test 1000 mask.png\n";
+        return -1;
     }
 
     return 0;

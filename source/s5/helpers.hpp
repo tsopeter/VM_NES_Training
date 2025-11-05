@@ -59,6 +59,7 @@ struct _pdf {
     std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> loss_fn;
 
     torch::Tensor masks;
+    torch::Tensor ratios;
 
     void clear_data ();
 };

@@ -10,20 +10,32 @@ ValidationBatchSize 1000
 TestSamples 1000
 TestBatchSize 1000
 Samples 10
-Padding 3
-SubShaderThreshold 0.8
+Padding 15
+SubShaderThreshold 0.5
 UpscaleFactor 2
 IterationAmount 4
-RegionFile source/Assets/phy8.npy
+RegionFile source/Assets/phy8_1.npy
 MinLimit 20
 SaveInterval 10000
 CheckpointDirectory 2025_10_30/007
-ExposureTime 300
+ExposureTime 80
 DatasetPath Datasets/
 Epochs 11
 InputFlipUD 0
 InputFlipLR 0
-AffineOffsetX -0.02496718056499958
-AffineOffsetY 0.08325961977243423
-AffineScaleX 0.8579343557357788
-AffineScaleY 1.0418670177459717
+AffineOffsetX 0.00971738900989294
+AffineOffsetY 0.010186241008341312
+AffineScaleX  0.8486856818199158
+AffineScaleY 1.0204341411590576
+
+Ratios 
+1.2125996
+1.2467209
+1.2666377
+1.3567727
+1.5947466
+1.276675
+1.2504095
+1.1569201
+2.0572214
+1.9740692

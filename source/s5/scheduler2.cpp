@@ -1308,8 +1308,18 @@ void Scheduler2::DrawSubTexturesOnly () {
         throw std::runtime_error("ERROR: [Scheduler2::DrawSubTexturesOnly] Affine sub-textures not enabled.");
     }
 
-    // No blend mode
-    BeginShaderMode(sub_shader);
+    // Draw the background texture if enabled
+    if (m_use_background_texture) {
+        DrawTexturePro(
+            m_background_texture,
+            {0, 0, static_cast<float>(m_background_texture.width), static_cast<float>(m_background_texture.height)},
+            {0, 0, static_cast<float>(window.Width), static_cast<float>(window.Height)},
+            {0, 0}, 0.0f, WHITE
+        );
+    }
+
+    BeginBlendMode(BLEND_ADD_COLORS);
+    BeginShaderMode(sub_shader_blend);
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
             s5_Utils::DrawTextureProAffine (
@@ -1321,6 +1331,7 @@ void Scheduler2::DrawSubTexturesOnly () {
         }
     }
     EndShaderMode();
+    EndBlendMode();
 
 
     EndDrawing();
@@ -1346,4 +1357,9 @@ void Scheduler2::DisableAffineSubTextures () {
 
 void Scheduler2::SetAffineParams (s5_Utils::Affine params) {
     m_affine_params = params;
+}
+
+void Scheduler2::SetBackgroundTexture (Texture tex) {
+    m_background_texture = tex;
+    m_use_background_texture = true;
 }
