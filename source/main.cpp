@@ -42,7 +42,7 @@ int main (int argc, char** argv) {
 
         r.Inference (config_file, dtype, n_data_points);
     }
-    else if (argc == 6 && std::string(argv[1]) == "-s") {
+    else if (argc == 7 && std::string(argv[1]) == "-s") {
         config_file = argv[2];
         r.m_inference = true;
 
@@ -63,13 +63,15 @@ int main (int argc, char** argv) {
             throw std::runtime_error("Runner::StaticInference: Unsupported dataset type specified.");
         }
 
-        int n_data_points = std::stoi(argv[4]);
-        std::string mask_file = argv[5];
+        int n_start_index = std::stoi(argv[4]);
+        int n_data_points = std::stoi(argv[5]);
+        std::string mask_file = argv[6];
 
         // Set the inference output file name to include the mask file name
-        r.inference_output_file = "inference_results_" + dataset_str + "_" + mask_file + ".csv";
+        // inference_results_<dataset>_<mask_file>_<start>_<n_data_points>.csv
+        r.inference_output_file = "inference_results_" + dataset_str + "_" + mask_file + "_" + std::to_string(n_start_index) + "_" + std::to_string(n_data_points) + ".csv";
 
-        r.StaticInference (config_file, dtype, n_data_points, mask_file);
+        r.StaticInference (config_file, dtype, n_start_index, n_data_points, mask_file);
     }
     else {
         // Invalid arguments
@@ -77,8 +79,8 @@ int main (int argc, char** argv) {
         std::cerr << "\tExample usage: " << argv[0] << " config.txt\n";
         std::cerr << "Usage for inference: " << argv[0] << " -i <checkpoint_config> <dataset> <dataset size>\n";
         std::cerr << "\tExample usage: " << argv[0] << " -i checkpoint_config.txt test 1000\n";
-        std::cerr << "Usage for inference with mask from image file: " << argv[0] << " -s <checkpoint_config> <dataset> <dataset size> <mask file>\n";
-        std::cerr << "\tExample usage: " << argv[0] << " -s checkpoint_config.txt test 1000 mask.png\n";
+        std::cerr << "Usage for inference with mask from image file: " << argv[0] << " -s <checkpoint_config> <start> <dataset> <dataset size> <mask file>\n";
+        std::cerr << "\tExample usage: " << argv[0] << " -s checkpoint_config.txt test 0 1000 mask.png\n";
         return -1;
     }
 

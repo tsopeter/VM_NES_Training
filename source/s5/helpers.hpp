@@ -82,12 +82,15 @@ struct Parameters {
 
     // Number of samples per image; note that the actual number of samples is n_samples * 20
     int64_t n_samples            = 10;
+    int     n_start_index        = 0;
 
     int64_t n_validation_samples = 1000;
     int64_t n_validation_batch_size = 1000;
+    int     n_validation_start_index = 0;
 
     int64_t n_test_samples = 1000;
     int64_t n_test_batch_size = 1000;
+    int     n_test_start_index = 0;
 
     int64_t n_padding            = 0;
     float   sub_shader_threshold = 0.8;
@@ -136,7 +139,8 @@ std::vector<Batch> Get (
     int n_data_points,
     int batch_size,
     s2_DataTypes dtype=s2_DataTypes::TRAIN,
-    int padding = 0
+    int padding = 0,
+    int start_index = 0
 );
 
 std::vector<Batch> Get_Training (Parameters&);

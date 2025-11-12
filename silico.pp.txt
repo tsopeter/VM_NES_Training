@@ -14,11 +14,11 @@ Padding 15
 SubShaderThreshold 0.5
 UpscaleFactor 2
 IterationAmount 4
-RegionFile source/Assets/phy8_1.npy
+RegionFile source/Assets/phy8_pp.npy
 MinLimit 20
 SaveInterval 10000
 CheckpointDirectory 2025_10_30/007
-ExposureTime 59
+ExposureTime 150
 DatasetPath Datasets/
 Epochs 11
 InputFlipUD 0
@@ -32,12 +32,12 @@ Warp source/Assets/Warp
 
 Ratios 
 1.0
-0.5
 1.0
 1.0
 1.0
-1.5
-0.6
-0.8
-2.0
+1.0
+1.0
+1.0
+1.0
+1.0
 1.0

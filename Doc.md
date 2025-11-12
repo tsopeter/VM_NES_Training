@@ -14,6 +14,11 @@
             - Train Physical (66.30) Simulation (73.80)
             - Valid Physical (58.50) Simulation (66.20)
             - Test  Physical (60.80) Simulation (67.10)
+    - 10000 Train/5000 Valid/5000 Test
+        - (1) (silico.ptq.6.png)
+            - Train Physical (65.77) Simulation (72.95)
+            - Valid Physical (66.64) Simulation (71.78)
+            - Test  Physical (63.38) Simulation (70.36)
         
 
 
@@ -32,6 +37,11 @@
                 - Train Physical (70.20) Simulation (73.60)
                 - Valid Physical (60.40) Simulation (67.10)
                 - Test  Physical (61.60) Simulation (67.10)
+        - 10000 Train/5000 Valid/5000 Test
+            - (1) (silico.ste.6.png)
+                - Train Physical () Simulation ()
+                - Valid Physical () Simulation ()
+                - Test  Physical () Simulation ()
 
 
 - Gradient-Free Training (In-Silico)

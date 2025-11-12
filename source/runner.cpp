@@ -308,7 +308,7 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
     Helpers::Data::Delete(dataset);
 }
 
-void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, int n_data_points, const std::string &mask_file) {
+void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, int n_start_index, int n_data_points, const std::string &mask_file) {
     Pylon::PylonAutoInitTerm init {};
 
     Scheduler2 scheduler;
@@ -367,7 +367,8 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
         n_data_points,
         n_data_points,
         data_type,
-        params.n_padding
+        params.n_padding,
+        n_start_index
     );
 
     Helpers::Run::EvalFunctions eval_fn;

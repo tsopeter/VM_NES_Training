@@ -86,7 +86,8 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get_Training (Parameters &param
         params.n_training_samples,
         params.n_batch_size,
         s2_DataTypes::TRAIN,
-        params.n_padding
+        params.n_padding,
+        params.n_start_index
     );
 }
 
@@ -96,7 +97,8 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get_Validation (Parameters &par
         params.n_validation_samples,
         params.n_validation_batch_size,
         s2_DataTypes::VALID,
-        params.n_padding
+        params.n_padding,
+        params.n_validation_start_index
     );
 }
 
@@ -106,7 +108,8 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get_Test (Parameters &params) {
         params.n_test_samples,
         params.n_test_batch_size,
         s2_DataTypes::TEST,
-        params.n_padding
+        params.n_padding,
+        params.n_test_start_index
     );
 }
 
@@ -115,11 +118,28 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
     int n_data_points,
     int batch_size,
     s2_DataTypes dtype,
-    int padding
+    int padding,
+    int start_index
 ) {
     s2_Dataloader data_loader {params.Training.dataset_path};
-    auto data = data_loader.load(dtype, n_data_points);
+    auto data = data_loader.load(dtype, start_index+n_data_points);
     std::cout << "INFO: [Helpers::Data::Get] Loaded data with " << data.len() << " samples.\n";
+
+    switch (dtype) {
+        case s2_DataTypes::TRAIN:
+            std::cout << "INFO: [Helpers::Data::Get] Data Type: TRAIN\n";
+            break;
+        case s2_DataTypes::VALID:
+            std::cout << "INFO: [Helpers::Data::Get] Data Type: VALID\n";
+            break;
+        case s2_DataTypes::TEST:
+            std::cout << "INFO: [Helpers::Data::Get] Data Type: TEST\n";
+            break;
+    }
+
+    std::cout << "INFO: [Helpers::Data::Get] Number of Data Points: " << n_data_points << "\n";
+    std::cout << "INFO: [Helpers::Data::Get] Batch Size: " << batch_size << "\n";
+    std::cout << "INFO: [Helpers::Data::Get] Start Index: " << start_index << "\n";
 
     std::vector<Helpers::Data::Batch> batches;
     batches.resize(n_data_points / batch_size);
@@ -137,8 +157,15 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
         map_y = np2lt::f32(params.prewarped_directory + "/map_y.npy");
     }
 
-    for (int i = 0; i < n_data_points; i += batch_size) {
+    int start = start_index;
+    int end   = start_index + n_data_points;
+    int index = 0;
+    for (int i = start; i < end; i += batch_size) {
+        std::cout << "Index: " << index << "\n";
         for (int j = 0; j < batch_size; ++j) {
+
+            std::cout << "Loading: " << (i + j) << "\n";
+
             auto [d, l] = data[i + j];
             // Process the data
 
@@ -169,8 +196,8 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
                 SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
                 UnloadImage(di);
 
-                batches[i / batch_size].textures.push_back(ti);
-                batches[i / batch_size].labels.push_back(li);
+                batches[index / batch_size].textures.push_back(ti);
+                batches[index / batch_size].labels.push_back(li);
             }
             else {
                 // Prewarp the image using map_x and map_y
@@ -204,11 +231,14 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
                 SetTextureFilter(ti, TEXTURE_FILTER_POINT);
                 UnloadImage(di);
 
-                batches[i / batch_size].textures.push_back(ti);
-                batches[i / batch_size].labels.push_back(li);
+                std::cout << "INFO: [Helpers::Data::Get] Pushed to: batch " << index / batch_size << '\n';
+
+                batches[index / batch_size].textures.push_back(ti);
+                batches[index / batch_size].labels.push_back(li);
                 
             }
         }
+        index += batch_size;
 
     }
 
