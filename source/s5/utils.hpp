@@ -10,6 +10,7 @@ namespace s5_Utils {
         float scale_y;
         float offset_x;
         float offset_y;
+        float rotation; // in radians
 
         Affine ();
     };

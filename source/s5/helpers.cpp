@@ -2,6 +2,7 @@
 #include "../s4/utils.hpp"
 #include "../device.hpp"
 #include "../utils/utils.hpp"
+#include "../s2/np2lt.hpp"
 #include <fstream>
 #include <filesystem>
 
@@ -123,6 +124,19 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
     std::vector<Helpers::Data::Batch> batches;
     batches.resize(n_data_points / batch_size);
 
+    // If prewarped is set, load prewarped images from directory
+    bool use_prewarped = false;
+    torch::Tensor map_x = torch::Tensor();
+    torch::Tensor map_y = torch::Tensor();
+    if (!params.prewarped_directory.empty()) {
+        std::cout << "INFO: [Helpers::Data::Get] Loading prewarped images from directory: " << params.prewarped_directory << "\n";
+        use_prewarped = true;
+
+
+        map_x = np2lt::f32(params.prewarped_directory + "/map_x.npy");
+        map_y = np2lt::f32(params.prewarped_directory + "/map_y.npy");
+    }
+
     for (int i = 0; i < n_data_points; i += batch_size) {
         for (int j = 0; j < batch_size; ++j) {
             auto [d, l] = data[i + j];
@@ -149,14 +163,51 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
                 d = torch::flipud(d);
             }
 
+            if (!use_prewarped) {
+                Image di = s4_Utils::TensorToImage(d);
+                Texture ti = LoadTextureFromImage(di);
+                SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
+                UnloadImage(di);
 
-            Image di = s4_Utils::TensorToImage(d);
-            Texture ti = LoadTextureFromImage(di);
-            SetTextureFilter(ti, TEXTURE_FILTER_BILINEAR);
-            UnloadImage(di);
+                batches[i / batch_size].textures.push_back(ti);
+                batches[i / batch_size].labels.push_back(li);
+            }
+            else {
+                // Prewarp the image using map_x and map_y
+                // First convert d to float32
+                d = d.to(torch::kFloat32).unsqueeze(0).unsqueeze(0); // [1, 1, H, W]
 
-            batches[i / batch_size].textures.push_back(ti);
-            batches[i / batch_size].labels.push_back(li);
+                // Resize it to 800x1280
+                d = torch::nn::functional::interpolate(
+                    d,
+                    torch::nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({800, 1280})).mode(torch::kBilinear).align_corners(false)
+                );
+
+                // Apply remap
+                d = torch::nn::functional::grid_sample(
+                    d,
+                    torch::stack({map_x, map_y}, -1).unsqueeze(0),
+                    torch::nn::functional::GridSampleFuncOptions().mode(torch::kBilinear).padding_mode(torch::kBorder).align_corners(true)
+                );
+
+                // Convert back to uint8
+                d = torch::clamp(d.squeeze() , 0, 255).to(torch::kUInt8); // [H, W]
+
+                Image di = s4_Utils::TensorToImage(d);
+
+                if ((i + j) == 0) {
+                    ExportImage(di, "prewarped_sample.bmp");
+                    std::cout << "INFO: [Helpers::Data::Get] Saved prewarped sample image to prewarped_sample.bmp\n";
+                }
+
+                Texture ti = LoadTextureFromImage(di);
+                SetTextureFilter(ti, TEXTURE_FILTER_POINT);
+                UnloadImage(di);
+
+                batches[i / batch_size].textures.push_back(ti);
+                batches[i / batch_size].labels.push_back(li);
+                
+            }
         }
 
     }

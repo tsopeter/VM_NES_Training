@@ -1322,12 +1322,23 @@ void Scheduler2::DrawSubTexturesOnly () {
     BeginShaderMode(sub_shader_blend);
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
-            s5_Utils::DrawTextureProAffine (
-                m_sub_textures[i],
-                m_affine_params,
-                window.Width,
-                window.Height
-            );
+            if (!m_prewarped_textures) {
+                s5_Utils::DrawTextureProAffine (
+                    m_sub_textures[i],
+                    m_affine_params,
+                    window.Width,
+                    window.Height
+                );
+            }
+            else {
+                // The textures are pre-warped, so just draw them normally
+                DrawTexturePro(
+                    m_sub_textures[i],
+                    {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
+                    {0, 0, static_cast<float>(window.Width), static_cast<float>(window.Height)},
+                    {0, 0}, 0.0f, WHITE
+                );
+            }
         }
     }
     EndShaderMode();
@@ -1362,4 +1373,12 @@ void Scheduler2::SetAffineParams (s5_Utils::Affine params) {
 void Scheduler2::SetBackgroundTexture (Texture tex) {
     m_background_texture = tex;
     m_use_background_texture = true;
+}
+
+void Scheduler2::EnablePrewarpedTextures () {
+    m_prewarped_textures = true;
+}
+
+void Scheduler2::DisablePrewarpedTextures () {
+    m_prewarped_textures = false;
 }

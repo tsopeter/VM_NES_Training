@@ -83,6 +83,9 @@ bool m_auto = false;
 
 double m_sub_texture_scale_h = 1.0;
 double m_sub_texture_scale_w = 1.0;
+std::string inference_output_file = "inference_results.csv";
+
+bool  disable_affine = false;
 
 void Run (std::string config_file);
 void Inference (std::string config_file, s2_DataTypes data_type, int n_data_points);

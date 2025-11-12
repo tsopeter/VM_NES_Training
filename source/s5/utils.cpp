@@ -12,6 +12,7 @@ void s5_Utils::DrawTextureProAffine (
 
     float scale_x = 1.0f/affine.scale_x;
     float scale_y = 1.0f/affine.scale_y;
+    float degrees = affine.rotation * 180.0f / 3.14159265f; // convert to degrees
 
     float offset_x = -affine.offset_x * window_Width / 2;
     float offset_y = -affine.offset_y * window_Height / 2;
@@ -29,9 +30,9 @@ void s5_Utils::DrawTextureProAffine (
     };
 
     Vector2 origin = {(float)window_Width/2 * scale_x, (float)window_Height/2 * scale_y};
-    DrawTexturePro(texture, src, dst, origin, 0.0f, WHITE);
+    DrawTexturePro(texture, src, dst, origin, degrees, WHITE);
 }
 
 s5_Utils::Affine::Affine () 
-    : scale_x(1.0f), scale_y(1.0f), offset_x(0.0f), offset_y(0.0f) {
+    : scale_x(1.0f), scale_y(1.0f), offset_x(0.0f), offset_y(0.0f), rotation(0.0f) {
 }

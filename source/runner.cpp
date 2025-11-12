@@ -299,7 +299,7 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
     params.n_validation_samples = n_data_points;
 
     // Save the data
-    params.ExportResults("./inference_results.csv", 1);
+    params.ExportResults(inference_output_file, 1);
 
     scheduler.StopThreads();
     scheduler.StopCamera();
@@ -399,6 +399,12 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
     double best_scale_w  = 1.0;
 
     Helpers::Run::Performance best_perf;
+
+    // if disable_affine is true, we disable affine sub-textures
+    if (disable_affine) {
+        scheduler.EnablePrewarpedTextures ();
+    }
+
     scheduler.EnableAffineSubTextures ();
     scheduler.SetAffineParams (m_affine_params);
 
@@ -454,7 +460,7 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
     params.n_validation_samples = n_data_points;
 
     // Save the data
-    params.ExportResults("./inference_results.csv", 1);
+    params.ExportResults(inference_output_file, 1);
 
     scheduler.StopThreads();
     scheduler.StopCamera();
@@ -973,6 +979,13 @@ void Runner::InitConfigKeyMap () {
             }
         },
         {
+            "AffineRotation",
+            [this](std::ifstream &ifs) {
+                ifs >> m_affine_params.rotation;
+                std::cout << "Setting Affine Rotation to " << m_affine_params.rotation << '\n';
+            }
+        },
+        {
             "Ratios",
             [this](std::ifstream &ifs) {
                 // If ratios are defined
@@ -983,6 +996,14 @@ void Runner::InitConfigKeyMap () {
                     ifs >> x;
                     params._PDF.ratios[0][i] = x;
                 }
+            }
+        },
+        {
+            "Warp",
+            [this](std::ifstream &ifs) {
+                ifs >> params.prewarped_directory;
+                disable_affine = true;
+                std::cout << "Setting Prewarped Directory to " << params.prewarped_directory << "...\n";
             }
         }
     };

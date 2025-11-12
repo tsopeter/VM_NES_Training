@@ -2971,3 +2971,1587 @@ Accuracy: 64.08
 Entropy: -inf
 Loss: -104.782
 ----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 334
+Samples Total: 5000
+Samples Correct: 2926
+Accuracy: 58.52
+Entropy: -inf
+Loss: -142.596
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 569
+Accuracy: 56.9
+Entropy: -inf
+Loss: -142.63
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 570
+Accuracy: 57
+Entropy: -inf
+Loss: -144.598
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 583
+Accuracy: 58.3
+Entropy: -inf
+Loss: -145.369
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 592
+Accuracy: 59.2
+Entropy: -inf
+Loss: -140.113
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 593
+Accuracy: 59.3
+Entropy: -inf
+Loss: -136.472
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 592
+Accuracy: 59.2
+Entropy: -inf
+Loss: -135.519
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 598
+Accuracy: 59.8
+Entropy: -inf
+Loss: -132.472
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 607
+Accuracy: 60.7
+Entropy: -inf
+Loss: -129.914
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 334
+Samples Total: 5000
+Samples Correct: 3109
+Accuracy: 62.18
+Entropy: -inf
+Loss: -125.545
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 334
+Samples Total: 5000
+Samples Correct: 3103
+Accuracy: 62.06
+Entropy: -inf
+Loss: -114.75
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 601
+Accuracy: 60.1
+Entropy: -inf
+Loss: -109.11
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 134
+Samples Total: 2000
+Samples Correct: 1210
+Accuracy: 60.5
+Entropy: -inf
+Loss: -112.962
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 607
+Accuracy: 60.7
+Entropy: -inf
+Loss: -83.157
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 598
+Accuracy: 59.8
+Entropy: -inf
+Loss: -82.7447
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 356
+Accuracy: 35.6
+Entropy: -inf
+Loss: -212.321
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 378
+Accuracy: 37.8
+Entropy: -inf
+Loss: -189.098
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 552
+Accuracy: 55.2
+Entropy: -inf
+Loss: -153.822
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 561
+Accuracy: 56.1
+Entropy: -inf
+Loss: -145.631
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 568
+Accuracy: 56.8
+Entropy: -inf
+Loss: -140.518
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 333
+Samples Total: 5000
+Samples Correct: 3008
+Accuracy: 60.16
+Entropy: -inf
+Loss: -135.452
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 332
+Accuracy: 33.2
+Entropy: -inf
+Loss: -163.187
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 620
+Accuracy: 62
+Entropy: -inf
+Loss: -108.259
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 333
+Samples Total: 5000
+Samples Correct: 3024
+Accuracy: 60.48
+Entropy: -inf
+Loss: -109.313
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 535
+Accuracy: 53.5
+Entropy: -inf
+Loss: -161.67
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 111
+Accuracy: 11.1
+Entropy: -inf
+Loss: -402.937
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 115
+Accuracy: 11.5
+Entropy: -inf
+Loss: -401.896
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 94
+Accuracy: 9.4
+Entropy: -inf
+Loss: -558.455
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 398
+Accuracy: 39.8
+Entropy: -inf
+Loss: -199.368
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 399
+Accuracy: 39.9
+Entropy: -inf
+Loss: -200.172
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 526
+Accuracy: 52.6
+Entropy: -inf
+Loss: -156.719
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 397
+Accuracy: 39.7
+Entropy: -inf
+Loss: -199.507
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 514
+Accuracy: 51.4
+Entropy: -inf
+Loss: -170.825
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 520
+Accuracy: 52
+Entropy: -inf
+Loss: -169.465
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 510
+Accuracy: 51
+Entropy: -inf
+Loss: -170.24
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 589
+Accuracy: 58.9
+Entropy: -inf
+Loss: -73.8703
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 333
+Samples Total: 5000
+Samples Correct: 3012
+Accuracy: 60.24
+Entropy: -inf
+Loss: -72.5877
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 549
+Accuracy: 54.9
+Entropy: -inf
+Loss: -68.6273
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 621
+Accuracy: 62.1
+Entropy: -inf
+Loss: -41.5969
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 588
+Accuracy: 58.8
+Entropy: -inf
+Loss: -47.7219
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 610
+Accuracy: 61
+Entropy: -inf
+Loss: -43.2873
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 333
+Samples Total: 5000
+Samples Correct: 2870
+Accuracy: 57.4
+Entropy: -inf
+Loss: -54.2945
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 334
+Samples Total: 5000
+Samples Correct: 2731
+Accuracy: 54.62
+Entropy: -inf
+Loss: -59.4881
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 333
+Samples Total: 5000
+Samples Correct: 2461
+Accuracy: 49.22
+Entropy: -inf
+Loss: -80.6774
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 333
+Samples Total: 5000
+Samples Correct: 1865
+Accuracy: 37.3
+Entropy: -inf
+Loss: -104.835
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 333
+Samples Total: 5000
+Samples Correct: 2373
+Accuracy: 47.46
+Entropy: -inf
+Loss: -72.4616
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 404
+Accuracy: 40.4
+Entropy: -inf
+Loss: -98.7468
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 364
+Accuracy: 36.4
+Entropy: -inf
+Loss: -69.7501
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 567
+Accuracy: 56.7
+Entropy: -inf
+Loss: -73.7631
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 508
+Accuracy: 50.8
+Entropy: -inf
+Loss: -93.131
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 429
+Accuracy: 42.9
+Entropy: -inf
+Loss: -118.574
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 549
+Accuracy: 54.9
+Entropy: -inf
+Loss: -56.9618
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 445
+Accuracy: 44.5
+Entropy: -inf
+Loss: -85.179
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 442
+Accuracy: 44.2
+Entropy: -inf
+Loss: -85.6222
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 441
+Accuracy: 44.1
+Entropy: -inf
+Loss: -85.9958
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 541
+Accuracy: 54.1
+Entropy: -inf
+Loss: -57.573
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 544
+Accuracy: 54.4
+Entropy: -inf
+Loss: -57.3987
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 499
+Accuracy: 49.9
+Entropy: -inf
+Loss: -86.4218
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 433
+Accuracy: 43.3
+Entropy: -inf
+Loss: -89.2771
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 542
+Accuracy: 54.2
+Entropy: -inf
+Loss: -58.1254
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 549
+Accuracy: 54.9
+Entropy: -inf
+Loss: -57.8535
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 485
+Accuracy: 48.5
+Entropy: -inf
+Loss: -61.2729
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 511
+Accuracy: 51.1
+Entropy: -inf
+Loss: -60.7792
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 356
+Accuracy: 35.6
+Entropy: -inf
+Loss: -94.7644
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 512
+Accuracy: 51.2
+Entropy: -inf
+Loss: -61.1707
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 345
+Accuracy: 34.5
+Entropy: -inf
+Loss: -95.9905
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 513
+Accuracy: 51.3
+Entropy: -inf
+Loss: -21.3617
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 520
+Accuracy: 52
+Entropy: -inf
+Loss: -59.5149
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 568
+Accuracy: 56.8
+Entropy: -inf
+Loss: -24.7443
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 515
+Accuracy: 51.5
+Entropy: -inf
+Loss: -59.1183
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 421
+Accuracy: 42.1
+Entropy: -inf
+Loss: -18.1988
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 552
+Accuracy: 55.2
+Entropy: -inf
+Loss: -55.556
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 510
+Accuracy: 51
+Entropy: -inf
+Loss: -25.98
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 566
+Accuracy: 56.6
+Entropy: -inf
+Loss: -51.7585
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 510
+Accuracy: 51
+Entropy: -inf
+Loss: -34.8103
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 513
+Accuracy: 51.3
+Entropy: -inf
+Loss: -34.7189
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 510
+Accuracy: 51
+Entropy: -inf
+Loss: -33.308
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 520
+Accuracy: 52
+Entropy: -inf
+Loss: -30.8603
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 516
+Accuracy: 51.6
+Entropy: -inf
+Loss: -99.5454
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 569
+Accuracy: 56.9
+Entropy: -inf
+Loss: -69.1858
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 533
+Accuracy: 53.3
+Entropy: -inf
+Loss: -71.2168
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 611
+Accuracy: 61.1
+Entropy: -inf
+Loss: -48.2289
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 623
+Accuracy: 62.3
+Entropy: -inf
+Loss: -102.303
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 541
+Accuracy: 54.1
+Entropy: -inf
+Loss: -131.389
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 578
+Accuracy: 57.8
+Entropy: -inf
+Loss: -124.98
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 591
+Accuracy: 59.1
+Entropy: -inf
+Loss: -61.3286
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 610
+Accuracy: 61
+Entropy: -inf
+Loss: -70.2191
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 594
+Accuracy: 59.4
+Entropy: -inf
+Loss: -72.8759
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 648
+Accuracy: 64.8
+Entropy: -inf
+Loss: -59.9714
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 648
+Accuracy: 64.8
+Entropy: -inf
+Loss: -56.3597
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 598
+Accuracy: 59.8
+Entropy: -inf
+Loss: -69.1393
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 593
+Accuracy: 59.3
+Entropy: -inf
+Loss: -72.0962
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 587
+Accuracy: 58.7
+Entropy: -inf
+Loss: -71.8511
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 616
+Accuracy: 61.6
+Entropy: -inf
+Loss: -67.4747
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 702
+Accuracy: 70.2
+Entropy: -inf
+Loss: -48.8135
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 604
+Accuracy: 60.4
+Entropy: -inf
+Loss: -70.4428
+----------------------------------------
+----------------------------------------
+Dataset: VALID
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 585
+Accuracy: 58.5
+Entropy: -inf
+Loss: -69.9981
+----------------------------------------
+----------------------------------------
+Dataset: TRAIN
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 663
+Accuracy: 66.3
+Entropy: -inf
+Loss: -53.7964
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 
+Best Offset H: 0
+Best Offset W: 0
+Best Scale H: 1.000000
+Best Scale W: 1.000000
+
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 608
+Accuracy: 60.8
+Entropy: -inf
+Loss: -69.8069
+----------------------------------------

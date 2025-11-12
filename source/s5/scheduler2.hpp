@@ -111,6 +111,9 @@ public:
     void SetAffineParams (s5_Utils::Affine params);
     void DisableAffineSubTextures ();
 
+    void EnablePrewarpedTextures ();
+    void DisablePrewarpedTextures ();
+
     void StartWindow();
     void StopWindow();
 
@@ -412,6 +415,8 @@ private:
 
     Texture m_background_texture;
     bool m_use_background_texture = false;
+
+    bool m_prewarped_textures = false;
 };
 
 

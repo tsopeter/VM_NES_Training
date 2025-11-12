@@ -99,6 +99,8 @@ struct Parameters {
     bool    flip_input_V         = false;
     bool    flip_input_H         = false;
 
+    std::string prewarped_directory = "";
+
     std::vector<_Result> results = {};
 
     _pdf _PDF;

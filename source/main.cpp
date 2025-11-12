@@ -36,6 +36,10 @@ int main (int argc, char** argv) {
         }
 
         int n_data_points = std::stoi(argv[4]);
+
+        // Set the inference output file name to include the config_file name
+        r.inference_output_file = "inference_results_" + dataset_str + ".csv";
+
         r.Inference (config_file, dtype, n_data_points);
     }
     else if (argc == 6 && std::string(argv[1]) == "-s") {
@@ -61,6 +65,10 @@ int main (int argc, char** argv) {
 
         int n_data_points = std::stoi(argv[4]);
         std::string mask_file = argv[5];
+
+        // Set the inference output file name to include the mask file name
+        r.inference_output_file = "inference_results_" + dataset_str + "_" + mask_file + ".csv";
+
         r.StaticInference (config_file, dtype, n_data_points, mask_file);
     }
     else {

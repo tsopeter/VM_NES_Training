@@ -18,7 +18,7 @@ RegionFile source/Assets/phy8_1.npy
 MinLimit 20
 SaveInterval 10000
 CheckpointDirectory 2025_10_30/007
-ExposureTime 80
+ExposureTime 150
 DatasetPath Datasets/
 Epochs 11
 InputFlipUD 0
@@ -28,14 +28,16 @@ AffineOffsetY 0.010186241008341312
 AffineScaleX  0.8486856818199158
 AffineScaleY 1.0204341411590576
 
+Warp source/Assets/Warp
+
 Ratios 
-1.2125996
-1.2467209
-1.2666377
-1.3567727
-1.5947466
-1.276675
-1.2504095
-1.1569201
-2.0572214
-1.9740692
+1.0
+0.5
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
+1.5
+1.0
