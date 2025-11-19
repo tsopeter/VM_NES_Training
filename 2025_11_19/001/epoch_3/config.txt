@@ -1,3 +1,4 @@
+#_Checkpoint_Config_File
 Height 400
 Width  640
 Distribution normal
@@ -27,3 +28,5 @@ AffineOffsetX -0.02496718056499958
 AffineOffsetY 0.08325961977243423
 AffineScaleX 0.8579343557357788
 AffineScaleY 1.0418670177459717
+CheckpointEpoch 3
+MaskLocation 2025_11_19/001/epoch_3/mask.pt

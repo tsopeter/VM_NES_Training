@@ -19,6 +19,8 @@
             - Train Physical (65.77) Simulation (72.95)
             - Valid Physical (66.64) Simulation (71.78)
             - Test  Physical (63.38) Simulation (70.36)
+        - (2) (silico.ptq.8.png)
+            - 
         
 
 
@@ -69,4 +71,48 @@
             - Train Physical ()
             - Valid Physical ()
             - Test  Physical ()
+
+
+For a single layer diffractive model, there is little to no difference between post-training-quantization (PTQ) and quantization-aware-training (QAT).
+
+## What question are we answering?
+How does the non-uniform quantization on the Phase Light Modulator affect training of machine learning models?
+
+The non-uniform quantization can affect how models train under two different methods: gradient-based methods and gradient-free methods. We show that gradient-based methods under a shallow model are not perceptable to quantization effects, while gradient-free models are affected by it.
+
+
+
+
+
+
+## Quantization Effects caused by Non-Uniform Step Size
+
+Unlike spatial light modulators (SLMs), the DMD-based DLP has non-uniform step size, where phases closer to 2 pi exhibit much larger steps than those closer to 0. We show that the non-uniform step sizes cause little to no error. However, initialization of parameters is important 
+
+We show that a single layer model is not affected by quantization effects, and tha
+
+#### Model Information
+
+The model uses 
+
+
+
+#### Physical Testbed
+
+
+#### Results
+
+
+### Gradient Free Optimization
+
+Gradient-Free Optimization treats the system as a non-differentiable black-box which cannot use backpropagation to update the weights. Most systems use gradient-free methods such as Natural Evolution Strategies to update the weights. These methods require many samples to estimate the gradient. However, most utilize Gaussian Distribution for phase manipulation. For a given varaince, it may under explore large step sizes and under explore small step sizes. 
+
+We show that the distribution itself can affect the rate of convergence of the model, and that Gaussian distributions are not prefered. 
+
+Treating the parameters not as phase components, but probabilities and utilizing Categorical distribution to ensure equal distance between levels produces better performance compared to a Gaussian distribution with fixed standard deviation. 
+
+
+
+
+
 

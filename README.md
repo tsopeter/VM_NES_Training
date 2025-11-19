@@ -46,3 +46,8 @@ Only supports Linux and macOS.
 
     For the default board (Zybo), connection to FPGA can be seen in FPGA-Layout.rtf. Note that a rich text file viewer is necessary
 
+## Debugging
+
+### How do I start the DLP/PLM?
+
+Power up both DLP and PLM together. Connect the DLP to the computer first. Configure the Video Pattern Mode. Then connect the PLM to the computer and configure the video pattern mode. Have both monitors be mirrored. After setting it, you may have noticed that either DLP or PLM have dropped due to mirroring mode. Go back to Video Mode and then back to Video Pattern Mode until Video source is locked. This is applicable for both. Check if PLM is displaying image correctly by displaying a image that is phase encoded 0:19 and intensity encoded 20:23. Try until PLM displays correct image.

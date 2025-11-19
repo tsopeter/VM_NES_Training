@@ -55,6 +55,7 @@ void Runner::Run (std::string config_file) {
 
     auto train_data = Helpers::Data::Get_Training(params);
     auto val_data   = Helpers::Data::Get_Validation(params);
+    auto test_data  = Helpers::Data::Get_Test(params);
 
     Helpers::Run::EvalFunctions eval_fn;
 
@@ -165,6 +166,24 @@ void Runner::Run (std::string config_file) {
         cp.Save(cp_dir);
     }
 
+    // Run final testing after training
+    std::cout << "INFO: [Runner::Run] Running final testing after training...\n";
+
+    auto test_perf = Helpers::Run::Inference(
+        params,
+        scheduler,
+        eval_fn,
+        test_data
+    );
+
+    params.ExportResults(checkpoint_directory + "/test_results.csv", 2);
+
+    test_perf.Save(
+        log_file,
+        epoch,
+        "Final Testing Results\nEpoch " + std::to_string(epoch)
+    );
+
 
 
 
@@ -177,6 +196,7 @@ void Runner::Run (std::string config_file) {
 
     Helpers::Data::Delete(train_data);
     Helpers::Data::Delete(val_data);
+    Helpers::Data::Delete(test_data);
 }
 
 void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_data_points) {

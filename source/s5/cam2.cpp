@@ -388,7 +388,7 @@ void Cam2::EnableZones() {
             Basler_UsbCameraParams::ROIZoneMode_On
         );
 
-        int zone_offset = i * (ZoneSize + GapH);
+        int zone_offset = i * (ZoneSize + GapH) + zone_offset_h_global;
 
         camera.ROIZoneSize.SetValue(ZoneSize);
         camera.ROIZoneOffset.SetValue(zone_offset);

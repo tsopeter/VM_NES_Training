@@ -1,7 +1,8 @@
+#_Checkpoint_Config_File
 Height 400
 Width  640
 Distribution normal
-Std 0.4
+Std 0.2
 LearningRate 0.5
 TrainingSamples 1000
 TrainingBatchSize 20
@@ -27,3 +28,5 @@ AffineOffsetX -0.02496718056499958
 AffineOffsetY 0.08325961977243423
 AffineScaleX 0.8579343557357788
 AffineScaleY 1.0418670177459717
+CheckpointEpoch 1
+MaskLocation 2025_11_19/001/epoch_1/mask.pt

@@ -1,0 +1,23 @@
+Dataset parameters:
+	Data Padding Amount: 3
+	Sub Shader Threshold: 0.8
+	Training Dataset:
+		Training Size: 1000
+		Training Batch Size: 20
+	Validation Dataset:
+		Validation Size: 1000
+		Validation Batch Size: 1000
+	Test Dataset:
+		Test Size: 1000
+		Test Batch Size: 1000
+Model Parameters:
+	Model Height: 400
+	Model Width: 640
+	Model Distribution: normal
+		Standard Deviation: 0.4
+	Upscale Factor: 2
+Training Parameters:
+	Learning Rate: 0.5
+	Optimizer: Adam
+	Samples per Image: 200
+	Epochs: 11
