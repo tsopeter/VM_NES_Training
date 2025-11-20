@@ -117,6 +117,17 @@ void Runner::Run (std::string config_file) {
         // Export the results to .csv file within the checkpoint directory
         params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/validation_results.csv", 1);
 
+        // Run inference on training data
+        auto train_infer_perf = Helpers::Run::Inference(
+            params,
+            scheduler,
+            eval_fn,
+            train_data
+        );
+
+        // Export the results to .csv file within the checkpoint directory
+        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 0);
+
         // Clear the params results for the next evaluation
         //params.results.clear();
 
@@ -155,6 +166,15 @@ void Runner::Run (std::string config_file) {
             log_file,
             epoch,
             val_perf_message
+        );
+
+        // Save the train inference performance
+        std::string train_infer_perf_message = "Training Inference\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
+        train_infer_perf_message += (revert ? "\nModel parameters reverted due to increased training loss." : "");
+        train_infer_perf.Save(
+            log_file,
+            epoch,
+            train_infer_perf_message
         );
 
         // Save checkpoint
