@@ -1,8 +1,8 @@
 Height 400
 Width  640
 Distribution normal
-Std 0.4
-LearningRate 0.5
+Std 0.1
+LearningRate 0.2
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -17,7 +17,7 @@ IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 20
 SaveInterval 10000
-CheckpointDirectory 2025_11_19/001
+CheckpointDirectory 2025_11_19/004
 ExposureTime 300
 DatasetPath Datasets/
 Epochs 11

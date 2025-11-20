@@ -2,7 +2,7 @@
 Height 400
 Width  640
 Distribution normal
-Std 0.2
+Std 0.4
 LearningRate 0.5
 TrainingSamples 1000
 TrainingBatchSize 20
