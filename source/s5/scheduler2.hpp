@@ -100,7 +100,8 @@ public:
 
     void SetupPEncoder (
         int pencoder_Height=1600,
-        int pencoder_Width=2560
+        int pencoder_Width=2560,
+        int num_levels=16
     );
 
     void EnableBlendMode ();
@@ -245,6 +246,7 @@ public:
         /* PEncoder properties */
         int pencoder_Height=0,
         int pencoder_Width=0,
+        int num_levels=16,
 
         /* Optimizer */
         s4_Optimizer *opt=nullptr,
@@ -268,6 +270,7 @@ public:
     void DisableAntiTheticSampling ();
 
     void SetBackgroundTexture (Texture tex);
+
 private:
     // Private methods 
     std::pair<torch::Tensor, torch::Tensor> ReadCamera();

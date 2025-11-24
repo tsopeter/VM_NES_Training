@@ -54,6 +54,8 @@ public:
     std::vector<torch::Tensor> parameters ();
     torch::Tensor &get_parameters ();
     int64_t N_samples () const override;
+    void set_definition (Distributions::Definition* def) override;
+    Distributions::Definition* get_definition () override;
 
 
 

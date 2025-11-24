@@ -57,9 +57,15 @@ struct _pdf {
     int64_t accuracy_interval = 20;
 
     std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> loss_fn;
+    std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> per_pixel_loss_fn;
 
     torch::Tensor masks;
     torch::Tensor ratios;
+
+    int loss_fn_mode = 0;
+    // 0: Cross Entropy Loss
+    // 1: MSE Loss
+    // 2: Per Pixel Loss
 
     void clear_data ();
 };
@@ -81,8 +87,16 @@ struct Parameters {
    int64_t n_batch_size         = 20;
 
     // Number of samples per image; note that the actual number of samples is n_samples * 20
-    int64_t n_samples            = 10;
-    int     n_start_index        = 0;
+    int64_t n_samples             = 10;
+    int     n_start_index         = 0;
+    int     n_samples_update_rate = -1; // if -1, no update, per epoch
+    int     n_samples_update_amount = 0; // Amount to update samples by, cumulative
+    int     epoch_counter         = 0; // Epoch counter
+
+    // Number of samples are updated using
+    // if epoch_counter != 0 and epoch_counter % n_samples_update_rate == 0
+    // then n_samples += n_samples_update_amount
+    // update scheduler...
 
     int64_t n_validation_samples = 1000;
     int64_t n_validation_batch_size = 1000;
@@ -102,6 +116,9 @@ struct Parameters {
     bool    flip_input_V         = false;
     bool    flip_input_H         = false;
 
+    int     num_levels           = 16;
+    // available levels: 2, 4, 8, 16
+
     std::string prewarped_directory = "";
 
     std::vector<_Result> results = {};
@@ -113,8 +130,8 @@ struct Parameters {
     _Training Training;
     _Camera Camera;
 
-    void ExportResults (const std::string &filename, int mode=0);
-    std::vector<_Result> GetResults (int mode=0);
+    void ExportResults (const std::string &filename, int mode=0, int dataset_size=0, int batch_size=0);
+    std::vector<_Result> GetResults (int mode=0, int dataset_size=0, int batch_size=0);
 };
 
 /**

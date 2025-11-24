@@ -16,6 +16,7 @@ Helpers::Parameters::Parameters () {
         std::cout << "DEBUG: [process_fn] Received image tensor of shape: " << img.sizes() << "\n";
         std::cout << "DEBUG: [process_fn] Mask is of shape: " << _PDF.masks.sizes() << "\n";
 
+        // Preprocess the image
         img      = torch::clamp(img, 0, 255).to(torch::kFloat32);
         img      = torch::where(img < _PDF.min_limit, torch::zeros_like(img), img).to(torch::kFloat64);
 
@@ -25,6 +26,8 @@ Helpers::Parameters::Parameters () {
         auto q    = img.unsqueeze(0).unsqueeze(0); // [1, 1, H, W]
         auto sums = (q.unsqueeze(1) * _PDF.masks.to(img.device())).sum({2,3,4}); // [1, 10]
         sums = sums * _PDF.ratios.to(sums.device());
+        auto preds = sums.argmax(1); // [1]
+        auto targets = l.to(torch::kLong).to(sums.device()); // [1]
 
         if (_PDF.process_count % _PDF.save_iter == 0) {
             std::cout << "INFO: [process_fn] Processed " << _PDF.process_count << " samples so far.\n";
@@ -36,8 +39,6 @@ Helpers::Parameters::Parameters () {
             UnloadImage(Img);
         } 
 
-        auto preds = sums.argmax(1); // [1]
-
         if (_PDF.process_count % _PDF.accuracy_interval == 0) {
             if (preds.item<int>() == ts.label) {
                 _PDF.correct.fetch_add(1, std::memory_order_release);
@@ -48,10 +49,22 @@ Helpers::Parameters::Parameters () {
             _PDF.label_freq[preds.item<int>()]++;
         }
 
-        auto targets = l.to(torch::kLong).to(sums.device()); // [1]
-
-
-        auto loss = _PDF.loss_fn(sums, targets);  // [1]
+        torch::Tensor loss;
+        switch (_PDF.loss_fn_mode) {
+            case 0: // Cross Entropy Loss
+            case 1: // MSE Loss
+                {
+                    loss = _PDF.loss_fn(sums, targets);
+                    break;
+                }
+            case 2: // Per Pixel Loss
+                {
+                    loss = _PDF.per_pixel_loss_fn(img, targets);
+                    break;
+                }
+            default:
+                throw std::runtime_error("process_fn: Unsupported loss function mode.");
+        }
 
         // Save to results
         Helpers::_Result result;
@@ -281,6 +294,7 @@ void Helpers::Run::Setup_Scheduler (
 
         2 * Height * params.upscale_amount,   /* PEncoder Height */
         2 * Width  * params.upscale_amount,   /* PEncoder Width */
+        params.num_levels,
 
         &opt,       /* Optimizer */
 
@@ -401,6 +415,13 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
 
     Helpers::Run::Performance perf;
 
+    //
+    if (params.n_samples_update_rate != -1) {
+        if (params.epoch_counter != 0 && params.epoch_counter % params.n_samples_update_rate == 0) {
+            params.n_samples += params.n_samples_update_amount;
+        }
+    }
+
     for (auto &batch : batches) {
         auto pp = Evaluate(params, scheduler, eval_fn, batch);
         perf.samples_total   += pp.samples_total;
@@ -408,6 +429,9 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
         perf.entropy        += pp.entropy;;
         perf.loss           += pp.loss;
     }
+
+    // Update parameters
+    params.epoch_counter++;
 
     int64_t end_time   = Utils::GetCurrentTime_s();
     int64_t delta = end_time - start_time;
@@ -519,28 +543,27 @@ Helpers::_pdf::_pdf () {
     masks = np2lt::f32("source/Assets/regions2.npy");
     ratios = torch::ones({1, 10});
 
-    loss_fn = [](torch::Tensor &preds, torch::Tensor &targets) -> torch::Tensor {
+    loss_fn = [this](torch::Tensor &preds, torch::Tensor &targets) -> torch::Tensor {
         
-        return -torch::nn::functional::cross_entropy(
-            preds,
-            targets,
-            torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
-        );
+        // Cross Entropy Loss
+        if (this->loss_fn_mode == 0) {
+            return -torch::nn::functional::cross_entropy(
+                preds,
+                targets,
+                torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+            );
+        }
         
-
         // targets [1]
         // preds [1, 10]
-
-        // Use MSE loss
-        // note that each pred is summed over a 50x50 region
-        // so we need to divide by (50*50) to get the average
-        /*
-        preds = preds / (50.0 * 50.0);
 
         auto target_one_hot = torch::nn::functional::one_hot(
             targets,
             preds.size(1)
         ).to(torch::kFloat32); // [1, 10]
+
+        // Multiply by the area of each region
+        target_one_hot = target_one_hot * this->masks.sum({2,3,4}).to(target_one_hot.device()) ; // [1, 10]
 
         // MSE Loss
         auto loss = torch::nn::functional::mse_loss(
@@ -551,7 +574,32 @@ Helpers::_pdf::_pdf () {
 
         // Return negative sum
         return -loss.sum(); // [1]
-        */
+    };
+
+    per_pixel_loss_fn = [this](torch::Tensor &img, torch::Tensor &targets) -> torch::Tensor {
+        // img: [H, W], scaled to [0, 1]
+
+        // Masks are shape [N, 1, H, W]
+
+        // We shape the image to [1, 1, H, W]
+        // we take the per-pixel MSE loss between the image and each mask
+        auto img_expanded = img.unsqueeze(0).unsqueeze(0).to(torch::kFloat32); // [1, 1, H, W]
+
+        // We select the mask corresponding to the target label
+        // targets: [1]
+        auto target_mask = this->masks.index_select(
+            0,
+            targets
+        ); // [1, 1, H, W]
+
+        // Difference
+        auto diff = img_expanded - target_mask.to(img_expanded.device()); // [1, 1, H, W]
+
+        // Squared difference
+        auto sq_diff = diff * diff; // [1, 1, H, W]
+        auto loss = -sq_diff.mean();
+
+        return loss;
     };
 
 }
@@ -642,7 +690,7 @@ Helpers::_Result::_Result () {
     reward = 0.0;
 }
 
-void Helpers::Parameters::ExportResults (const std::string &filename, int mode) {
+void Helpers::Parameters::ExportResults (const std::string &filename, int mode, int p_dataset_size, int p_batch_size) {
     // Export as a CSV file
     std::ofstream ofs(filename);
 
@@ -651,7 +699,7 @@ void Helpers::Parameters::ExportResults (const std::string &filename, int mode) 
 
     ofs << "Index,Label,Prediction,Reward,Correct\n";
 
-    auto _results = GetResults(mode);
+    auto _results = GetResults(mode, p_dataset_size, p_batch_size);
 
     for (const auto &res : _results) {
         ofs << res.index << ','
@@ -666,7 +714,7 @@ void Helpers::Parameters::ExportResults (const std::string &filename, int mode) 
     
 }
 
-std::vector<Helpers::_Result> Helpers::Parameters::GetResults (int mode) {
+std::vector<Helpers::_Result> Helpers::Parameters::GetResults (int mode, int p_dataset_size, int p_batch_size) {
     std::vector<Helpers::_Result> output_results;
 
     int dataset_size = 0;
@@ -683,6 +731,10 @@ std::vector<Helpers::_Result> Helpers::Parameters::GetResults (int mode) {
         case 2:
             dataset_size = n_test_samples;
             batch_size = n_test_batch_size;
+            break;
+        case 3:
+            dataset_size = p_dataset_size;
+            batch_size = p_batch_size;
             break;
         default:
             throw std::runtime_error("Runner::GetResults: Unsupported mode for getting results.");

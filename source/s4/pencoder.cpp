@@ -62,10 +62,12 @@ constexpr uint8_t logical_masks[16][2][2] = {
     {{0, 1}, {0, 1}}   //15
 };
 
-PEncoder::PEncoder () :
+PEncoder::PEncoder (int num_levels) :
 m_x(-1), m_y(-1), m_h(-1), m_w(-1),
 m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
+    m_num_levels = num_levels;
+    q.set_levels(m_num_levels);
     /* Loads mask and stores it to reduce memory calls */
     masks = torch::from_blob(
         (void*)logical_masks,
@@ -80,12 +82,14 @@ m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(fa
     ).clone().to(DEVICE);
 }
 
-PEncoder::PEncoder (int x, int y, int h, int w) :
+PEncoder::PEncoder (int x, int y, int h, int w, int num_levels) :
 m_x(x), m_y(y), m_h(h), m_w(w),
 m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
     assert (m_h % 2 == 0);
     assert (m_w % 2 == 0);
+    m_num_levels = num_levels;
+    q.set_levels(m_num_levels);
 
     /* Loads mask and stores it to reduce memory calls */
     masks = torch::from_blob(
@@ -500,9 +504,60 @@ void PEncoder::init_pbo () {
 }
 #endif
 
-torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &x) {
+torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &q) {
     // x is [N, H, W] with values in [0, 15]
     // This means, unlike MEncode_u8Tensor*, we do not need to quantize x first
+
+    // copy to x
+    torch::Tensor x = q.clone();
+
+    // Based on m_levels, we apply mapping from 0-15 to some new indexes
+    switch (m_num_levels) {
+        case 2:
+            // [0 -> 7] -> [0]
+            // [7 -> 15] -> [8]
+            x = torch::where(x < 8, torch::zeros_like(x), torch::full_like(x, 8));
+            break;
+        case 4:
+            // [0 -> 3] -> [0]
+            // [4 -> 7] -> [4]
+            // [8 -> 11] -> [8]
+            // [12 -> 15] -> [12]
+            x = torch::where(x < 4, torch::zeros_like(x),
+                    torch::where(x < 8, torch::full_like(x, 4),
+                        torch::where(x < 12, torch::full_like(x, 8), torch::full_like(x, 12))
+                    )
+                );
+            break;
+        case 8:
+            // [0 -> 1] -> [0]
+            // [2 -> 3] -> [2]
+            // [4 -> 5] -> [4]
+            // [6 -> 7] -> [6]
+            // [8 -> 9] -> [8]
+            // [10 -> 11] -> [10]
+            // [12 -> 13] -> [12]
+            // [14 -> 15] -> [14]
+            x = torch::where(x < 2, torch::zeros_like(x),
+                    torch::where(x < 4, torch::full_like(x, 2),
+                        torch::where(x < 6, torch::full_like(x, 4),
+                            torch::where(x < 8, torch::full_like(x, 6),
+                                torch::where(x < 10, torch::full_like(x, 8),
+                                    torch::where(x < 12, torch::full_like(x, 10),
+                                        torch::where(x < 14, torch::full_like(x, 12), torch::full_like(x, 14))
+                                    )
+                                )
+                            )
+                        )
+                    )
+            );
+            break;
+        case 16:
+            // no mapping needed
+            break;
+        default:
+            throw std::runtime_error("PEncoder::MEncode_u8Tensor_Categorical: Unsupported m_num_levels: " + std::to_string(m_num_levels) + "\n");
+    }
 
     int64_t N = x.size(0);
     int64_t input_h = x.size(1);

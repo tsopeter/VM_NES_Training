@@ -35,8 +35,8 @@ public:
      *        If you need to simply generate a Image from Tensor, use s4_Utils::TensorToImage.
      * 
      */
-    PEncoder ();
-    PEncoder (int x, int y, int h, int w);
+    PEncoder (int num_levels=16);
+    PEncoder (int x, int y, int h, int w, int num_levels=16);
     ~PEncoder();
 
     /* Default methods for encoding torchTensors to other types */
@@ -165,6 +165,8 @@ private:
     GLuint m_pbo;
     cudaGraphicsResource* m_cuda_pbo_resource;
     bool m_texture_initialized;
+
+    int m_num_levels;
 
 };
 

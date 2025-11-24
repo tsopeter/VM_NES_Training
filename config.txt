@@ -1,8 +1,8 @@
 Height 400
 Width  640
-Distribution normal
+Distribution categorical
 Std 0.4
-LearningRate 0.05
+LearningRate 0.5
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -12,12 +12,12 @@ TestBatchSize 1000
 Samples 10
 Padding 3
 SubShaderThreshold 0.8
-UpscaleFactor 2
+UpscaleFactor 4
 IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 20
 SaveInterval 10000
-CheckpointDirectory 2025_11_19/009
+CheckpointDirectory 2025_11_24/002
 ExposureTime 300
 DatasetPath Datasets/
 Epochs 11
@@ -27,3 +27,5 @@ AffineOffsetX -0.02496718056499958
 AffineOffsetY 0.08325961977243423
 AffineScaleX 0.8579343557357788
 AffineScaleY 1.0418670177459717
+SchedSampleRate -1
+SchedUpdateAmount 0

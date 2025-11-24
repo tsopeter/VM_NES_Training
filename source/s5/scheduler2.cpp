@@ -81,9 +81,10 @@ void Scheduler2::SetupCamera(
 
 void Scheduler2::SetupPEncoder(
     int pencoder_Height,
-    int pencoder_Width
+    int pencoder_Width,
+    int num_levels
 ) {
-    pen = new PEncoder(0, 0, pencoder_Height, pencoder_Width);
+    pen = new PEncoder(0, 0, pencoder_Height, pencoder_Width, num_levels);
     pen->init_pbo();
     std::cout << "INFO: [Scheduler2::SetupPEncoder] PEncoder created on heap.\n";
 }
@@ -769,6 +770,7 @@ void Scheduler2::Start (
         /* PEncoder properties */
         int pencoder_Height,
         int pencoder_Width,
+        int num_levels,
 
         /* Optimizer */
         s4_Optimizer *opt,
@@ -808,7 +810,8 @@ void Scheduler2::Start (
     StartCameraThread();
     SetupPEncoder(
         pencoder_Height,
-        pencoder_Width
+        pencoder_Width,
+        num_levels
     );
     SetOptimizer(opt);
     SetupVSYNCTimer();

@@ -16,6 +16,7 @@ public:
     virtual std::string get_name() const = 0;
     virtual torch::Tensor entropy() = 0;
     virtual torch::Tensor entropy_no_grad() = 0;
+    virtual torch::Tensor probs() = 0;
 };
 
 class Normal : public Definition {
@@ -28,10 +29,26 @@ public:
     std::string get_name() const override;
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
-
+    torch::Tensor probs() override;
 private:
     torch::Tensor m_mu;
     double m_std;
+};
+
+class xNES_Normal : public Definition {
+public:
+    xNES_Normal (torch::Tensor &mu, torch::Tensor &cov);
+    ~xNES_Normal ();
+    torch::Tensor sample (int n) override;
+    torch::Tensor base(int n) override;
+    torch::Tensor log_prob(torch::Tensor &t) override;
+    std::string get_name() const override;
+    torch::Tensor entropy() override;
+    torch::Tensor entropy_no_grad() override;
+    torch::Tensor probs() override;
+private:
+    torch::Tensor m_mu;
+    torch::Tensor m_cov;
 };
 
 class Categorical : public Definition {
@@ -44,7 +61,7 @@ public:
     std::string get_name() const override;
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
-
+    torch::Tensor probs() override;
 private:
     torch::Tensor m_logits;
 
@@ -62,7 +79,7 @@ public:
     std::string get_name() const override;
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
-
+    torch::Tensor probs() override;
 private:
     torch::Tensor m_logits;
 
@@ -80,6 +97,7 @@ public:
     std::string get_name() const override;
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
+    torch::Tensor probs() override;
 private:
     Categorical *dist = nullptr;
 };

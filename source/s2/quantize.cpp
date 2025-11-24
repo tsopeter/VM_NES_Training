@@ -3,7 +3,11 @@
 
 #include "../utils/utils.hpp"
 
-Quantize::Quantize () {}
+Quantize::Quantize (int p_num_levels) {
+    m_num_levels = p_num_levels;
+    set_levels(p_num_levels);
+    
+}
 Quantize::~Quantize () {}
 
 torch::Tensor Quantize::operator()(torch::Tensor &x, bool arg) {
@@ -88,4 +92,44 @@ torch::Tensor Quantize::CPUOperator(const torch::Tensor &x) {
     }
 
     return indices.view_as(x);
+}
+
+void Quantize::set_levels(int num_levels) {
+    // Based on m_num_levels, we modify table parameters to simulate different levels
+    // We still have *16* inputs, but several map to the same level
+    switch (num_levels) {
+        case 2:
+            m_table = torch::tensor({
+                0.0000, 0.0000, 0.0000, 0.0000,
+                0.0000, 0.0000, 0.0000, 0.0000,
+                0.4916, 0.4916, 0.4916, 0.4916,
+                0.4916, 0.4916, 0.4916, 0.4916
+            }, torch::TensorOptions().dtype(torch::kFloat32));
+            break;
+        case 4:
+            m_table = torch::tensor({
+                0.0000, 0.0000, 0.0000, 0.0000,
+                0.3426, 0.3426, 0.3426, 0.3426,
+                0.4916, 0.4916, 0.4916, 0.4916,
+                0.7970, 0.7970, 0.7970, 0.7970
+            }, torch::TensorOptions().dtype(torch::kFloat32));
+            break;
+        case 8:
+            m_table = torch::tensor({
+                0.0000, 0.0000, 0.0205, 0.0205,
+                0.0560, 0.0560, 0.1131, 0.1131,
+                0.3426, 0.3426, 0.4228, 0.4228,
+                0.5994, 0.5994, 0.7970, 0.7970
+            }, torch::TensorOptions().dtype(torch::kFloat32));
+            break;
+        case 16:
+            // Default table
+            // do nothing
+            break;
+        default:
+            throw std::runtime_error("Quantize: Unsupported number of levels.");
+    };
+
+    // Set m_levels
+    m_levels = m_table.view({1, -1});
 }

@@ -13,12 +13,16 @@ public:
     void step (torch::Tensor &rewards);
     void step_a (torch::Tensor &rewards);
     void step_ppo (torch::Tensor &rewards);
+    void step_fisher (torch::Tensor &rewards);
 
     double epsilon = 0.1;
 private:
     torch::optim::Optimizer &m_opt;
     s4_Model& m_model;
     torch::Tensor m_old_logp;
+
+    torch::Tensor utilities (torch::Tensor &rewards);
+    torch::Tensor norm_reward (torch::Tensor &rewards);
 };
 
 #endif

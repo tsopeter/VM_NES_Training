@@ -37,8 +37,10 @@ public:
      *      auto q = Quantize();
      *      auto y = q(x);
      */
-    Quantize();
+    Quantize(int num_levels=16);
     ~Quantize();
+
+    void set_levels(int num_levels);
 
     /**
      * @brief Returns quantized value (index if arg is true).
@@ -80,4 +82,5 @@ private:
         0.0000
     }, torch::TensorOptions().dtype(torch::kFloat32));
 
+    int m_num_levels;
 };

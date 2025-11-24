@@ -62,6 +62,12 @@ torch::Tensor Distributions::Normal::entropy_no_grad() {
     return entropy(); // note that entropy has no grad anyway since it only is determed by std
 }
 
+torch::Tensor Distributions::Normal::probs() {
+    // Return the probabilities (PDF values) at m_mu
+    auto coeff = 1.0 / (m_std * std::sqrt(2 * M_PI));
+    return torch::full_like(m_mu, coeff);
+}
+
 Distributions::Categorical::Categorical (torch::Tensor &logits) {
     m_logits = logits;
 }
@@ -175,6 +181,13 @@ torch::Tensor Distributions::Categorical::logits_to_probs (torch::Tensor &t) {
     return torch::nn::functional::softmax(t, -1);
 }
 
+torch::Tensor Distributions::Categorical::probs() {
+    auto detached_logits = m_logits.detach();
+    // Convert logits to normalized log-probabilities
+    auto logits = detached_logits - detached_logits.logsumexp(-1, true);
+    return logits_to_probs(logits);
+}
+
 Distributions::Bernoulli::Bernoulli (torch::Tensor &logits) {
     m_logits = logits;
 }
@@ -266,6 +279,10 @@ torch::Tensor Distributions::Bernoulli::entropy_no_grad() {
     return loss;
 }
 
+torch::Tensor Distributions::Bernoulli::probs() {
+    return torch::sigmoid(m_logits);
+}
+
 Distributions::Binary::Binary (torch::Tensor &logits) {
     // Ensure that logits are only two classes (i.e., last dimension is 2)
     if (logits.size(-1) != 2) {
@@ -301,3 +318,70 @@ torch::Tensor Distributions::Binary::entropy() {
 torch::Tensor Distributions::Binary::entropy_no_grad() {
     return dist->entropy_no_grad();
 }
+
+torch::Tensor Distributions::Binary::probs() {
+    return dist->probs();
+}
+
+xNES_Normal::xNES_Normal (torch::Tensor &mu, torch::Tensor &cov) {
+    m_mu  = mu;
+    m_cov = cov;
+}
+
+xNES_Normal::~xNES_Normal () {
+
+}
+
+torch::Tensor xNES_Normal::sample (int n) {
+    torch::NoGradGuard no_grad;
+    std::cout << "INFO: [Distributions::xNES_Normal::sample] Sampling " << n << " samples from xNES Normal distribution with mean shape " << m_mu.sizes() << " and cov shape " << m_cov.sizes() << ".\n";
+    
+    // Broadcast m_mu to match the sample shape
+    auto mu_shape = m_mu.sizes();
+    auto sample_shape = torch::IntArrayRef({n}).vec();
+    sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
+    torch::Tensor eps = torch::randn(sample_shape, m_mu.options());
+    return (m_mu.unsqueeze(0).expand_as(eps) + torch::matmul(eps, m_cov.unsqueeze(0).expand({n, -1, -1}))).contiguous();
+}
+
+torch::Tensor xNES_Normal::base(int n) {
+    torch::NoGradGuard no_grad;
+    
+    // Broadcast m_mu to match the sample shape
+    auto mu_shape = m_mu.sizes();
+    auto sample_shape = torch::IntArrayRef({n}).vec();
+    sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
+    return m_mu.unsqueeze(0).expand(sample_shape).contiguous();
+}
+
+torch::Tensor xNES_Normal::log_prob(torch::Tensor &t) {
+    // Compute log probability of t under Normal(m_mu, m_cov)
+    // Not implemented yet
+    throw std::runtime_error("Distributions::xNES_Normal::log_prob not implemented yet.");
+}
+
+torch::Tensor xNES_Normal::entropy() {
+    // Entropy of multivariate normal: 0.5 * log((2 * pi * e)^k * |cov|)
+
+    auto k = m_mu.numel();
+    auto cov_det = torch::determinant(m_cov);
+    auto entropy = 0.5 * std::log(std::pow(2 * M_PI * M_E, k) * cov_det.item<double>());
+    return torch::tensor(entropy, m_mu.options());
+}
+
+torch::Tensor xNES_Normal::entropy_no_grad() {
+    torch::NoGradGuard no_grad;
+    return entropy(); // note that entropy has no grad anyway since it only is determed by cov
+}
+
+torch::Tensor xNES_Normal::probs() {
+    // Return the probabilities (PDF values) at m_mu
+    // Not implemented yet
+    throw std::runtime_error("Distributions::xNES_Normal::probs not implemented yet.");
+}
+
+std::string xNES_Normal::get_name() const {
+    return "xnes_normal";
+}
+
+

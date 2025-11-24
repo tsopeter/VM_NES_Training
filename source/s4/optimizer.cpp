@@ -76,14 +76,19 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
         throw std::runtime_error("Mismatch in reward size: got " + std::to_string(rewards.size(0)) +
                                  ", expected " + std::to_string(m_model.N_samples()));
     }
+    std::cout << "INFO: [s4_Optimizer::step] Rewards device: " << rewards.device() << '\n';
+
+    auto u = utilities(rewards);
+
+    // If xnes_normal, we need to compute gradients differently
+
+    std::cout << "INFO: [s4_Optimizer::step] u device: " << u.device() << '\n';
+
     auto logp        = m_model.logp_action();
-    logp             = torch::sum(logp.view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
+    u                = u.to(logp.device());
+    logp             = torch::sum((logp).view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
 
-    auto sum_rewards = rewards.sum();
-    auto baseline    = (sum_rewards - rewards)/(m_model.N_samples()-1);
-    auto norm_sum    = (rewards - baseline)/rewards.std(true);
-
-    auto loss        = -torch::mean(logp * norm_sum);
+    auto loss        = -torch::mean(logp * u);
 
     m_opt.zero_grad();
     loss.backward();
@@ -93,4 +98,44 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
     // Maybe the optimizer holds onto the computation graph otherwise
     logp.detach();
 
+}
+
+void s4_Optimizer::step_fisher (torch::Tensor &rewards) {
+    if (rewards.size(0) != m_model.N_samples()) {
+        throw std::runtime_error("Mismatch in reward size: got " + std::to_string(rewards.size(0)) +
+                                 ", expected " + std::to_string(m_model.N_samples()));
+    }
+    torch::NoGradGuard no_grad;
+
+    // Compute by updating the model parameters directly.
+    // Currently, only implemented for Categorical actions.
+
+    
+
+}
+
+torch::Tensor s4_Optimizer::utilities (torch::Tensor &rewards) {
+    std::cout << "INFO: [s4_Optimizer::utilities] Calculating utilities...\n";
+    torch::NoGradGuard no_grad;
+    int64_t N = rewards.size(0);
+    auto order = std::get<1>(rewards.sort(/*dim=*/0, /*descending=*/true));
+    auto ranks = torch::empty_like(order);
+    auto arange = torch::arange(N, rewards.options()).to(torch::kLong);
+    ranks.index_put_({order}, arange);
+
+    auto denom = torch::log(torch::tensor(static_cast<double>(N) / 2.0 + 1.0, rewards.options()));
+    auto util = denom - torch::log(ranks.to(rewards.dtype()) + 1.0);
+    util = torch::clamp(util, /*min=*/0.0);
+
+    util = util / util.sum();
+    util = util - 1.0 / static_cast<double>(N);
+
+    return util;
+}
+
+torch::Tensor s4_Optimizer::norm_reward (torch::Tensor &rewards) {
+    auto mean = rewards.mean();
+    auto std  = rewards.std(true);
+
+    return (rewards - mean) / (std + 1e-10);
 }

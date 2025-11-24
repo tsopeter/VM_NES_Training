@@ -54,6 +54,13 @@ void Runner::Run (std::string config_file) {
     //TestIfScreenIsOkay(params, scheduler); // Wait until screen is okay
 
     auto train_data = Helpers::Data::Get_Training(params);
+    auto train_infer_data = Helpers::Data::Get (
+        params,
+        params.n_training_samples,
+        params.n_training_samples,
+        s2_DataTypes::TRAIN,
+        params.n_padding
+    );
     auto val_data   = Helpers::Data::Get_Validation(params);
     auto test_data  = Helpers::Data::Get_Test(params);
 
@@ -122,11 +129,11 @@ void Runner::Run (std::string config_file) {
             params,
             scheduler,
             eval_fn,
-            train_data
+            train_infer_data
         );
 
         // Export the results to .csv file within the checkpoint directory
-        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 0);
+        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 3, params.n_training_samples, params.n_training_samples);
 
         // Clear the params results for the next evaluation
         //params.results.clear();
@@ -217,6 +224,7 @@ void Runner::Run (std::string config_file) {
     Helpers::Data::Delete(train_data);
     Helpers::Data::Delete(val_data);
     Helpers::Data::Delete(test_data);
+    Helpers::Data::Delete(train_infer_data);
 }
 
 void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_data_points) {
@@ -519,6 +527,17 @@ Runner::Model::~Model () {
     }
 }
 
+void Runner::Model::set_definition (Distributions::Definition* def) {
+    if (m_dist != nullptr) {
+        delete m_dist;
+    }
+    m_dist = def;
+}
+
+Distributions::Definition* Runner::Model::get_definition () {
+    return m_dist;
+}
+
 void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, DistributionType dist_type) {
     m_Height = Height;
     m_Width  = Width;
@@ -677,6 +696,9 @@ void Runner::ExportConfig (const std::string &filename) {
 
     ofs << "\tUpscale Factor: ";
     ofs << params.upscale_amount << '\n';
+    
+    ofs << "\tNumber of Levels: ";
+    ofs << params.num_levels << '\n';
 
     ofs << "Training Parameters:\n";
     ofs << "\tLearning Rate: ";
@@ -688,6 +710,12 @@ void Runner::ExportConfig (const std::string &filename) {
 
     ofs << "\tEpochs: ";
     ofs << n_epochs << '\n';
+
+    ofs << "\tSample Update Rate: ";
+    ofs << params.n_samples_update_rate << '\n';
+
+    ofs << "\tSample Update Amount: ";
+    ofs << params.n_samples_update_amount << '\n';
 
     ofs.close();
 }
@@ -1045,6 +1073,27 @@ void Runner::InitConfigKeyMap () {
                 ifs >> params.prewarped_directory;
                 disable_affine = true;
                 std::cout << "Setting Prewarped Directory to " << params.prewarped_directory << "...\n";
+            }
+        },
+        {
+            "NumLevels",
+            [this](std::ifstream &ifs) {
+                ifs >> params.num_levels;
+                std::cout << "Setting Number of Levels to " << params.num_levels << "...\n";
+            }
+        },
+        {
+            "SchedSampleRate",
+            [this](std::ifstream &ifs) {
+                ifs >> params.n_samples_update_rate;
+                std::cout << "Setting Scheduler Sample Rate to " << params.n_samples_update_rate << "...\n";
+            }
+        },
+        {
+            "SchedUpdateAmount",
+            [this](std::ifstream &ifs) {
+                ifs >> params.n_samples_update_amount;
+                std::cout << "Setting Scheduler Update Amount to " << params.n_samples_update_amount << "...\n";
             }
         }
     };
