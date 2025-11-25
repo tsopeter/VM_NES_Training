@@ -2,9 +2,8 @@
 #include <numeric>
 #include "tutils.hpp"
 
-Distributions::Normal::Normal (torch::Tensor &mu, double std) {
-    m_mu = mu;
-    m_std = std;
+Distributions::Normal::Normal (torch::Tensor &mu, double std) : m_mu(mu), m_std(std) {
+
 }
 
 Distributions::Normal::~Normal () {
@@ -68,8 +67,16 @@ torch::Tensor Distributions::Normal::probs() {
     return torch::full_like(m_mu, coeff);
 }
 
-Distributions::Categorical::Categorical (torch::Tensor &logits) {
-    m_logits = logits;
+torch::Tensor &Distributions::Normal::mu () {
+    return m_mu;
+}
+
+torch::Tensor &Distributions::Normal::std () {
+    throw std::runtime_error("Distributions::Normal::std: Standard deviation is a scalar, not a tensor.");
+}
+
+Distributions::Categorical::Categorical (torch::Tensor &logits) : m_logits(logits) {
+
 }
 
 Distributions::Categorical::~Categorical () {
@@ -188,8 +195,18 @@ torch::Tensor Distributions::Categorical::probs() {
     return logits_to_probs(logits);
 }
 
-Distributions::Bernoulli::Bernoulli (torch::Tensor &logits) {
-    m_logits = logits;
+torch::Tensor &Distributions::Categorical::mu () {
+    // Not well-defined for categorical distributions
+    throw std::runtime_error("Distributions::Categorical::mu: Not defined for categorical distributions.");
+}
+
+torch::Tensor &Distributions::Categorical::std () {
+    // Not well-defined for categorical distributions
+    throw std::runtime_error("Distributions::Categorical::std: Not defined for categorical distributions.");
+}
+
+Distributions::Bernoulli::Bernoulli (torch::Tensor &logits) : m_logits(logits) {
+
 }
 
 Distributions::Bernoulli::~Bernoulli () {
@@ -283,6 +300,14 @@ torch::Tensor Distributions::Bernoulli::probs() {
     return torch::sigmoid(m_logits);
 }
 
+torch::Tensor &Distributions::Bernoulli::mu () {
+    throw std::runtime_error("Distributions::Bernoulli::mu: Not defined for bernoulli distributions.");
+}
+
+torch::Tensor &Distributions::Bernoulli::std () {
+    throw std::runtime_error("Distributions::Bernoulli::std: Not defined for bernoulli distributions.");
+}
+
 Distributions::Binary::Binary (torch::Tensor &logits) {
     // Ensure that logits are only two classes (i.e., last dimension is 2)
     if (logits.size(-1) != 2) {
@@ -323,28 +348,34 @@ torch::Tensor Distributions::Binary::probs() {
     return dist->probs();
 }
 
-xNES_Normal::xNES_Normal (torch::Tensor &mu, torch::Tensor &cov) {
-    m_mu  = mu;
-    m_cov = cov;
+torch::Tensor &Distributions::Binary::mu () {
+    throw std::runtime_error("Distributions::Binary::mu: Not defined for binary distributions.");
 }
 
-xNES_Normal::~xNES_Normal () {
+torch::Tensor &Distributions::Binary::std () {
+    throw std::runtime_error("Distributions::Binary::std: Not defined for binary distributions.");
+}
+
+Distributions::xNES_Normal::xNES_Normal (torch::Tensor &mu, torch::Tensor &std) : m_mu(mu), m_std(std) {
 
 }
 
-torch::Tensor xNES_Normal::sample (int n) {
+Distributions::xNES_Normal::~xNES_Normal () {
+
+}
+
+torch::Tensor Distributions::xNES_Normal::sample (int n) {
     torch::NoGradGuard no_grad;
-    std::cout << "INFO: [Distributions::xNES_Normal::sample] Sampling " << n << " samples from xNES Normal distribution with mean shape " << m_mu.sizes() << " and cov shape " << m_cov.sizes() << ".\n";
-    
+
     // Broadcast m_mu to match the sample shape
     auto mu_shape = m_mu.sizes();
     auto sample_shape = torch::IntArrayRef({n}).vec();
     sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
     torch::Tensor eps = torch::randn(sample_shape, m_mu.options());
-    return (m_mu.unsqueeze(0).expand_as(eps) + torch::matmul(eps, m_cov.unsqueeze(0).expand({n, -1, -1}))).contiguous();
+    return (m_mu.unsqueeze(0).expand_as(eps) + eps * m_std.unsqueeze(0).expand_as(eps)).contiguous();
 }
 
-torch::Tensor xNES_Normal::base(int n) {
+torch::Tensor Distributions::xNES_Normal::base(int n) {
     torch::NoGradGuard no_grad;
     
     // Broadcast m_mu to match the sample shape
@@ -354,34 +385,40 @@ torch::Tensor xNES_Normal::base(int n) {
     return m_mu.unsqueeze(0).expand(sample_shape).contiguous();
 }
 
-torch::Tensor xNES_Normal::log_prob(torch::Tensor &t) {
+torch::Tensor Distributions::xNES_Normal::log_prob(torch::Tensor &t) {
     // Compute log probability of t under Normal(m_mu, m_cov)
     // Not implemented yet
     throw std::runtime_error("Distributions::xNES_Normal::log_prob not implemented yet.");
 }
 
-torch::Tensor xNES_Normal::entropy() {
-    // Entropy of multivariate normal: 0.5 * log((2 * pi * e)^k * |cov|)
-
-    auto k = m_mu.numel();
-    auto cov_det = torch::determinant(m_cov);
-    auto entropy = 0.5 * std::log(std::pow(2 * M_PI * M_E, k) * cov_det.item<double>());
-    return torch::tensor(entropy, m_mu.options());
+torch::Tensor Distributions::xNES_Normal::entropy() {
+    // Compute Entropy
+    // m_std [H, W],
+    // Let it be the average entropy over all dimensions
+    auto var = m_std * m_std;
+    auto ent = 0.5 + 0.5 * torch::log(2 * M_PI * var);
+    return ent.mean();
 }
 
-torch::Tensor xNES_Normal::entropy_no_grad() {
+torch::Tensor Distributions::xNES_Normal::entropy_no_grad() {
     torch::NoGradGuard no_grad;
     return entropy(); // note that entropy has no grad anyway since it only is determed by cov
 }
 
-torch::Tensor xNES_Normal::probs() {
+torch::Tensor Distributions::xNES_Normal::probs() {
     // Return the probabilities (PDF values) at m_mu
     // Not implemented yet
     throw std::runtime_error("Distributions::xNES_Normal::probs not implemented yet.");
 }
 
-std::string xNES_Normal::get_name() const {
+std::string Distributions::xNES_Normal::get_name() const {
     return "xnes_normal";
 }
 
+torch::Tensor &Distributions::xNES_Normal::mu () {
+    return m_mu;
+}
 
+torch::Tensor &Distributions::xNES_Normal::std () {
+    return m_std;
+}

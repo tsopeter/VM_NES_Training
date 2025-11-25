@@ -3,6 +3,7 @@ Width  640
 Distribution categorical
 Std 0.4
 LearningRate 0.5
+xNES_lr 0.5 0.5
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -12,12 +13,12 @@ TestBatchSize 1000
 Samples 10
 Padding 3
 SubShaderThreshold 0.8
-UpscaleFactor 4
+UpscaleFactor 2
 IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 20
 SaveInterval 10000
-CheckpointDirectory 2025_11_24/002
+CheckpointDirectory 2025_11_24/003
 ExposureTime 300
 DatasetPath Datasets/
 Epochs 11

@@ -17,12 +17,15 @@ public:
 enum DistributionType {
         NORMAL,
         CATEGORICAL,
-        BINARY
+        BINARY,
+        XNES_NORMAL
 };
 
 int ModelHeight = 400;
 int ModelWidth  = 640;
 int n_epochs    = 50;
+double xNES_lr_mu = 0.1;
+double xNES_lr_std = 0.1;
 DistributionType ModelDistribution = DistributionType::NORMAL;
 std::string checkpoint_directory = "./checkpoints/";
 Helpers::Parameters params;
@@ -51,6 +54,7 @@ public:
     torch::Tensor sample (int n);
     void squash ();
     torch::Tensor logp_action () override;
+    torch::Tensor action () override;
     std::vector<torch::Tensor> parameters ();
     torch::Tensor &get_parameters ();
     int64_t N_samples () const override;
@@ -61,6 +65,7 @@ public:
 
     Distributions::Definition *m_dist = nullptr;
     torch::Tensor m_parameter;
+    torch::Tensor m_std;
     torch::Tensor m_action;
     std::vector<torch::Tensor> m_action_s;
     int64_t m_Height;

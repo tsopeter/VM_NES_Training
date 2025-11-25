@@ -289,8 +289,13 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
     eval_fn.sample = [&model](int i) -> torch::Tensor {
         return model.sample(i);
     };
-    eval_fn.base = [&model](int i) -> torch::Tensor {
-        return model.m_dist->base(i);
+    eval_fn.base = [&model, &optimizer](int i) -> torch::Tensor {
+        auto action = optimizer.best_mask; // [H, W]
+        
+        // Extend to [N, H, W]
+        action = action.unsqueeze(0).expand({i, -1, -1}).contiguous();
+        return action;
+
     };
     eval_fn.squash = [&model]() -> void {
         model.squash();
@@ -389,6 +394,8 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
         adam_opt,
         model
     );
+    optimizer.xNES_lr_mu = xNES_lr_mu; // if xNES is used, set the learning rate
+    optimizer.xNES_lr_std = xNES_lr_std;
 
     std::cout << "INFO: [Runner::Inference] Setting up scheduler...\n";
     Helpers::Run::Setup_Scheduler(
@@ -558,6 +565,12 @@ void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, Distribution
         m_parameter = torch::randn({m_Height, m_Width, 2}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Binary(m_parameter);
     }
+    else if (dist_type == DistributionType::XNES_NORMAL) {
+        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
+        m_std       = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE).abs() * 0.1; // small positive std
+        m_std.set_requires_grad(false);
+        m_dist = new Distributions::xNES_Normal(m_parameter, m_std);
+    }
     else {
         throw std::runtime_error("Model::init: Unsupported distribution type.");
     }
@@ -577,6 +590,9 @@ void Runner::Model::init (torch::Tensor tensor, DistributionType dist_type) {
     }
     else if (dist_type == DistributionType::BINARY) {
         m_dist = new Distributions::Binary(m_parameter);
+    }
+    else if (dist_type == DistributionType::XNES_NORMAL) {
+        throw std::runtime_error("Model::init: XNES_NORMAL not yet supported for tensor initialization.");
     }
     else {
         throw std::runtime_error("Model::init: Unsupported distribution type.");
@@ -600,6 +616,10 @@ void Runner::Model::squash () {
 
 torch::Tensor Runner::Model::logp_action () {
     return m_dist->log_prob(m_action);
+}
+
+torch::Tensor Runner::Model::action () {
+    return m_action;
 }
 
 std::vector<torch::Tensor> Runner::Model::parameters () {
@@ -689,6 +709,11 @@ void Runner::ExportConfig (const std::string &filename) {
         case DistributionType::BINARY:
             ofs << "binary\n";
             break;
+        case DistributionType::XNES_NORMAL:
+            ofs << "xnes_normal\n";
+            ofs << "\t\tLearn Rate (Mu): " << xNES_lr_mu << '\n';
+            ofs << "\t\tLearn Rate (Std): " << xNES_lr_std << '\n';
+            break;
         default:
             ofs << "unknown\n";
             break;
@@ -753,6 +778,9 @@ void Runner::InitConfigKeyMap () {
                 }
                 else if (dist_str == "binary") {
                     ModelDistribution = DistributionType::BINARY;
+                }
+                else if (dist_str == "xnes_normal") {
+                    ModelDistribution = DistributionType::XNES_NORMAL;
                 }
                 else {
                     throw std::runtime_error("Runner::Run: Unsupported distribution type in config file.");
@@ -1094,6 +1122,16 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {
                 ifs >> params.n_samples_update_amount;
                 std::cout << "Setting Scheduler Update Amount to " << params.n_samples_update_amount << "...\n";
+            }
+        },
+        {
+            "XNES_lr",
+            [this](std::ifstream &ifs) {
+                // First is the mu learn rate
+                // second is the sigma learn rate
+                ifs >> xNES_lr_mu;
+                ifs >> xNES_lr_std;
+                std::cout << "Setting xNES Learning Rates to mu: " << xNES_lr_mu << ", sigma: " << xNES_lr_std << "...\n";
             }
         }
     };

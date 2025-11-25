@@ -3,6 +3,11 @@
 s4_Optimizer::s4_Optimizer (torch::optim::Optimizer& opt, s4_Model& model)
 : m_opt(opt), m_model(model)
 {
+    best_mask = torch::empty({});
+
+    // Best reward would have the highest
+    // possible value
+    best_reward = -100000000;
 
 }
 
@@ -80,7 +85,24 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
 
     auto u = utilities(rewards);
 
+    // Best reward tracking
+    if (rewards.max().item<double>() > best_reward) {
+        best_reward = rewards.max().item<double>();
+
+        // Get the index of the best reward
+        auto max_idx = std::get<1>(rewards.max(0));
+
+        // Get the action that corresponds to the best reward
+        auto action = m_model.action(); // [N, H, W]
+        best_mask = action.index_select(0, max_idx); // [H, W]
+    }
+
     // If xnes_normal, we need to compute gradients differently
+    if (m_model.get_definition()->get_name() == "xNES_Normal") {
+        // Update using sNES (does not use SGD or Adam)
+        xNES_update(rewards);
+        return;
+    }
 
     std::cout << "INFO: [s4_Optimizer::step] u device: " << u.device() << '\n';
 
@@ -138,4 +160,34 @@ torch::Tensor s4_Optimizer::norm_reward (torch::Tensor &rewards) {
     auto std  = rewards.std(true);
 
     return (rewards - mean) / (std + 1e-10);
+}
+
+void s4_Optimizer::xNES_update (torch::Tensor &rewards) {
+    auto u = utilities(rewards); // [N]
+
+    // Get the learning rate from optimizer
+    auto def = m_model.get_definition();
+
+    // Get mu and std
+    auto &mu  = def->mu ();  // [H, W]
+    auto &std = def->std (); // [H, W]
+
+    // Get the action
+    auto action = m_model.action(); // [N, H, W]
+
+    // Get the sample
+    // Note that action = mu + eps * std
+    // so eps = (action - mu) / std
+    auto eps = (action - mu.unsqueeze(0)) / std.unsqueeze(0); // [N, H, W]
+
+    // Expand u to shape [N, 1, 1]
+    auto u_exp = -u.view({-1, 1, 1});
+
+    // Compute the gradients directly
+    auto nabla_J = std * torch::sum(u_exp * eps, 0);
+    auto covGrad = torch::sum(u_exp * ((eps * eps) - 1), 0);
+    auto nabla_K = torch::exp(0.5 * xNES_lr_std * covGrad);
+
+    mu -= xNES_lr_mu * nabla_J;
+    std *= nabla_K;
 }

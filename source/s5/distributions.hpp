@@ -17,6 +17,8 @@ public:
     virtual torch::Tensor entropy() = 0;
     virtual torch::Tensor entropy_no_grad() = 0;
     virtual torch::Tensor probs() = 0;
+    virtual torch::Tensor &mu () = 0;
+    virtual torch::Tensor &std () = 0;
 };
 
 class Normal : public Definition {
@@ -30,14 +32,16 @@ public:
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
     torch::Tensor probs() override;
-private:
-    torch::Tensor m_mu;
+    torch::Tensor &mu () override;
+    torch::Tensor &std () override;
+
+    torch::Tensor &m_mu;
     double m_std;
 };
 
 class xNES_Normal : public Definition {
 public:
-    xNES_Normal (torch::Tensor &mu, torch::Tensor &cov);
+    xNES_Normal (torch::Tensor &mu, torch::Tensor &std);
     ~xNES_Normal ();
     torch::Tensor sample (int n) override;
     torch::Tensor base(int n) override;
@@ -46,9 +50,11 @@ public:
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
     torch::Tensor probs() override;
-private:
-    torch::Tensor m_mu;
-    torch::Tensor m_cov;
+    torch::Tensor &mu () override;
+    torch::Tensor &std () override;
+
+    torch::Tensor &m_mu;
+    torch::Tensor &m_std;
 };
 
 class Categorical : public Definition {
@@ -62,9 +68,11 @@ public:
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
     torch::Tensor probs() override;
-private:
-    torch::Tensor m_logits;
+    torch::Tensor &mu () override;
+    torch::Tensor &std () override;
 
+
+    torch::Tensor &m_logits;
     torch::Tensor logits_to_probs (torch::Tensor&);
 
 };
@@ -80,8 +88,10 @@ public:
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
     torch::Tensor probs() override;
-private:
-    torch::Tensor m_logits;
+    torch::Tensor &mu () override;
+    torch::Tensor &std () override;
+
+    torch::Tensor &m_logits;
 
     torch::Tensor logits_to_probs ();
 
@@ -98,6 +108,8 @@ public:
     torch::Tensor entropy() override;
     torch::Tensor entropy_no_grad() override;
     torch::Tensor probs() override;
+    torch::Tensor &mu () override;
+    torch::Tensor &std () override;
 private:
     Categorical *dist = nullptr;
 };
