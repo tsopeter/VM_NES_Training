@@ -20,6 +20,7 @@ public:
     double xNES_lr_std = 0.1;
 
     torch::Tensor best_mask;
+    torch::Tensor average_mask;
     double best_reward;
 private:
     torch::optim::Optimizer &m_opt;

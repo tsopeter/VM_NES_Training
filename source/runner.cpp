@@ -22,10 +22,13 @@ void Runner::Run (std::string config_file) {
     std::cout << "INFO: [Runner::Run] Exporting configuration to log file...\n";
     std::string log_file = checkpoint_directory + "/a/mean_reward.txt";
 
+    std::vector<torch::Tensor> run_parameter;
+    std::vector<double> run_loss;
+
     if (!m_load_checkpoint) {
         ExportConfig(log_file);
         epoch = 0;
-        model.init(ModelHeight, ModelWidth, scheduler.maximum_number_of_frames_in_image, ModelDistribution);
+        model.init(ModelHeight, ModelWidth, scheduler.maximum_number_of_frames_in_image, ModelDistribution, params.num_levels);
     }
     else {
         LoadCheckpointFile(config_file);
@@ -35,7 +38,11 @@ void Runner::Run (std::string config_file) {
     }
 
     std::cout << "INFO: [Runner::Run] Setting up optimizer...\n";
-    torch::optim::Adam adam_opt(model.parameters(), torch::optim::AdamOptions(params.Training.lr));
+    std::vector<torch::Tensor> dummy_params = {torch::randn({1}, torch::kFloat32).to(DEVICE)}; // Dummy tensor
+    dummy_params[0].set_requires_grad(true);
+    auto model_params = (ModelDistribution == DistributionType::XNES_NORMAL) ? dummy_params : model.parameters();
+
+    torch::optim::Adam adam_opt(model_params, torch::optim::AdamOptions(params.Training.lr));
     s4_Optimizer optimizer(
         adam_opt,
         model
@@ -135,6 +142,10 @@ void Runner::Run (std::string config_file) {
         // Export the results to .csv file within the checkpoint directory
         params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 3, params.n_training_samples, params.n_training_samples);
 
+        // Save the training performance to run_loss and run_parameter
+        run_parameter.push_back(model.get_parameters().detach());
+        run_loss.push_back(train_perf.loss);
+
         // Clear the params results for the next evaluation
         //params.results.clear();
 
@@ -195,6 +206,20 @@ void Runner::Run (std::string config_file) {
 
     // Run final testing after training
     std::cout << "INFO: [Runner::Run] Running final testing after training...\n";
+
+    // Find the model parameter with highest loss (as loss is negative reward)
+    double best_loss = -1000000.0f;
+    int best_index = -1;
+    for (size_t i = 0; i < run_loss.size(); ++i) {
+        if (run_loss[i] > best_loss) {
+            best_loss = run_loss[i];
+            best_index = static_cast<int>(i);
+        }
+    }
+    torch::Tensor best_parameter = run_parameter[best_index];
+
+    // Re-initialize the model with best parameters
+    model.init(best_parameter.to(DEVICE), ModelDistribution);
 
     auto test_perf = Helpers::Run::Inference(
         params,
@@ -290,7 +315,7 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
         return model.sample(i);
     };
     eval_fn.base = [&model, &optimizer](int i) -> torch::Tensor {
-        auto action = optimizer.best_mask; // [H, W]
+        auto action = optimizer.average_mask; // [H, W]
         
         // Extend to [N, H, W]
         action = action.unsqueeze(0).expand({i, -1, -1}).contiguous();
@@ -527,7 +552,9 @@ void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, i
     UnloadTexture (mask_texture);
 }
 
-Runner::Model::Model () {}
+Runner::Model::Model () {
+    m_dist = nullptr;
+}
 Runner::Model::~Model () {
     if (m_dist != nullptr) {
         delete m_dist;
@@ -545,36 +572,38 @@ Distributions::Definition* Runner::Model::get_definition () {
     return m_dist;
 }
 
-void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, DistributionType dist_type) {
+void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, DistributionType dist_type, int num_levels) {
     m_Height = Height;
     m_Width  = Width;
     m_n      = n;
 
     // Initialize m_parameter based on distribution type
     if (dist_type == DistributionType::NORMAL) {
-        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
+        m_parameter = torch::rand({Height, Width}, torch::kFloat32).to(DEVICE) * 2.0 * M_PI - M_PI;
         m_dist = new Distributions::Normal(m_parameter, std);
+        m_parameter.set_requires_grad(true);
     }
     else if (dist_type == DistributionType::CATEGORICAL) {
-        m_parameter = torch::randn({Height, Width, 16}, torch::kFloat32).to(DEVICE);
+        m_parameter = torch::randn({Height, Width, num_levels}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Categorical(m_parameter);
+        m_parameter.set_requires_grad(true);
     }
     else if (dist_type == DistributionType::BINARY) {
         m_Height = 2 * Height;
         m_Width  = 2 * Width;
         m_parameter = torch::randn({m_Height, m_Width, 2}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Binary(m_parameter);
+        m_parameter.set_requires_grad(true);
     }
     else if (dist_type == DistributionType::XNES_NORMAL) {
         m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
-        m_std       = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE).abs() * 0.1; // small positive std
+        m_std       = torch::ones({Height, Width}, torch::kFloat32).to(DEVICE);
         m_std.set_requires_grad(false);
         m_dist = new Distributions::xNES_Normal(m_parameter, m_std);
     }
     else {
         throw std::runtime_error("Model::init: Unsupported distribution type.");
     }
-    m_parameter.set_requires_grad(true);
 }
 
 void Runner::Model::init (torch::Tensor tensor, DistributionType dist_type) {
@@ -582,20 +611,26 @@ void Runner::Model::init (torch::Tensor tensor, DistributionType dist_type) {
     m_parameter.set_requires_grad(true);
 
     // Initialize m_dist based on distribution type
-    if (dist_type == DistributionType::NORMAL) {
-        m_dist = new Distributions::Normal(m_parameter, 0.1);
-    }
-    else if (dist_type == DistributionType::CATEGORICAL) {
-        m_dist = new Distributions::Categorical(m_parameter);
-    }
-    else if (dist_type == DistributionType::BINARY) {
-        m_dist = new Distributions::Binary(m_parameter);
-    }
-    else if (dist_type == DistributionType::XNES_NORMAL) {
-        throw std::runtime_error("Model::init: XNES_NORMAL not yet supported for tensor initialization.");
+    if (m_dist == nullptr) {
+        if (dist_type == DistributionType::NORMAL) {
+            m_dist = new Distributions::Normal(m_parameter, 0.1);
+        }
+        else if (dist_type == DistributionType::CATEGORICAL) {
+            m_dist = new Distributions::Categorical(m_parameter);
+        }
+        else if (dist_type == DistributionType::BINARY) {
+            m_dist = new Distributions::Binary(m_parameter);
+        }
+        else if (dist_type == DistributionType::XNES_NORMAL) {
+            throw std::runtime_error("Model::init: XNES_NORMAL not yet supported for tensor initialization.");
+        }
+        else {
+            throw std::runtime_error("Model::init: Unsupported distribution type.");
+        }
     }
     else {
-        throw std::runtime_error("Model::init: Unsupported distribution type.");
+        auto &mu = m_dist->mu();
+        mu = m_parameter; // set
     }
 }
 
@@ -1132,6 +1167,13 @@ void Runner::InitConfigKeyMap () {
                 ifs >> xNES_lr_mu;
                 ifs >> xNES_lr_std;
                 std::cout << "Setting xNES Learning Rates to mu: " << xNES_lr_mu << ", sigma: " << xNES_lr_std << "...\n";
+            }
+        },
+        {
+            "LossFn",
+            [this](std::ifstream &ifs) {
+                ifs >> params._PDF.loss_fn_mode;
+                std::cout << "Setting Loss Function Mode to " << params._PDF.loss_fn_mode << "...\n";
             }
         }
     };

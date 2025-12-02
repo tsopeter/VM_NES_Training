@@ -4,6 +4,7 @@ s4_Optimizer::s4_Optimizer (torch::optim::Optimizer& opt, s4_Model& model)
 : m_opt(opt), m_model(model)
 {
     best_mask = torch::empty({});
+    average_mask = torch::empty({});
 
     // Best reward would have the highest
     // possible value
@@ -97,8 +98,16 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
         best_mask = action.index_select(0, max_idx); // [H, W]
     }
 
+    // Compute the average mask
+    /*
+    {
+        auto action = m_model.action(); // [N, H, W]
+        average_mask = action.mean(0); // [H, W]
+    }
+    */
+
     // If xnes_normal, we need to compute gradients differently
-    if (m_model.get_definition()->get_name() == "xNES_Normal") {
+    if (m_model.get_definition()->get_name() == "xnes_normal") {
         // Update using sNES (does not use SGD or Adam)
         xNES_update(rewards);
         return;

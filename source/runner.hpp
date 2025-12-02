@@ -49,7 +49,7 @@ public:
     Model ();
     ~Model () override;
 
-    void init (int64_t Height, int64_t Width, int64_t n, DistributionType dist_type);
+    void init (int64_t Height, int64_t Width, int64_t n, DistributionType dist_type, int num_levels=16);
     void init (torch::Tensor, DistributionType dist_type);
     torch::Tensor sample (int n);
     void squash ();

@@ -62,6 +62,11 @@ Helpers::Parameters::Parameters () {
                     loss = _PDF.per_pixel_loss_fn(img, targets);
                     break;
                 }
+            case 3: // MSE Loss (only considers first mask)
+                {
+                    loss = _PDF.mse_loss(img);
+                    break;
+                }
             default:
                 throw std::runtime_error("process_fn: Unsupported loss function mode.");
         }
@@ -600,6 +605,15 @@ Helpers::_pdf::_pdf () {
         auto loss = -sq_diff.mean();
 
         return loss;
+    };
+
+    mse_loss = [this](torch::Tensor &img) -> torch::Tensor {
+        // MSE Loss considering only the first mask
+        auto target_mask = this->masks[0].squeeze(); // [1, H, W]
+        auto diff = img - target_mask.to(img.device()); // [H, W]
+        auto loss = diff * diff; // [H, W]
+
+        return -loss.mean(); // [1]
     };
 
 }

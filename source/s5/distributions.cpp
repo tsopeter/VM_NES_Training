@@ -197,7 +197,7 @@ torch::Tensor Distributions::Categorical::probs() {
 
 torch::Tensor &Distributions::Categorical::mu () {
     // Not well-defined for categorical distributions
-    throw std::runtime_error("Distributions::Categorical::mu: Not defined for categorical distributions.");
+    return m_logits;
 }
 
 torch::Tensor &Distributions::Categorical::std () {

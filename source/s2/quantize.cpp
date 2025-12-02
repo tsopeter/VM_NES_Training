@@ -97,29 +97,18 @@ torch::Tensor Quantize::CPUOperator(const torch::Tensor &x) {
 void Quantize::set_levels(int num_levels) {
     // Based on m_num_levels, we modify table parameters to simulate different levels
     // We still have *16* inputs, but several map to the same level
+
+    // Precomputed tables
     switch (num_levels) {
-        case 2:
-            m_table = torch::tensor({
-                0.0000, 0.0000, 0.0000, 0.0000,
-                0.0000, 0.0000, 0.0000, 0.0000,
-                0.4916, 0.4916, 0.4916, 0.4916,
-                0.4916, 0.4916, 0.4916, 0.4916
-            }, torch::TensorOptions().dtype(torch::kFloat32));
-            break;
         case 4:
             m_table = torch::tensor({
-                0.0000, 0.0000, 0.0000, 0.0000,
-                0.3426, 0.3426, 0.3426, 0.3426,
-                0.4916, 0.4916, 0.4916, 0.4916,
-                0.7970, 0.7970, 0.7970, 0.7970
+                0.0000, 0.3426, 0.6671, 0.9375
             }, torch::TensorOptions().dtype(torch::kFloat32));
             break;
         case 8:
             m_table = torch::tensor({
-                0.0000, 0.0000, 0.0205, 0.0205,
-                0.0560, 0.0560, 0.1131, 0.1131,
-                0.3426, 0.3426, 0.4228, 0.4228,
-                0.5994, 0.5994, 0.7970, 0.7970
+                0.0000, 0.1131, 0.3426, 0.4228,
+                0.5994, 0.6671, 0.7970, 0.9375
             }, torch::TensorOptions().dtype(torch::kFloat32));
             break;
         case 16:

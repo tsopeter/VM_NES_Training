@@ -167,6 +167,7 @@ private:
     bool m_texture_initialized;
 
     int m_num_levels;
+    torch::Tensor level_mapping (torch::Tensor x);
 
 };
 
