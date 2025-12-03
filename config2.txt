@@ -1,7 +1,7 @@
 Height 400
 Width  640
 Distribution categorical
-Std 0.2
+Std 0.4
 LearningRate 0.5
 TrainingSamples 5
 TrainingBatchSize 1
@@ -9,7 +9,7 @@ ValidationSamples 1
 ValidationBatchSize 1
 TestSamples 1
 TestBatchSize 1
-Samples 10
+Samples 20
 Padding 0
 SubShaderThreshold 0.8
 UpscaleFactor 2
@@ -17,7 +17,7 @@ IterationAmount 4
 RegionFile source/Assets/custom_checkerboard_mask.npy
 MinLimit 20
 SaveInterval 1000
-CheckpointDirectory 2025_11_26c/004
+CheckpointDirectory 2025_12_03c/002
 ExposureTime 300
 DatasetPath Datasets2/
 Epochs 50
@@ -30,4 +30,4 @@ AffineScaleY 1.0418670177459717
 SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 3
-NumLevels 4
+NumLevels 16
