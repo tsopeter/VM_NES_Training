@@ -1,5 +1,5 @@
-Height 400
-Width  640
+Height 200
+Width  320
 Distribution normal
 Std 0.2
 LearningRate 0.1
@@ -12,12 +12,12 @@ TestBatchSize 1000
 Samples 10
 Padding 3
 SubShaderThreshold 0.8
-UpscaleFactor 2
+UpscaleFactor 4
 IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 20
 SaveInterval 10000
-CheckpointDirectory 2025_12_03/16/normal/003
+CheckpointDirectory 2025_12_03/16/normal/001
 ExposureTime 300
 DatasetPath Datasets/
 Epochs 10
