@@ -70,9 +70,15 @@ public:
      */
     void set_mu (torch::Tensor &mu, double kappa);
 
-private:
+    /**
+     * @brief Set std
+     */
+    void set_std (double std);
+    double get_std ();
+    
     torch::Tensor m_mu, m_kappa;
     torch::Tensor m_r;
+    double std;
     double logp = std::log(2.0 * M_PI);  // using M_PI from cmath
 
 };

@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include <functional>
 #include <chrono>
+#include "../utils/utils.hpp"
+#include <raylib.h>
 
 std::atomic<bool> s3_r0_can_read = true;
 /**
@@ -20,12 +22,20 @@ public:
             const uint8_t *raw_data = static_cast<uint8_t*>(ptrGrabResult->GetBuffer());
             u8Image v_raw_data(raw_data, raw_data+size);
 
+            std::cout<<"INFO: [s3_Camera_Reportable_handler::OnImageGrabbed] Image grabbed of size "
+                        <<ptrGrabResult->GetWidth()<<"x"<<ptrGrabResult->GetHeight()
+                        <<", buffer size: "<<ptrGrabResult->GetBufferSize()
+                        <<", timestamp: "<<ptrGrabResult->GetTimeStamp() <<
+                        ", skipped images: "<<ptrGrabResult->GetNumberOfSkippedImages()<<'\n';
+
             if (s3_r0_can_read.load()) {
                 ids->enqueue(v_raw_data);
                 image_count->fetch_add(1, std::memory_order_release);
                 vsync->enqueue(mvt->vsync_counter.load(std::memory_order_acquire));
-                if ((*count)%20==0)
-                    timestamps->enqueue(ptrGrabResult->GetTimeStamp());
+                if ((*count)%20==0) {
+                    //timestamps->enqueue(ptrGrabResult->GetTimeStamp());
+                    timestamps->enqueue(Utils::GetCurrentTime_us());
+                }
                 ++(*count);
             }
         }
@@ -172,9 +182,26 @@ void s3_Camera_Reportable::p_open () {
 
     camera.Open();
 
+    std::cout<<"Setting exposure time to "<<prop.ExposureTime<<" us.\n";
     camera.ExposureTime.SetValue(prop.ExposureTime);
     camera.Height.SetValue(prop.Height);
     camera.Width.SetValue(prop.Width);
+    //camera.BinningHorizontal.SetValue(prop.BinningHorizontal);
+    //camera.BinningVertical.SetValue(prop.BinningVertical); 
+    
+    /*
+    switch (prop.BinningMode) {
+        case s3_Camera_Reportable_Properties_BinningSelectorEnums::BinningSelector_Average:
+            camera.BinningHorizontalMode.SetValue(Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Average);
+            camera.BinningVerticalMode.SetValue(Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Average);
+            break;
+        case s3_Camera_Reportable_Properties_BinningSelectorEnums::BinningSelector_Sum:
+            camera.BinningHorizontalMode.SetValue(Basler_UsbCameraParams::BinningHorizontalModeEnums::BinningHorizontalMode_Sum);
+            camera.BinningVerticalMode.SetValue(Basler_UsbCameraParams::BinningVerticalModeEnums::BinningVerticalMode_Sum);
+            break;
+    }
+    */
+
 
     camera.TriggerSelector.SetValue(prop.TriggerSelect);
     camera.TriggerMode.SetValue(prop.TriggerMode);
@@ -191,6 +218,7 @@ void s3_Camera_Reportable::p_open () {
     camera.SensorReadoutMode.SetValue(prop.SenReadoutMode);
 
     camera.AcquisitionStatusSelector.SetValue(prop.AcqStatSel);
+
 }
 
 void s3_Camera_Reportable::properties() const {

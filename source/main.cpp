@@ -1,10 +1,88 @@
 #include <iostream>
-#include "examples/e15.hpp"
-#include "examples/e13.hpp"
-#include "examples/e16.hpp"
-#include "examples/e17.hpp"
-#include "examples/e3.hpp"
+#include "runner.hpp"
+#include "s5/helpers.hpp"
+#include "s2/dataloader.hpp"
 
-int main () {
-    e3();
-}
+int main (int argc, char** argv) {
+    std::string config_file = "config.txt";
+    Runner r;
+
+
+    // If training mode, the argument is structured as ./app <config>
+    if (argc == 2) {
+        config_file = argv[1];
+        r.Run (config_file);
+    }
+    // If inference mode, the argument is structured as ./app -i <config> <dataset> <dataset size>
+    else if (argc == 5 && std::string(argv[1]) == "-i") {
+        config_file = argv[2];
+        r.m_inference = true;
+
+        // Parse dataset type
+        // Supported dataset types: train, valid, test
+        s2_DataTypes dtype;
+        std::string dataset_str = argv[3];
+        if (dataset_str == "train") {
+            dtype = s2_DataTypes::TRAIN;
+        }
+        else if (dataset_str == "valid") {
+            dtype = s2_DataTypes::VALID;
+        }
+        else if (dataset_str == "test") {
+            dtype = s2_DataTypes::TEST;
+        }
+        else {
+            throw std::runtime_error("Runner::Inference: Unsupported dataset type specified.");
+        }
+
+        int n_data_points = std::stoi(argv[4]);
+
+        // Set the inference output file name to include the config_file name
+        r.inference_output_file = "inference_results_" + dataset_str + ".csv";
+
+        r.Inference (config_file, dtype, n_data_points);
+    }
+    else if (argc == 7 && std::string(argv[1]) == "-s") {
+        config_file = argv[2];
+        r.m_inference = true;
+
+        // Parse dataset type
+        // Supported dataset types: train, valid, test
+        s2_DataTypes dtype;
+        std::string dataset_str = argv[3];
+        if (dataset_str == "train") {
+            dtype = s2_DataTypes::TRAIN;
+        }
+        else if (dataset_str == "valid") {
+            dtype = s2_DataTypes::VALID;
+        }
+        else if (dataset_str == "test") {
+            dtype = s2_DataTypes::TEST;
+        }
+        else {
+            throw std::runtime_error("Runner::StaticInference: Unsupported dataset type specified.");
+        }
+
+        int n_start_index = std::stoi(argv[4]);
+        int n_data_points = std::stoi(argv[5]);
+        std::string mask_file = argv[6];
+
+        // Set the inference output file name to include the mask file name
+        // inference_results_<dataset>_<mask_file>_<start>_<n_data_points>.csv
+        r.inference_output_file = "inference_results_" + dataset_str + "_" + mask_file + "_" + std::to_string(n_start_index) + "_" + std::to_string(n_data_points) + ".csv";
+
+        r.StaticInference (config_file, dtype, n_start_index, n_data_points, mask_file);
+    }
+    else {
+        // Invalid arguments
+        std::cerr << "Usage for training:  " << argv[0] << " <config>\n";
+        std::cerr << "\tExample usage: " << argv[0] << " config.txt\n";
+        std::cerr << "Usage for inference: " << argv[0] << " -i <checkpoint_config> <dataset> <dataset size>\n";
+        std::cerr << "\tExample usage: " << argv[0] << " -i checkpoint_config.txt test 1000\n";
+        std::cerr << "Usage for inference with mask from image file: " << argv[0] << " -s <checkpoint_config> <start> <dataset> <dataset size> <mask file>\n";
+        std::cerr << "\tExample usage: " << argv[0] << " -s checkpoint_config.txt test 0 1000 mask.png\n";
+        return -1;
+    }
+
+    return 0;
+}       

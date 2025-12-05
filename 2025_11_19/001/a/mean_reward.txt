@@ -1,0 +1,167 @@
+Dataset parameters:
+	Data Padding Amount: 3
+	Sub Shader Threshold: 0.8
+	Training Dataset:
+		Training Size: 1000
+		Training Batch Size: 20
+	Validation Dataset:
+		Validation Size: 1000
+		Validation Batch Size: 1000
+	Test Dataset:
+		Test Size: 1000
+		Test Batch Size: 1000
+Model Parameters:
+	Model Height: 400
+	Model Width: 640
+	Model Distribution: normal
+		Standard Deviation: 0.4
+	Upscale Factor: 2
+Training Parameters:
+	Learning Rate: 0.5
+	Optimizer: Adam
+	Samples per Image: 200
+	Epochs: 11
+----------------------------------------
+Training
+Epoch 0
+Time: 15:41:42
+Epoch: 0
+Compute Time (s): 704
+Samples Total: 1000
+Samples Correct: 203
+Accuracy: 20.3
+Entropy: 0.502648
+Loss: -5.67629
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 0
+Time: 15:41:42
+Epoch: 0
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 150
+Accuracy: 15
+Entropy: 0.502648
+Loss: -4.29454
+----------------------------------------
+----------------------------------------
+Training
+Epoch 1
+Time: 15:54:41
+Epoch: 1
+Compute Time (s): 712
+Samples Total: 1000
+Samples Correct: 197
+Accuracy: 19.7
+Entropy: 0.502648
+Loss: -4.12544
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 1
+Time: 15:54:41
+Epoch: 1
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 205
+Accuracy: 20.5
+Entropy: 0.502648
+Loss: -3.66667
+----------------------------------------
+----------------------------------------
+Training
+Epoch 2
+Time: 16:07:41
+Epoch: 2
+Compute Time (s): 713
+Samples Total: 1000
+Samples Correct: 216
+Accuracy: 21.6
+Entropy: 0.502648
+Loss: -4.11784
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 2
+Time: 16:07:41
+Epoch: 2
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 263
+Accuracy: 26.3
+Entropy: 0.502648
+Loss: -3.36135
+----------------------------------------
+----------------------------------------
+Training
+Epoch 3
+Time: 16:20:40
+Epoch: 3
+Compute Time (s): 712
+Samples Total: 1000
+Samples Correct: 213
+Accuracy: 21.3
+Entropy: 0.502648
+Loss: -4.0399
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 3
+Time: 16:20:40
+Epoch: 3
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 244
+Accuracy: 24.4
+Entropy: 0.502648
+Loss: -3.67095
+----------------------------------------
+----------------------------------------
+Training
+Epoch 4
+Time: 16:33:40
+Epoch: 4
+Compute Time (s): 713
+Samples Total: 1000
+Samples Correct: 188
+Accuracy: 18.8
+Entropy: 0.502648
+Loss: -3.90991
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 4
+Time: 16:33:40
+Epoch: 4
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 197
+Accuracy: 19.7
+Entropy: 0.502648
+Loss: -4.30788
+----------------------------------------
+----------------------------------------
+Training
+Epoch 5
+Time: 16:46:39
+Epoch: 5
+Compute Time (s): 712
+Samples Total: 1000
+Samples Correct: 162
+Accuracy: 16.2
+Entropy: 0.502648
+Loss: -4.05923
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 5
+Time: 16:46:39
+Epoch: 5
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 201
+Accuracy: 20.1
+Entropy: 0.502648
+Loss: -3.21306
+----------------------------------------

@@ -40,6 +40,11 @@ public:
      *  @brief Handles opening the serial port. Make sure that this is used before calling Send and Signal. Calling the `Serial` constructor is typically not enough. You MUST call `Open()` to open up a serial connection.
      */
     void Open();
+
+    /**
+     * @brief Handles opening the serial port. Make sure that this is used before calling Send and Signal. Calling the `Serial` constructor is typically not enough. You MUST call `Open()` to open up a serial connection.
+     */
+    void Open(const std::string &port_name, int baud_rate = 115200);
     
     /**
      *  @brief Handles closing up the serial port. If you want to open it up again, call `Open()`. The `Serial` destructor `~Serial()` also calls close so explicitly calling this function, for most cases, is completely optional.

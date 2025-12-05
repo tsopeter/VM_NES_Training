@@ -23,6 +23,12 @@ s2_Data s2_Dataloader::load (s2_DataTypes type, int sz) {
         case s2_DataTypes::VALID:
             filenames = "Validation_Dataset.npy";
             break;
+        case s2_DataTypes::BALANCED_1:
+            filenames = "Balanced_1.npy";
+            break;
+        case s2_DataTypes::BALANCED_2:
+            filenames = "Balanced_2.npy";
+            break;
         default:
             filenames = "Validation_Dataset.npy";
     }
@@ -43,6 +49,9 @@ s2_Data::s2_Data (std::filesystem::path &p1, std::filesystem::path &p2, int i0)
 
 std::pair<torch::Tensor, torch::Tensor> s2_Data::operator[](int i) {
     if (!loaded) load_data();
+    if (i < 0 || i >= sz) {
+        throw std::out_of_range("Invalid index.");
+    }
     return {idata[i], ldata[i]};
 }
 

@@ -37,8 +37,10 @@ public:
      *      auto q = Quantize();
      *      auto y = q(x);
      */
-    Quantize();
+    Quantize(int num_levels=16);
     ~Quantize();
+
+    void set_levels(int num_levels);
 
     /**
      * @brief Returns quantized value (index if arg is true).
@@ -52,6 +54,7 @@ public:
      * Inputs are expected to be -pi to pi
      */
     torch::Tensor operator[](const torch::Tensor &x);
+    torch::Tensor CPUOperator(const torch::Tensor &x);
 private:
     torch::Tensor m_table = torch::tensor({
         0.0000, 0.0100, 0.0205, 0.0422,
@@ -60,4 +63,24 @@ private:
         0.5994, 0.6671, 0.7970, 0.9375
     }, torch::TensorOptions().dtype(torch::kFloat32));  // Or use kFloat32 if needed
 
+    torch::Tensor m_levels = torch::tensor({
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000,
+        0.0000
+    }, torch::TensorOptions().dtype(torch::kFloat32));
+
+    int m_num_levels;
 };

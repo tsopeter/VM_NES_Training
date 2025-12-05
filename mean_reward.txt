@@ -1,0 +1,120 @@
+Dataset parameters:
+	Data Padding Amount: 9
+	Sub Shader Threshold: 0.5
+	Training Dataset:
+		Training Size: 1000
+		Training Batch Size: 20
+	Validation Dataset:
+		Validation Size: 1000
+		Validation Batch Size: 1000
+	Test Dataset:
+		Test Size: 1000
+		Test Batch Size: 1000
+Model Parameters:
+	Model Height: 400
+	Model Width: 640
+	Model Distribution: categorical
+	Upscale Factor: 2
+Training Parameters:
+	Learning Rate: 0.5
+	Optimizer: Adam
+	Samples per Image: 200
+	Epochs: 50
+----------------------------------------
+Training
+Epoch 0
+Time: 15:47:58
+Epoch: 0
+Compute Time (s): 680
+Samples Total: 10000
+Samples Correct: 1902
+Accuracy: 19.02
+Entropy: 1.10146
+Loss: -7.1193
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 0
+Time: 15:47:58
+Epoch: 0
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 321
+Accuracy: 32.1
+Entropy: 0.431373
+Loss: -2.97988
+----------------------------------------
+----------------------------------------
+Training
+Epoch 1
+Time: 16:00:24
+Epoch: 1
+Compute Time (s): 680
+Samples Total: 10000
+Samples Correct: 4580
+Accuracy: 45.8
+Entropy: 0.251701
+Loss: -2.31436
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 1
+Time: 16:00:24
+Epoch: 1
+Compute Time (s): 66
+Samples Total: 1000
+Samples Correct: 529
+Accuracy: 52.9
+Entropy: 0.14723
+Loss: -1.92618
+----------------------------------------
+----------------------------------------
+Training
+Epoch 2
+Time: 16:12:51
+Epoch: 2
+Compute Time (s): 680
+Samples Total: 10000
+Samples Correct: 5727
+Accuracy: 57.27
+Entropy: 0.102516
+Loss: -1.62696
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 2
+Time: 16:12:51
+Epoch: 2
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 554
+Accuracy: 55.4
+Entropy: 0.0727626
+Loss: -1.71463
+----------------------------------------
+----------------------------------------
+Training
+Epoch 3
+Time: 16:25:17
+Model parameters reverted due to increased training loss.
+Epoch: 3
+Compute Time (s): 679
+Samples Total: 10000
+Samples Correct: 2077
+Accuracy: 20.77
+Entropy: 0.05653
+Loss: -11.726
+----------------------------------------
+----------------------------------------
+Validation
+Epoch 3
+Time: 16:25:17
+Model parameters reverted due to increased training loss.
+Epoch: 3
+Compute Time (s): 67
+Samples Total: 1000
+Samples Correct: 169
+Accuracy: 16.9
+Entropy: 0.0445307
+Loss: -9.15495
+----------------------------------------

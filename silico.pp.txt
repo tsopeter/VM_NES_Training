@@ -1,0 +1,43 @@
+Height 400
+Width  640
+Distribution normal
+Std 0.2
+LearningRate 0.1
+TrainingSamples 1000
+TrainingBatchSize 20
+ValidationSamples 1000
+ValidationBatchSize 1000
+TestSamples 1000
+TestBatchSize 1000
+Samples 10
+Padding 15
+SubShaderThreshold 0.5
+UpscaleFactor 2
+IterationAmount 4
+RegionFile source/Assets/phy8_pp.npy
+MinLimit 20
+SaveInterval 10000
+CheckpointDirectory 2025_10_30/007
+ExposureTime 150
+DatasetPath Datasets/
+Epochs 11
+InputFlipUD 0
+InputFlipLR 0
+AffineOffsetX 0.00971738900989294
+AffineOffsetY 0.010186241008341312
+AffineScaleX  0.8486856818199158
+AffineScaleY 1.0204341411590576
+
+Warp source/Assets/Warp
+
+Ratios 
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0

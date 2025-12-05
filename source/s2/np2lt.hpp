@@ -10,6 +10,7 @@ namespace np2lt {
     torch::Tensor i64(const std::filesystem::path& filename);
     torch::Tensor u32(const std::filesystem::path& filename);
     torch::Tensor u64(const std::filesystem::path& filename);
+    torch::Tensor u8 (const std::filesystem::path& filename);
 };
 
 #endif

@@ -1,9 +1,16 @@
 UNAME_S := $(shell uname -s)
+DISTRO := $(shell lsb_release -si 2>/dev/null)
 
-ifeq ($(UNAME_S),Linux)
-include Makefile.Linux
-else ifeq ($(UNAME_S),Darwin)
+ifeq ($(UNAME_S),Darwin)
+$(info Using Makefile.OSX)
 include Makefile.OSX
+else ifeq ($(DISTRO),Ubuntu)
+$(info Using Makefile.Mate)
+include Makefile.Mate
+else ifeq ($(DISTRO),Pop)
+$(info Using Makefile.Linux)
+include Makefile.Linux
 else
-$(error Unsupported OS: $(UNAME_S))
+$(info Using Makefile.Linux)
+include Makefile.Linux
 endif

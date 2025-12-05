@@ -56,6 +56,13 @@ void Serial::Open () {
     
 }
 
+void Serial::Open(const std::string &p_port_name, int p_baud_rate) {
+    set_port_name(p_port_name);
+    set_baud_rate(p_baud_rate);
+    Open();
+}
+
+
 void Serial::Close() {
     if (port >= 0) {
         close(port);

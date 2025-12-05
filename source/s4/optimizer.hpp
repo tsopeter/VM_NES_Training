@@ -11,10 +11,26 @@ public:
     ~s4_Optimizer ();
 
     void step (torch::Tensor &rewards);
+    void step_a (torch::Tensor &rewards);
+    void step_ppo (torch::Tensor &rewards);
+    void step_fisher (torch::Tensor &rewards);
 
+    double epsilon = 0.1;
+    double xNES_lr_mu = 0.1;
+    double xNES_lr_std = 0.1;
+
+    torch::Tensor best_mask;
+    torch::Tensor average_mask;
+    double best_reward;
 private:
     torch::optim::Optimizer &m_opt;
     s4_Model& m_model;
+    torch::Tensor m_old_logp;
+
+    torch::Tensor utilities (torch::Tensor &rewards);
+    torch::Tensor norm_reward (torch::Tensor &rewards);
+
+    void xNES_update (torch::Tensor &rewards);
 };
 
 #endif
