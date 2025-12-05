@@ -422,3 +422,76 @@ torch::Tensor &Distributions::xNES_Normal::mu () {
 torch::Tensor &Distributions::xNES_Normal::std () {
     return m_std;
 }
+
+Distributions::Normal2::Normal2 (torch::Tensor &mu, torch::Tensor &std) : m_mu(mu), m_std(std) {
+
+}
+
+Distributions::Normal2::~Normal2 () {
+
+}
+
+std::string Distributions::Normal2::get_name() const {
+    return "normal2";
+}
+
+torch::Tensor Distributions::Normal2::sample (int n) {
+    torch::NoGradGuard no_grad;
+    std::cout << "INFO: [Distributions::Normal2::sample] Sampling " << n << " samples from Normal2 distribution with mean shape " << m_mu.sizes() << " and std shape " << m_std.sizes() << ".\n";
+    
+    // Broadcast m_mu and m_std to match the sample shape
+    auto mu_shape = m_mu.sizes();
+    auto sample_shape = torch::IntArrayRef({n}).vec();
+    sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
+    torch::Tensor eps = torch::randn(sample_shape, m_mu.options());
+    return (m_mu.unsqueeze(0).expand_as(eps) + m_std.unsqueeze(0).expand_as(eps) * eps).contiguous();
+}
+
+torch::Tensor Distributions::Normal2::base(int n) {
+    torch::NoGradGuard no_grad;
+    
+    // Broadcast m_mu to match the sample shape
+    auto mu_shape = m_mu.sizes();
+    auto sample_shape = torch::IntArrayRef({n}).vec();
+    sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
+    return m_mu.unsqueeze(0).expand(sample_shape).contiguous();
+}
+
+torch::Tensor Distributions::Normal2::log_prob(torch::Tensor &t) {
+    // Compute log probability of t under Normal(m_mu, m_std)
+    auto var = m_std * m_std;
+    auto log_scale = torch::log(m_std);
+
+    return (
+        -((t - m_mu).pow(2)) / (2 * var)
+        - log_scale
+        - std::log(2 * M_PI) / 2
+    );
+}
+
+torch::Tensor Distributions::Normal2::entropy() {
+    // Entropy of Normal distribution: 0.5 * log(2 * pi * e * var)
+    auto var = m_std * m_std;
+
+    auto _entropy = 0.5 + 0.5 * torch::log(2 * M_PI * var);
+    return _entropy;
+}
+
+torch::Tensor Distributions::Normal2::entropy_no_grad() {
+    torch::NoGradGuard no_grad;
+    return entropy(); // note that entropy has no grad anyway since it only is determed by std
+}
+
+torch::Tensor Distributions::Normal2::probs() {
+    // Probs doesnt make sense for Normal distributions
+    throw std::runtime_error("Distributions::Normal2::probs: Not defined for Normal distributions.");
+}
+
+torch::Tensor &Distributions::Normal2::mu () {
+    return m_mu;
+}
+
+torch::Tensor &Distributions::Normal2::std () {
+    return m_std;
+}
+
