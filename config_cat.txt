@@ -1,8 +1,8 @@
-Height 200
-Width  320
-Distribution normal
+Height 400
+Width  640
+Distribution categorical
 Std 0.2
-LearningRate 0.1
+LearningRate 0.2
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -17,10 +17,10 @@ IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 20
 SaveInterval 10000
-CheckpointDirectory 2025_12_03/16/normal/200x320/upscale2/004
+CheckpointDirectory 2025_12_03/16/categorical/003
 ExposureTime 300
 DatasetPath Datasets/
-Epochs 10
+Epochs 20
 InputFlipUD 0
 InputFlipLR 0
 AffineOffsetX -0.02496718056499958

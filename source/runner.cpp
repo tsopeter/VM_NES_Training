@@ -155,6 +155,7 @@ void Runner::Run (std::string config_file) {
         }
 
         // If the current accuracy is 20% less than previous accuracy, revert
+        /*
         if (train_perf.accuracy < 0.8 * previous_accuracy) {
             std::cout << "WARNING: [Runner::Run] Training accuracy dropped from "
                       << previous_accuracy << " to " << train_perf.accuracy
@@ -165,6 +166,7 @@ void Runner::Run (std::string config_file) {
         else {
             previous_accuracy = train_perf.accuracy;
         }
+        */
 
         Time current_time = GetCurrentTime();
 

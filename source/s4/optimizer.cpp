@@ -84,7 +84,8 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
     }
     std::cout << "INFO: [s4_Optimizer::step] Rewards device: " << rewards.device() << '\n';
 
-    auto u = utilities(rewards);
+    //auto u = utilities(rewards);
+    auto u   = norm_reward(rewards);
 
     // Best reward tracking
     if (rewards.max().item<double>() > best_reward) {
@@ -165,10 +166,12 @@ torch::Tensor s4_Optimizer::utilities (torch::Tensor &rewards) {
 }
 
 torch::Tensor s4_Optimizer::norm_reward (torch::Tensor &rewards) {
-    auto mean = rewards.mean();
+    auto N    = rewards.size(0);
     auto std  = rewards.std(true);
+    auto baseline = (rewards.sum() - rewards)/(N-1);
+    auto norm     = (rewards - baseline)/(std + 1e-10);
 
-    return (rewards - mean) / (std + 1e-10);
+    return norm;
 }
 
 void s4_Optimizer::xNES_update (torch::Tensor &rewards) {
