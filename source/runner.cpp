@@ -238,12 +238,6 @@ void Runner::Run (std::string config_file) {
         "Final Testing Results\nEpoch " + std::to_string(epoch)
     );
 
-
-
-
-
-
-
     scheduler.StopThreads();
     scheduler.StopCamera();
     scheduler.StopWindow();
@@ -578,12 +572,20 @@ void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, Distribution
     m_Height = Height;
     m_Width  = Width;
     m_n      = n;
+    m_model_distribution = dist_type;
 
     // Initialize m_parameter based on distribution type
     if (dist_type == DistributionType::NORMAL) {
         m_parameter = torch::rand({Height, Width}, torch::kFloat32).to(DEVICE) * 2.0 * M_PI - M_PI;
         m_dist = new Distributions::Normal(m_parameter, std);
         m_parameter.set_requires_grad(true);
+    }
+    else if (dist_type == DistributionType::NORMAL2) {
+        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
+        m_parameter_std = torch::ones({Height, Width}, torch::kFloat32).to(DEVICE) * std;
+        m_dist = new Distributions::Normal2(m_parameter, m_parameter_std);
+        m_parameter.set_requires_grad(true);
+        m_parameter_std.set_requires_grad(true);
     }
     else if (dist_type == DistributionType::CATEGORICAL) {
         m_parameter = torch::randn({Height, Width, num_levels}, torch::kFloat32).to(DEVICE);
@@ -660,7 +662,12 @@ torch::Tensor Runner::Model::action () {
 }
 
 std::vector<torch::Tensor> Runner::Model::parameters () {
-    return {m_parameter};
+    if (m_model_distribution == DistributionType::NORMAL2) {
+        return {m_parameter, m_parameter_std};
+    }
+    else {
+        return {m_parameter};
+    }
 }
 
 torch::Tensor &Runner::Model::get_parameters () {
@@ -740,6 +747,10 @@ void Runner::ExportConfig (const std::string &filename) {
             ofs << "normal\n";
             ofs << "\t\tStandard Deviation: " << m_std << '\n';
             break;
+        case DistributionType::NORMAL2:
+            ofs << "normal2\n";
+            ofs << "\t\tInitial Standard Deviation: " << m_std << '\n';
+            break;
         case DistributionType::CATEGORICAL:
             ofs << "categorical\n";
             break;
@@ -809,6 +820,9 @@ void Runner::InitConfigKeyMap () {
                 ifs >> dist_str;
                 if (dist_str == "normal") {
                     ModelDistribution = DistributionType::NORMAL;
+                }
+                else if (dist_str == "normal2") {
+                    ModelDistribution = DistributionType::NORMAL2;
                 }
                 else if (dist_str == "categorical") {
                     ModelDistribution = DistributionType::CATEGORICAL;

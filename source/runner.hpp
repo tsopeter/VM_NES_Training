@@ -18,7 +18,8 @@ enum DistributionType {
         NORMAL,
         CATEGORICAL,
         BINARY,
-        XNES_NORMAL
+        XNES_NORMAL,
+        NORMAL2
 };
 
 int ModelHeight = 400;
@@ -62,9 +63,10 @@ public:
     Distributions::Definition* get_definition () override;
 
 
-
+    DistributionType m_model_distribution;
     Distributions::Definition *m_dist = nullptr;
     torch::Tensor m_parameter;
+    torch::Tensor m_parameter_std; /* Only used for Normal2 */
     torch::Tensor m_std;
     torch::Tensor m_action;
     std::vector<torch::Tensor> m_action_s;
