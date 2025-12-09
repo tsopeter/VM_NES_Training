@@ -29,13 +29,14 @@ Helpers::Parameters::Parameters () {
         auto preds = sums.argmax(1); // [1]
         auto targets = l.to(torch::kLong).to(sums.device()); // [1]
 
-        if (_PDF.process_count % _PDF.save_iter == 0) {
+        if (_PDF.process_count % _PDF.save_iter == 0 && this->save_images) {
             std::cout << "INFO: [process_fn] Processed " << _PDF.process_count << " samples so far.\n";
             auto img_img = img * 255.0f;
             img_img = img_img.contiguous().to(torch::kUInt8);
+            std::string filepath = this->save_images_directory + "/sample_" + std::to_string(_PDF.process_count) + "_" + std::to_string(ts.label) + "_" + std::to_string(preds.item<int>()) + ".png";
 
             auto Img = s4_Utils::TensorToImage(img_img);
-            ExportImage(Img, "sample.bmp");
+            ExportImage(Img, filepath.c_str());
             UnloadImage(Img);
         } 
 
@@ -385,6 +386,8 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
             Iterate(params, scheduler);
             ++params.steps;
         }
+
+        //TakeScreenshot("screenshot.png");
 
     }
 

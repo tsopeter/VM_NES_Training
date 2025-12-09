@@ -37,6 +37,12 @@ void Runner::Run (std::string config_file) {
         model.init(m_checkpoint_mask, ModelDistribution);
     }
 
+    bool save_images = params.save_images;
+
+    if (m_save_only_test) {
+        params.save_images = false;
+    }
+
     std::cout << "INFO: [Runner::Run] Setting up optimizer...\n";
     std::vector<torch::Tensor> dummy_params = {torch::randn({1}, torch::kFloat32).to(DEVICE)}; // Dummy tensor
     dummy_params[0].set_requires_grad(true);
@@ -222,6 +228,10 @@ void Runner::Run (std::string config_file) {
 
     // Re-initialize the model with best parameters
     model.init(best_parameter.to(DEVICE), ModelDistribution);
+
+    if (save_images) {
+        params.save_images = true;
+    }
 
     auto test_perf = Helpers::Run::Inference(
         params,
@@ -576,7 +586,7 @@ void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, Distribution
 
     // Initialize m_parameter based on distribution type
     if (dist_type == DistributionType::NORMAL) {
-        m_parameter = torch::rand({Height, Width}, torch::kFloat32).to(DEVICE) * 2.0 * M_PI - M_PI;
+        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Normal(m_parameter, std);
         m_parameter.set_requires_grad(true);
     }
@@ -789,6 +799,11 @@ void Runner::ExportConfig (const std::string &filename) {
 
     ofs << "\tSample Update Amount: ";
     ofs << params.n_samples_update_amount << '\n';
+
+    if (params.save_images) {
+        ofs << "Image Saving: Enabled\n";
+        ofs << "\tImage Save Directory: " << params.save_images_directory << '\n';
+    }
 
     ofs.close();
 }
@@ -1190,6 +1205,32 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {
                 ifs >> params._PDF.loss_fn_mode;
                 std::cout << "Setting Loss Function Mode to " << params._PDF.loss_fn_mode << "...\n";
+            }
+        },
+        {
+            "SaveImages",
+            [this](std::ifstream &ifs) {
+                ifs >> params.save_images;
+                std::cout << "Setting Save Images to " << (params.save_images ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "SaveImagesDirectory",
+            [this](std::ifstream &ifs) {
+                ifs >> params.save_images_directory;
+                // Test if the folder exists
+                if (!std::filesystem::exists(params.save_images_directory)) {
+                    throw std::runtime_error("Runner::ParseConfigFile: Save Images Directory does not exist: " + params.save_images_directory);
+                }
+                std::cout << "Setting Save Images Directory to " << params.save_images_directory << "...\n";
+            }
+        },
+        {
+            "SaveAll",
+            [this](std::ifstream &ifs) {
+                ifs >> m_save_only_test;
+                m_save_only_test = !m_save_only_test;
+                std::cout << "Setting Save All Images to " << (m_save_only_test ? "true" : "false") << "...\n";
             }
         }
     };

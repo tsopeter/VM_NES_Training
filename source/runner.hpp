@@ -89,6 +89,7 @@ std::string m_checkpoint_mask_location;
 int m_sub_texture_offset_h = 0;
 int m_sub_texture_offset_w = 0;
 bool m_auto = false;
+bool m_save_only_test = true;
 
 double m_sub_texture_scale_h = 1.0;
 double m_sub_texture_scale_w = 1.0;

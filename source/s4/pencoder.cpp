@@ -338,6 +338,9 @@ torch::Tensor PEncoder::MEncode_u8Tensor4 (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
+    torch::Tensor plane = q[x];
+    return MEncode_u8Tensor_Categorical(plane);
+    /*
     int64_t N       = x.size(0);
     int64_t input_h = x.size(1);
     int64_t input_w = x.size(2);
@@ -364,6 +367,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
     image = torch::fliplr(image);
 
     return image;
+    */
 }
 
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {

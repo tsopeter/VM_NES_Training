@@ -117,6 +117,9 @@ struct Parameters {
     bool    flip_input_V         = false;
     bool    flip_input_H         = false;
 
+    bool    save_images          = false;
+    std::string save_images_directory = "./Saved_Images/";
+
     int     num_levels           = 16;
     // available levels: 2, 4, 8, 16
 
