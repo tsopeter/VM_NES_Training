@@ -2,7 +2,7 @@ Height 400
 Width  640
 Distribution categorical
 Std 0.4
-LearningRate 0.5
+LearningRate 0.2
 TrainingSamples 5
 TrainingBatchSize 1
 ValidationSamples 1
@@ -14,13 +14,15 @@ Padding 0
 SubShaderThreshold 0.8
 UpscaleFactor 2
 IterationAmount 4
-RegionFile source/Assets/custom_checkerboard_mask.npy
+RegionFile source/Assets/custom_mask.npy
 MinLimit 20
-SaveInterval 1000
-CheckpointDirectory 2026_01_27/16/categorical/001c
+SaveInterval 100
+SaveImages 1
+SaveImagesDirectory 2026_01_27/16/categorical/002c/images
+CheckpointDirectory 2026_01_27/16/categorical/002c
 ExposureTime 300
 DatasetPath Datasets2/
-Epochs 50
+Epochs 100
 InputFlipUD 0
 InputFlipLR 0
 AffineOffsetX -0.02496718056499958
@@ -31,3 +33,5 @@ SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 3
 NumLevels 16
+SaveAll 1
+SaveImageCount 5000
