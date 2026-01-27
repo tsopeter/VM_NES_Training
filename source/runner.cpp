@@ -803,6 +803,7 @@ void Runner::ExportConfig (const std::string &filename) {
     if (params.save_images) {
         ofs << "Image Saving: Enabled\n";
         ofs << "\tImage Save Directory: " << params.save_images_directory << '\n';
+        ofs << "\tNumber of Images to Save: " << params.save_images_count << '\n';
     }
 
     ofs.close();
@@ -1231,6 +1232,13 @@ void Runner::InitConfigKeyMap () {
                 ifs >> m_save_only_test;
                 m_save_only_test = !m_save_only_test;
                 std::cout << "Setting Save All Images to " << (m_save_only_test ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "SaveImageCount",
+            [this](std::ifstream &ifs) {
+                ifs >>  params.save_images_count;
+                std::cout << "Setting Save Image Count to " << params.save_images_count << "...\n";
             }
         }
     };

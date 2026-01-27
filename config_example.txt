@@ -33,4 +33,5 @@ SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 0
 NumLevels 16
-SaveAll 1
+SaveAll 0
+SaveImageCount 100

@@ -119,6 +119,7 @@ struct Parameters {
 
     bool    save_images          = false;
     std::string save_images_directory = "./Saved_Images/";
+    int     save_images_count    = -1;
 
     int     num_levels           = 16;
     // available levels: 2, 4, 8, 16

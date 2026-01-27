@@ -29,7 +29,7 @@ Helpers::Parameters::Parameters () {
         auto preds = sums.argmax(1); // [1]
         auto targets = l.to(torch::kLong).to(sums.device()); // [1]
 
-        if (_PDF.process_count % _PDF.save_iter == 0 && this->save_images) {
+        if (_PDF.process_count % _PDF.save_iter == 0 && this->save_images && this->save_images_count != 0) {
             std::cout << "INFO: [process_fn] Processed " << _PDF.process_count << " samples so far.\n";
             auto img_img = img * 255.0f;
             img_img = img_img.contiguous().to(torch::kUInt8);
@@ -38,6 +38,7 @@ Helpers::Parameters::Parameters () {
             auto Img = s4_Utils::TensorToImage(img_img);
             ExportImage(Img, filepath.c_str());
             UnloadImage(Img);
+            --this->save_images_count;
         } 
 
         if (_PDF.process_count % _PDF.accuracy_interval == 0) {
@@ -308,7 +309,8 @@ void Helpers::Run::Setup_Scheduler (
 
     );
 
-    scheduler.EnableSampleImageCapture();
+    //scheduler.EnableSampleImageCapture();
+    scheduler.DisableSampleImageCapture();
     scheduler.SetRewardDevice(DEVICE);
     scheduler.EnableLabelQueueing();
     scheduler.EnableBlendMode();    /* For use with DLP/PLM system, disable if only PLM */
