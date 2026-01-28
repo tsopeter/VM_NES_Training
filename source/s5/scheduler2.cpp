@@ -102,6 +102,7 @@ void Scheduler2::StartWindow() {
     sub_shader = LoadShader(nullptr, "source/shaders/alpha_mask.fs");
     val_shader = LoadShader(nullptr, "source/shaders/selective_mask.fs");
     sub_shader_blend = LoadShader(nullptr, "source/shaders/alpha_mask_b4.fs");
+    sub_shader_blend_posterize = LoadShader(nullptr, "source/shaders/alpha_mask_posterize_b4.fs");
     std::cout << "INFO: [Scheduler2::StartWindow] Shader loaded.\n";
     std::cout << "INFO: [Scheduler2::StartWindow] Window started.\n";
 
@@ -1107,7 +1108,12 @@ void Scheduler2::DrawSubTexturesToScreen_BlendMode () {
     // colors are only allowed for the last bit of blue channel
 
     BeginBlendMode(BLEND_ADD_COLORS);
-    BeginShaderMode(sub_shader_blend);
+
+    if (!m_use_posterization) {
+        BeginShaderMode(sub_shader_blend);
+    } else {
+        BeginShaderMode(sub_shader_blend_posterize);
+    }
 
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
@@ -1161,7 +1167,11 @@ void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
 
     //BeginBlendMode(BLEND_ADD_COLORS);
     BeginBlendMode(BLEND_ADDITIVE);
-    BeginShaderMode(sub_shader_blend);
+    if (!m_use_posterization) {
+        BeginShaderMode(sub_shader_blend);
+    } else {
+        BeginShaderMode(sub_shader_blend_posterize);
+    }
 
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
@@ -1287,6 +1297,12 @@ void Scheduler2::SetSubShaderThreshold(float threshold) {
         &threshold,
         SHADER_UNIFORM_FLOAT
     );
+    SetShaderValue(
+        sub_shader_blend_posterize,
+        GetShaderLocation(sub_shader_blend_posterize, "uThreshold"),
+        &threshold,
+        SHADER_UNIFORM_FLOAT
+    );
     m_sub_shader_threshold = threshold;
 }
 
@@ -1322,7 +1338,13 @@ void Scheduler2::DrawSubTexturesOnly () {
     }
 
     BeginBlendMode(BLEND_ADD_COLORS);
-    BeginShaderMode(sub_shader_blend);
+
+    if (m_use_posterization) {
+        BeginShaderMode(sub_shader_blend_posterize);
+    }
+    else {
+        BeginShaderMode(sub_shader_blend);
+    }
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
             if (!m_prewarped_textures) {
@@ -1384,4 +1406,8 @@ void Scheduler2::EnablePrewarpedTextures () {
 
 void Scheduler2::DisablePrewarpedTextures () {
     m_prewarped_textures = false;
+}
+
+void Scheduler2::SetPosterization (bool enable) {
+    m_use_posterization = enable;
 }

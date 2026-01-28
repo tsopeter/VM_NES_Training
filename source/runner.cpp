@@ -1240,6 +1240,13 @@ void Runner::InitConfigKeyMap () {
                 ifs >>  params.save_images_count;
                 std::cout << "Setting Save Image Count to " << params.save_images_count << "...\n";
             }
+        },
+        {
+            "UsePosterizationShader",
+            [this](std::ifstream &ifs) {
+                ifs >> params.use_posterization;
+                std::cout << "Setting Use Posterization Shader to " << (params.use_posterization ? "true" : "false") << "...\n";
+            }
         }
     };
 }

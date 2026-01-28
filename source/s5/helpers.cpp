@@ -331,6 +331,7 @@ void Helpers::Run::Setup_Scheduler (
 
     scheduler.SetSubShaderThreshold(params.sub_shader_threshold);
     scheduler.SetBatchSize(params.n_batch_size);
+    scheduler.SetPosterization(params.use_posterization);
 }
 
 void Helpers::Run::Performance::Save (

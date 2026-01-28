@@ -270,6 +270,7 @@ public:
     void DisableAntiTheticSampling ();
 
     void SetBackgroundTexture (Texture tex);
+    void SetPosterization (bool enable);
 
 private:
     // Private methods 
@@ -341,6 +342,9 @@ private:
     Shader sub_shader;
     Shader val_shader;
     Shader sub_shader_blend;
+    Shader sub_shader_blend_posterize;
+
+    bool m_use_posterization = false;
 
     //
     // Optimizer

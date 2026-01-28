@@ -11,7 +11,8 @@ TestSamples 1000
 TestBatchSize 1000
 Samples 10
 Padding 3
-SubShaderThreshold 0.5
+SubShaderThreshold 0.8
+UsePosterizationShader 1
 UpscaleFactor 2
 IterationAmount 4
 RegionFile source/Assets/phy8.npy

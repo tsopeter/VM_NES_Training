@@ -123,6 +123,8 @@ struct Parameters {
 
     int     num_levels           = 16;
     // available levels: 2, 4, 8, 16
+    
+    bool    use_posterization    = false;
 
     std::string prewarped_directory = "";
 
