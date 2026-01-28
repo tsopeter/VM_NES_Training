@@ -156,7 +156,10 @@ torch::Tensor s4_Optimizer::utilities (torch::Tensor &rewards) {
     auto ranks = torch::empty_like(order, torch::kLong);
     ranks.index_copy_(0, order, torch::arange(N, rewards.options().dtype(torch::kLong)));
 
-    auto util = torch::log((N / 2.0 + 1.0)) - torch::log(ranks.to(rewards.dtype()) + 1);
+    const double log_n2p1 = std::log(N / 2.0 + 1.0);
+
+
+    auto util = torch::log(log_n2p1 - ranks.to(rewards.dtype()) - 1);
     util = torch::clamp(util, 0);
     util = util / util.sum();
     util = util - 1.0 / N;

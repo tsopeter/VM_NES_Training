@@ -17,7 +17,7 @@ IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 20
 SaveInterval 10000
-CheckpointDirectory 2026_01_27/16/categorical/001
+CheckpointDirectory 2026_01_27/16/categorical/002
 ExposureTime 300
 DatasetPath FashionDatasets/
 Epochs 20
