@@ -1,8 +1,8 @@
 Height 400
 Width  640
 Distribution normal
-Std 0.1
-LearningRate 0.01
+Std 0.6
+LearningRate 0.075
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -12,12 +12,13 @@ TestBatchSize 1000
 Samples 10
 Padding 3
 SubShaderThreshold 0.8
+UsePosterizationShader 0
 UpscaleFactor 2
 IterationAmount 4
 RegionFile source/Assets/phy8.npy
-MinLimit 20
+MinLimit 2
 SaveInterval 10000
-CheckpointDirectory 2025_12_10/long_form/002
+CheckpointDirectory 2026_01_27/4/normal/mnist/001
 ExposureTime 300
 DatasetPath Datasets/
 Epochs 50
@@ -30,4 +31,4 @@ AffineScaleY 1.0418670177459717
 SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 0
-NumLevels 16
+NumLevels 4

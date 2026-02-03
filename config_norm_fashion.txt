@@ -1,8 +1,8 @@
 Height 400
 Width  640
 Distribution normal
-Std 0.6
-LearningRate 0.075
+Std 1.0
+LearningRate 0.05
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -18,7 +18,7 @@ IterationAmount 4
 RegionFile source/Assets/phy8.npy
 MinLimit 2
 SaveInterval 10000
-CheckpointDirectory 2026_01_27/16/normal/001
+CheckpointDirectory 2026_01_27/4/normal/fashion/003
 ExposureTime 300
 DatasetPath FashionDatasets/
 Epochs 20
@@ -31,4 +31,4 @@ AffineScaleY 1.0418670177459717
 SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 0
-NumLevels 16
+NumLevels 4
