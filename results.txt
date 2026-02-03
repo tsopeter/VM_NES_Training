@@ -5647,3 +5647,27 @@ Accuracy: 0
 Entropy: 0.155191
 Loss: -0.00153603
 ----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/centered/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 8
+Samples Total: 100
+Samples Correct: 0
+Accuracy: 0
+Entropy: 0.155191
+Loss: -0.00181027
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/large_centered/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 0
+Accuracy: 0
+Entropy: 0.155239
+Loss: -0.00200928
+----------------------------------------

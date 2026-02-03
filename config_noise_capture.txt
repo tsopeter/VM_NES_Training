@@ -15,12 +15,12 @@ SubShaderThreshold 0.8
 UsePosterizationShader 0
 UpscaleFactor 2
 IterationAmount 4
-RegionFile source/Assets/custom_mask_single.npy
+RegionFile source/Assets/custom_mask_single_large.npy
 MinLimit 2
 SaveInterval 100
-SaveImages 1
-SaveImagesDirectory 2026_01_27/noise_info/centered/images
-CheckpointDirectory 2026_01_27/noise_info/centered
+SaveImages 0
+SaveImagesDirectory 2026_01_27/noise_info/large_centered/train/images
+CheckpointDirectory 2026_01_27/noise_info/large_centered/train
 ExposureTime 300
 DatasetPath Datasets2/
 Epochs 100
@@ -34,5 +34,5 @@ SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 3
 NumLevels 16
-SaveAll 1
+SaveAll 0
 SaveImageCount 1
