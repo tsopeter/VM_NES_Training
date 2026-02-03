@@ -321,11 +321,12 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
         return model.sample(i);
     };
     eval_fn.base = [&model, &optimizer](int i) -> torch::Tensor {
-        auto action = optimizer.average_mask; // [H, W]
+        //auto action = optimizer.average_mask; // [H, W]
         
         // Extend to [N, H, W]
-        action = action.unsqueeze(0).expand({i, -1, -1}).contiguous();
-        return action;
+        //action = action.unsqueeze(0).expand({i, -1, -1}).contiguous();
+        //return action;
+        return model.m_dist->base(i);
 
     };
     eval_fn.squash = [&model]() -> void {
