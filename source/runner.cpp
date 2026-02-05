@@ -21,6 +21,8 @@ void Runner::Run (std::string config_file) {
 
     std::cout << "INFO: [Runner::Run] Exporting configuration to log file...\n";
     std::string log_file = checkpoint_directory + "/a/mean_reward.txt";
+    std::string csv_file = checkpoint_directory + "/a/results.csv";
+    InitCSVFile(csv_file);
 
     std::vector<torch::Tensor> run_parameter;
     std::vector<double> run_loss;
@@ -193,6 +195,12 @@ void Runner::Run (std::string config_file) {
             epoch,
             val_perf_message
         );
+        // Also write to CSV file
+        WriteValidationEntryToCSVFile(
+            csv_file,
+            val_perf,
+            epoch
+        );
 
         // Save the train inference performance
         std::string train_infer_perf_message = "Training Inference\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
@@ -201,6 +209,12 @@ void Runner::Run (std::string config_file) {
             log_file,
             epoch,
             train_infer_perf_message
+        );
+        // Also write to CSV file
+        WriteTrainingEntryToCSVFile(
+            csv_file,
+            train_infer_perf,
+            epoch
         );
 
         // Save checkpoint
@@ -246,6 +260,12 @@ void Runner::Run (std::string config_file) {
         log_file,
         epoch,
         "Final Testing Results\nEpoch " + std::to_string(epoch)
+    );
+    // Also write to CSV file
+    WriteTestEntryToCSVFile(
+        csv_file,
+        test_perf,
+        epoch
     );
 
     scheduler.StopThreads();
@@ -1399,4 +1419,72 @@ void Runner::Alignment () {
     
 
 
+}
+
+void Runner::WriteTrainingEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch) {
+    WriteEntryToCSVFile(filename, perf, epoch, 0);
+}
+
+void Runner::WriteValidationEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch) {
+    WriteEntryToCSVFile(filename, perf, epoch, 1);
+}
+
+void Runner::WriteTestEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch) {
+    WriteEntryToCSVFile(filename, perf, epoch, 2);
+}
+
+void Runner::WriteEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch, int type) {
+    std::ofstream ofs;
+    bool file_exists = std::filesystem::exists(filename);
+
+    ofs.open(filename, std::ios::app);
+    if (!ofs) {
+        throw std::runtime_error("WriteEntryToCSVFile: Could not open " + filename + " for writing.");
+    }
+
+    // If file does not exist, write header
+    if (!file_exists) {
+        ofs << "Epoch,CurrentTime,ComputeTime,DataType,SamplesTotal,SamplesCorrect,Entropy,Accuracy,Loss\n";
+    }
+
+    std::string data_type;
+    switch (type) {
+        case 0:
+            data_type = "Training";
+            break;
+        case 1:
+            data_type = "Validation";
+            break;
+        case 2:
+            data_type = "Test";
+            break;
+        default:
+            data_type = "Unknown";
+            break;
+    }
+
+    Time current_time = GetCurrentTime();
+
+    ofs << epoch << ","
+        << current_time.to_string() << ","
+        << perf.compute_time_s << ","
+        << data_type << ","
+        << perf.samples_total << ","
+        << perf.samples_correct << ","
+        << perf.entropy << ","
+        << perf.accuracy << ","
+        << perf.loss << "\n";
+
+    ofs.close();
+}
+
+void Runner::InitCSVFile (const std::string &filename) {
+    std::ofstream ofs;
+    ofs.open(filename, std::ios::out);
+    if (!ofs) {
+        throw std::runtime_error("InitCSVFile: Could not open " + filename + " for writing.");
+    }
+
+    ofs << "Epoch,CurrentTime,ComputeTime,DataType,SamplesTotal,SamplesCorrect,Entropy,Accuracy,Loss\n";
+    ofs.close();
 }

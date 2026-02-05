@@ -16,12 +16,13 @@ UsePosterizationShader 0
 UpscaleFactor 2
 IterationAmount 4
 RegionFile source/Assets/phy8.npy
-MinLimit 20
+MinLimit 2
 SaveInterval 10000
-CheckpointDirectory 2026_01_27/4/categorical/mnist/001
+SaveImages 0
+CheckpointDirectory 2026_01_27/16/categorical/mnist/002
 ExposureTime 300
 DatasetPath Datasets/
-Epochs 20
+Epochs 50
 InputFlipUD 0
 InputFlipLR 0
 AffineOffsetX -0.02496718056499958
@@ -31,4 +32,6 @@ AffineScaleY 1.0418670177459717
 SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 0
-NumLevels 4
+NumLevels 16
+SaveAll 0
+SaveImageCount 0

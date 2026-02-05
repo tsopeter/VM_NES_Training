@@ -43,6 +43,13 @@ void InitConfigKeyMap ();
 void ParseConfigFile (const std::string &filename);
 void ExportConfig    (const std::string &filename);
 
+void InitCSVFile (const std::string &filename);
+void WriteTrainingEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch);
+void WriteValidationEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch);
+void WriteTestEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch);
+
+void WriteEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch, int type);
+
 void SaveCheckpoint  (int epoch, torch::Tensor mask , const std::string &directory);
 
 class Model : public s4_Model {
