@@ -30,6 +30,7 @@ double xNES_lr_std = 0.1;
 DistributionType ModelDistribution = DistributionType::NORMAL;
 std::string checkpoint_directory = "./checkpoints/";
 Helpers::Parameters params;
+bool save_only_last_checkpoint = false;
 
 struct ConfigKeyMap {
     std::string      name;

@@ -19,10 +19,10 @@ RegionFile source/Assets/phy8.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0
-CheckpointDirectory 2026_01_27/16/categorical/mnist/002
-ExposureTime 300
+CheckpointDirectory 2026_01_27/16/categorical/mnist/003_59/train
+ExposureTime 59
 DatasetPath Datasets/
-Epochs 50
+Epochs 20
 InputFlipUD 0
 InputFlipLR 0
 AffineOffsetX -0.02496718056499958
@@ -35,3 +35,4 @@ LossFn 0
 NumLevels 16
 SaveAll 0
 SaveImageCount 0
+SaveOnlyLastCheckpoint 1

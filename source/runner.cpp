@@ -223,7 +223,16 @@ void Runner::Run (std::string config_file) {
         cp.config_file = config_file;
         cp.mask = model.get_parameters().detach().cpu();
         std::string cp_dir = checkpoint_directory;
-        cp.Save(cp_dir);
+
+        if (save_only_last_checkpoint) {
+            // Save only the last checkpoint
+            if (epoch == n_epochs - 1) {
+                cp.Save(cp_dir);
+            }
+        }
+        else {
+            cp.Save(cp_dir);
+        }
     }
 
     // Run final testing after training
@@ -1267,6 +1276,13 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {
                 ifs >> params.use_posterization;
                 std::cout << "Setting Use Posterization Shader to " << (params.use_posterization ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "SaveOnlyLastCheckpoint",
+            [this](std::ifstream &ifs) {
+                ifs >> save_only_last_checkpoint;
+                std::cout << "Setting Save Only Last Checkpoint to " << (save_only_last_checkpoint ? "true" : "false") << "...\n";
             }
         }
     };

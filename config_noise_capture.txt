@@ -19,11 +19,11 @@ RegionFile source/Assets/custom_mask_single.npy
 MinLimit 2
 SaveInterval 100
 SaveImages 0
-SaveImagesDirectory 2026_01_27/noise_info/centered_2/train/images
-CheckpointDirectory 2026_01_27/noise_info/centered_2/train
-ExposureTime 300
+SaveImagesDirectory 2026_01_27/noise_info/59_us_add_att_no_train/train/images
+CheckpointDirectory 2026_01_27/noise_info/59_us_add_att_no_train/train
+ExposureTime 59
 DatasetPath Datasets2/
-Epochs 100
+Epochs 1
 InputFlipUD 0
 InputFlipLR 0
 AffineOffsetX -0.02496718056499958
