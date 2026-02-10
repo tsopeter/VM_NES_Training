@@ -195,6 +195,8 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
             // Process the data
 
             auto li = l.item<int>();
+            // std::cout << "Label: " << li << "\n";
+            // assert(false);
 
             d = 255.0 - d;
             d = d.squeeze();

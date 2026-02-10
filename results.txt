@@ -5851,3 +5851,123 @@ Accuracy: 0
 Entropy: 2.35661
 Loss: -0.000120071
 ----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_5/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 0.165771
+Loss: -4.78326e-05
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_5_ces/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 1.17357
+Loss: -1.27381e-10
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_5_ces/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 1.19197
+Loss: -1.25321e-10
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_5_ces/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 1.19197
+Loss: -1.25319e-10
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_1/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 0.166919
+Loss: -5.03955e-05
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_1/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 0.166264
+Loss: -4.66692e-05
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_1/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 0.166264
+Loss: -4.84503e-05
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_1/train/epoch_9/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 100
+Accuracy: 100
+Entropy: 1.55115
+Loss: -7.56157e-05
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_1/train/epoch_99/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 0
+Accuracy: 0
+Entropy: 0.166264
+Loss: -0.000395488
+----------------------------------------
+----------------------------------------
+Dataset: TEST
+Mask Location: 2026_01_27/noise_info/59_us_digit_1/train/epoch_9/mask.pt
+
+Epoch: 0
+Compute Time (s): 7
+Samples Total: 100
+Samples Correct: 0
+Accuracy: 0
+Entropy: 1.55115
+Loss: -0.00050257
+----------------------------------------
