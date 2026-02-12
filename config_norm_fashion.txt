@@ -1,7 +1,7 @@
 Height 400
 Width  640
 Distribution normal
-Std 1.0
+Std 0.6
 LearningRate 0.05
 TrainingSamples 1000
 TrainingBatchSize 20
@@ -11,15 +11,15 @@ TestSamples 1000
 TestBatchSize 1000
 Samples 10
 Padding 3
-SubShaderThreshold 0.5
+SubShaderThreshold 0.9
 UsePosterizationShader 0
 UpscaleFactor 2
 IterationAmount 4
-RegionFile source/Assets/phy8.npy
+RegionFile source/Assets/phy8_10.npy
 MinLimit 2
 SaveInterval 10000
-CheckpointDirectory 2026_01_27/4/normal/fashion/003
-ExposureTime 300
+CheckpointDirectory 2026_01_27/4/normal/fashion/005_59/train
+ExposureTime 59
 DatasetPath FashionDatasets/
 Epochs 20
 InputFlipUD 0
@@ -32,3 +32,6 @@ SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 0
 NumLevels 4
+SaveAll 0
+SaveImageCount 0
+SaveOnlyLastCheckpoint 1
