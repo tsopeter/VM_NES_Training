@@ -40,7 +40,7 @@ torch::Tensor Quantize::operator[](const torch::Tensor &x) {
         m_levels = m_table.to(x.device()).to(x.dtype()).view({1, -1});
 
     auto normalized_x = (x + M_PI) / (2 * M_PI);  // [0, 1]
-    auto flat_x = normalized_x.view({-1});        // [N]
+    auto flat_x = normalized_x.reshape({-1});        // [N]
 
     // [N, L] = [N, 1] - [1, L] with broadcasting
     auto t1 = Utils::GetCurrentTime_us();
@@ -56,7 +56,7 @@ torch::Tensor Quantize::operator[](const torch::Tensor &x) {
     std::cout<<"INFO: [Quantize::operator[]] Remainder took: " << (t2 - t1) << " us\n";
     std::cout<<"INFO: [Quantize::operator[]] Argmin    took: " << (t3 - t2) << " us\n";
 
-    return indices.view_as(x);
+    return indices.view_as(x).contiguous();
 }
 
 torch::Tensor Quantize::CPUOperator(const torch::Tensor &x) {
@@ -100,6 +100,11 @@ void Quantize::set_levels(int num_levels) {
 
     // Precomputed tables
     switch (num_levels) {
+        case 2:
+            m_table = torch::tensor({
+                0.0000, 0.4916
+            }, torch::TensorOptions().dtype(torch::kFloat32));
+            break;
         case 4:
             m_table = torch::tensor({
                 0.0000, 0.3426, 0.6671, 0.9375

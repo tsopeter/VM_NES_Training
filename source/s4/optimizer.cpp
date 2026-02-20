@@ -31,7 +31,7 @@ void s4_Optimizer::step_a (torch::Tensor &rewards) {
 
     auto sum_rewards = rewards.sum();
     auto baseline    = (sum_rewards - rewards)/(m_model.N_samples()-1);
-    auto norm_sum    = (rewards - baseline)/rewards.std(true);
+    auto norm_sum    = (rewards - baseline)/(rewards.std(true) + 1e-8);
 
     auto logp        = m_model.logp_action();
     logp             = torch::sum(logp.view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);

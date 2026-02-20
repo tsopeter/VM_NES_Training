@@ -555,6 +555,13 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Binary (const torch::Tensor &x) {
 
 torch::Tensor PEncoder::level_mapping (torch::Tensor x) {
     switch (m_num_levels) {
+        case 2:
+            // Map 0 -> 0
+            // Map 1 -> 11
+            x = torch::where(x == 0, torch::zeros_like(x), x);
+            x = torch::where(x == 1, torch::full_like(x, 11), x);
+            
+            break;
         case 4:
             // Map 0 -> 0
             // Map 1 -> 8

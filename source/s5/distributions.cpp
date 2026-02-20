@@ -23,17 +23,19 @@ torch::Tensor Distributions::Normal::sample (int n) {
     auto sample_shape = torch::IntArrayRef({n}).vec();
     sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
     torch::Tensor eps = torch::randn(sample_shape, m_mu.options());
-    return (m_mu.unsqueeze(0).expand_as(eps) + m_std * eps).contiguous();
+    //return (m_mu.unsqueeze(0).expand_as(eps) + m_std * eps).contiguous();
+    return (m_mu + (eps * m_std)).contiguous();
 }
 
 torch::Tensor Distributions::Normal::base(int n) {
     torch::NoGradGuard no_grad;
     
     // Broadcast m_mu to match the sample shape
-    auto mu_shape = m_mu.sizes();
-    auto sample_shape = torch::IntArrayRef({n}).vec();
-    sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
-    return m_mu.unsqueeze(0).expand(sample_shape).contiguous();
+    //auto mu_shape = m_mu.sizes();
+    //auto sample_shape = torch::IntArrayRef({n}).vec();
+    //sample_shape.insert(sample_shape.end(), mu_shape.begin(), mu_shape.end());
+    //return m_mu.unsqueeze(0).expand(sample_shape).contiguous();
+    return m_mu.unsqueeze(0).expand({n, -1, -1}).contiguous();
 }
 
 torch::Tensor Distributions::Normal::log_prob(torch::Tensor &t) {

@@ -130,6 +130,9 @@ struct Parameters {
     
     bool    use_posterization    = false;
 
+    //bool    logging_enabled        = false;
+    //int     logging_interval       = 10;
+
     std::string prewarped_directory = "";
 
     std::vector<_Result> results = {};
