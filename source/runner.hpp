@@ -64,7 +64,7 @@ public:
     void squash ();
     torch::Tensor logp_action () override;
     torch::Tensor action () override;
-    std::vector<torch::Tensor> parameters ();
+    std::vector<torch::Tensor> parameters () override;
     torch::Tensor &get_parameters ();
     int64_t N_samples () const override;
     void set_definition (Distributions::Definition* def) override;

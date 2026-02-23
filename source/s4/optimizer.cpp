@@ -124,6 +124,7 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
 
     m_opt.zero_grad();
     loss.backward();
+    torch::nn::utils::clip_grad_norm_(m_model.parameters(), 1.0);
     m_opt.step();
 
     // Detach logp to avoid memory leak ??
