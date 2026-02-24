@@ -19,7 +19,7 @@ RegionFile source/Assets/phy8_10.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0
-CheckpointDirectory 2026_01_27/16/categorical/mnist/009/train
+CheckpointDirectory 2026_01_27/vibration/001/train
 ExposureTime 59
 DatasetPath Datasets/
 Epochs 20

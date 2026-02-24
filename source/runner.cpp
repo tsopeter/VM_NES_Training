@@ -101,6 +101,11 @@ void Runner::Run (std::string config_file) {
         return scheduler.Loss();
     };
 
+    // Hooks
+    hooks.SetScheduler(&scheduler);
+    hooks.SetHooks();
+
+
     double previous_accuracy = 0.0f;
     for (; epoch < n_epochs; ++epoch) {
         std::cout << "INFO: [Runner::Run] Starting Epoch " << epoch << "...\n";

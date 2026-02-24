@@ -7,6 +7,7 @@
 #include "s5/distributions.hpp"
 #include "s5/helpers.hpp"
 #include "s5/utils.hpp"
+#include "hook.hpp"
 #include <iostream>
 #include <fstream>
 #include <ostream>
@@ -84,6 +85,8 @@ public:
     double std; /* May be unused */
 
 };
+
+Additional_Hooks hooks;
 
 bool m_inference = false;
 bool m_load_checkpoint = false;

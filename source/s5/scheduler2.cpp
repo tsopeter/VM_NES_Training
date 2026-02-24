@@ -365,10 +365,15 @@ void Scheduler2::DrawTextureToScreenCentered () {
             {0, 0}, 0.0f, WHITE
         );
         EndShaderMode();
-        if (!m_blend_mode_enabled)
-            DrawSubTexturesToScreenCentered();
-        else
-            DrawSubTexturesToScreenCentered_BlendMode();
+        if (!m_sub_texture_hook_enabled) {
+            if (!m_blend_mode_enabled)
+                DrawSubTexturesToScreenCentered();
+            else
+                DrawSubTexturesToScreenCentered_BlendMode();
+        } else {
+            Shader shaders[2] = {sub_shader_blend, sub_shader_blend_posterize};
+            m_sub_texture_hook(shaders, m_sub_textures, m_sub_textures_enable);
+        }
     EndDrawing();
 }
 
@@ -1410,4 +1415,9 @@ void Scheduler2::DisablePrewarpedTextures () {
 
 void Scheduler2::SetPosterization (bool enable) {
     m_use_posterization = enable;
+}
+
+void Scheduler2::SetSubTextureHook(std::function<void(Shader[2], Texture[10], bool[10])> hook) {
+    m_sub_texture_hook = hook;
+    m_sub_texture_hook_enabled = true;
 }

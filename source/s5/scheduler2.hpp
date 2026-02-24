@@ -120,6 +120,7 @@ public:
 
     void StartCamera();
     void StopCamera();
+    void SetSubTextureHook (std::function<void(Shader[2], Texture[10], bool[10])> hook_function);
 
     void SetTextureFromTensor(const torch::Tensor &tensor);
     void SetTextureFromTensorTiled (const torch::Tensor &tensor);
@@ -424,6 +425,11 @@ private:
     bool m_use_background_texture = false;
 
     bool m_prewarped_textures = false;
+
+    //
+    // SubTexture hook
+    std::function<void(Shader[2], Texture[10], bool[10])> m_sub_texture_hook;
+    bool m_sub_texture_hook_enabled = false;
 };
 
 

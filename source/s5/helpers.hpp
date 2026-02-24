@@ -201,6 +201,11 @@ void Setup_Scheduler (
     int Width
 );
 
+void Set_SubTextureHook (
+    Scheduler2 &,
+    std::function<void(Shader[2], Texture[10], bool[10])> hook_function
+);
+
 struct Performance {
     Performance ();
     double compute_time_s;

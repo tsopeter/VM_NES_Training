@@ -875,3 +875,10 @@ std::vector<Helpers::_Result> Helpers::Parameters::GetResults (int mode, int p_d
 
     return output_results;
 }
+
+void Helpers::Run::Set_SubTextureHook (
+    Scheduler2 &scheduler,
+    std::function<void(Shader[2], Texture[10], bool[10])> hook_function
+) {
+    scheduler.SetSubTextureHook(hook_function);
+}
