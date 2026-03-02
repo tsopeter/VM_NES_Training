@@ -55,10 +55,12 @@ struct _pdf {
     int min_limit = 20;
 
     int64_t accuracy_interval = 20;
+    int     vert_dK = 2; // px
 
     std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> loss_fn;
     std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> per_pixel_loss_fn;
     std::function<torch::Tensor(torch::Tensor&)> mse_loss;
+    std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> cross_entropy_loss_fn_vert_stablized;
 
     torch::Tensor masks;
     torch::Tensor ratios;
@@ -67,6 +69,8 @@ struct _pdf {
     // 0: Cross Entropy Loss
     // 1: MSE Loss
     // 2: Per Pixel Loss
+    // 3: MSE Loss (only considers first mask)
+    // 4: Vertically Stablized Cross Entropy Loss
 
     void clear_data ();
 };
@@ -117,8 +121,17 @@ struct Parameters {
     bool    flip_input_V         = false;
     bool    flip_input_H         = false;
 
+    bool    save_images          = false;
+    std::string save_images_directory = "./Saved_Images/";
+    int     save_images_count    = -1;
+
     int     num_levels           = 16;
     // available levels: 2, 4, 8, 16
+    
+    bool    use_posterization    = false;
+
+    //bool    logging_enabled        = false;
+    //int     logging_interval       = 10;
 
     std::string prewarped_directory = "";
 

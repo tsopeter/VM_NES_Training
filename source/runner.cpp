@@ -21,6 +21,8 @@ void Runner::Run (std::string config_file) {
 
     std::cout << "INFO: [Runner::Run] Exporting configuration to log file...\n";
     std::string log_file = checkpoint_directory + "/a/mean_reward.txt";
+    std::string csv_file = checkpoint_directory + "/a/results.csv";
+    InitCSVFile(csv_file);
 
     std::vector<torch::Tensor> run_parameter;
     std::vector<double> run_loss;
@@ -35,6 +37,12 @@ void Runner::Run (std::string config_file) {
         epoch = m_checkpoint_epoch + 1;
         std::cout << "Epoch: " << epoch << '\n';
         model.init(m_checkpoint_mask, ModelDistribution);
+    }
+
+    bool save_images = params.save_images;
+
+    if (m_save_only_test) {
+        params.save_images = false;
     }
 
     std::cout << "INFO: [Runner::Run] Setting up optimizer...\n";
@@ -187,6 +195,12 @@ void Runner::Run (std::string config_file) {
             epoch,
             val_perf_message
         );
+        // Also write to CSV file
+        WriteValidationEntryToCSVFile(
+            csv_file,
+            val_perf,
+            epoch
+        );
 
         // Save the train inference performance
         std::string train_infer_perf_message = "Training Inference\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
@@ -196,6 +210,12 @@ void Runner::Run (std::string config_file) {
             epoch,
             train_infer_perf_message
         );
+        // Also write to CSV file
+        WriteTrainingEntryToCSVFile(
+            csv_file,
+            train_infer_perf,
+            epoch
+        );
 
         // Save checkpoint
         Helpers::Checkpoint cp;
@@ -203,7 +223,16 @@ void Runner::Run (std::string config_file) {
         cp.config_file = config_file;
         cp.mask = model.get_parameters().detach().cpu();
         std::string cp_dir = checkpoint_directory;
-        cp.Save(cp_dir);
+
+        if (save_only_last_checkpoint) {
+            // Save only the last checkpoint
+            if (epoch == n_epochs - 1) {
+                cp.Save(cp_dir);
+            }
+        }
+        else {
+            cp.Save(cp_dir);
+        }
     }
 
     // Run final testing after training
@@ -223,6 +252,10 @@ void Runner::Run (std::string config_file) {
     // Re-initialize the model with best parameters
     model.init(best_parameter.to(DEVICE), ModelDistribution);
 
+    if (save_images) {
+        params.save_images = true;
+    }
+
     auto test_perf = Helpers::Run::Inference(
         params,
         scheduler,
@@ -237,12 +270,12 @@ void Runner::Run (std::string config_file) {
         epoch,
         "Final Testing Results\nEpoch " + std::to_string(epoch)
     );
-
-
-
-
-
-
+    // Also write to CSV file
+    WriteTestEntryToCSVFile(
+        csv_file,
+        test_perf,
+        epoch
+    );
 
     scheduler.StopThreads();
     scheduler.StopCamera();
@@ -317,11 +350,12 @@ void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_d
         return model.sample(i);
     };
     eval_fn.base = [&model, &optimizer](int i) -> torch::Tensor {
-        auto action = optimizer.average_mask; // [H, W]
+        //auto action = optimizer.average_mask; // [H, W]
         
         // Extend to [N, H, W]
-        action = action.unsqueeze(0).expand({i, -1, -1}).contiguous();
-        return action;
+        //action = action.unsqueeze(0).expand({i, -1, -1}).contiguous();
+        //return action;
+        return model.m_dist->base(i);
 
     };
     eval_fn.squash = [&model]() -> void {
@@ -578,12 +612,20 @@ void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, Distribution
     m_Height = Height;
     m_Width  = Width;
     m_n      = n;
+    m_model_distribution = dist_type;
 
     // Initialize m_parameter based on distribution type
     if (dist_type == DistributionType::NORMAL) {
-        m_parameter = torch::rand({Height, Width}, torch::kFloat32).to(DEVICE) * 2.0 * M_PI - M_PI;
+        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Normal(m_parameter, std);
         m_parameter.set_requires_grad(true);
+    }
+    else if (dist_type == DistributionType::NORMAL2) {
+        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
+        m_parameter_std = torch::ones({Height, Width}, torch::kFloat32).to(DEVICE) * std;
+        m_dist = new Distributions::Normal2(m_parameter, m_parameter_std);
+        m_parameter.set_requires_grad(true);
+        m_parameter_std.set_requires_grad(true);
     }
     else if (dist_type == DistributionType::CATEGORICAL) {
         m_parameter = torch::randn({Height, Width, num_levels}, torch::kFloat32).to(DEVICE);
@@ -660,7 +702,12 @@ torch::Tensor Runner::Model::action () {
 }
 
 std::vector<torch::Tensor> Runner::Model::parameters () {
-    return {m_parameter};
+    if (m_model_distribution == DistributionType::NORMAL2) {
+        return {m_parameter, m_parameter_std};
+    }
+    else {
+        return {m_parameter};
+    }
 }
 
 torch::Tensor &Runner::Model::get_parameters () {
@@ -740,6 +787,10 @@ void Runner::ExportConfig (const std::string &filename) {
             ofs << "normal\n";
             ofs << "\t\tStandard Deviation: " << m_std << '\n';
             break;
+        case DistributionType::NORMAL2:
+            ofs << "normal2\n";
+            ofs << "\t\tInitial Standard Deviation: " << m_std << '\n';
+            break;
         case DistributionType::CATEGORICAL:
             ofs << "categorical\n";
             break;
@@ -779,6 +830,12 @@ void Runner::ExportConfig (const std::string &filename) {
     ofs << "\tSample Update Amount: ";
     ofs << params.n_samples_update_amount << '\n';
 
+    if (params.save_images) {
+        ofs << "Image Saving: Enabled\n";
+        ofs << "\tImage Save Directory: " << params.save_images_directory << '\n';
+        ofs << "\tNumber of Images to Save: " << params.save_images_count << '\n';
+    }
+
     ofs.close();
 }
 
@@ -809,6 +866,9 @@ void Runner::InitConfigKeyMap () {
                 ifs >> dist_str;
                 if (dist_str == "normal") {
                     ModelDistribution = DistributionType::NORMAL;
+                }
+                else if (dist_str == "normal2") {
+                    ModelDistribution = DistributionType::NORMAL2;
                 }
                 else if (dist_str == "categorical") {
                     ModelDistribution = DistributionType::CATEGORICAL;
@@ -1177,6 +1237,53 @@ void Runner::InitConfigKeyMap () {
                 ifs >> params._PDF.loss_fn_mode;
                 std::cout << "Setting Loss Function Mode to " << params._PDF.loss_fn_mode << "...\n";
             }
+        },
+        {
+            "SaveImages",
+            [this](std::ifstream &ifs) {
+                ifs >> params.save_images;
+                std::cout << "Setting Save Images to " << (params.save_images ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "SaveImagesDirectory",
+            [this](std::ifstream &ifs) {
+                ifs >> params.save_images_directory;
+                // Test if the folder exists
+                if (!std::filesystem::exists(params.save_images_directory)) {
+                    throw std::runtime_error("Runner::ParseConfigFile: Save Images Directory does not exist: " + params.save_images_directory);
+                }
+                std::cout << "Setting Save Images Directory to " << params.save_images_directory << "...\n";
+            }
+        },
+        {
+            "SaveAll",
+            [this](std::ifstream &ifs) {
+                ifs >> m_save_only_test;
+                m_save_only_test = !m_save_only_test;
+                std::cout << "Setting Save All Images to " << (m_save_only_test ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "SaveImageCount",
+            [this](std::ifstream &ifs) {
+                ifs >>  params.save_images_count;
+                std::cout << "Setting Save Image Count to " << params.save_images_count << "...\n";
+            }
+        },
+        {
+            "UsePosterizationShader",
+            [this](std::ifstream &ifs) {
+                ifs >> params.use_posterization;
+                std::cout << "Setting Use Posterization Shader to " << (params.use_posterization ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "SaveOnlyLastCheckpoint",
+            [this](std::ifstream &ifs) {
+                ifs >> save_only_last_checkpoint;
+                std::cout << "Setting Save Only Last Checkpoint to " << (save_only_last_checkpoint ? "true" : "false") << "...\n";
+            }
         }
     };
 }
@@ -1328,4 +1435,72 @@ void Runner::Alignment () {
     
 
 
+}
+
+void Runner::WriteTrainingEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch) {
+    WriteEntryToCSVFile(filename, perf, epoch, 0);
+}
+
+void Runner::WriteValidationEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch) {
+    WriteEntryToCSVFile(filename, perf, epoch, 1);
+}
+
+void Runner::WriteTestEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch) {
+    WriteEntryToCSVFile(filename, perf, epoch, 2);
+}
+
+void Runner::WriteEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch, int type) {
+    std::ofstream ofs;
+    bool file_exists = std::filesystem::exists(filename);
+
+    ofs.open(filename, std::ios::app);
+    if (!ofs) {
+        throw std::runtime_error("WriteEntryToCSVFile: Could not open " + filename + " for writing.");
+    }
+
+    // If file does not exist, write header
+    if (!file_exists) {
+        ofs << "Epoch,CurrentTime,ComputeTime,DataType,SamplesTotal,SamplesCorrect,Entropy,Accuracy,Loss\n";
+    }
+
+    std::string data_type;
+    switch (type) {
+        case 0:
+            data_type = "Training";
+            break;
+        case 1:
+            data_type = "Validation";
+            break;
+        case 2:
+            data_type = "Test";
+            break;
+        default:
+            data_type = "Unknown";
+            break;
+    }
+
+    Time current_time = GetCurrentTime();
+
+    ofs << epoch << ","
+        << current_time.to_string() << ","
+        << perf.compute_time_s << ","
+        << data_type << ","
+        << perf.samples_total << ","
+        << perf.samples_correct << ","
+        << perf.entropy << ","
+        << perf.accuracy << ","
+        << perf.loss << "\n";
+
+    ofs.close();
+}
+
+void Runner::InitCSVFile (const std::string &filename) {
+    std::ofstream ofs;
+    ofs.open(filename, std::ios::out);
+    if (!ofs) {
+        throw std::runtime_error("InitCSVFile: Could not open " + filename + " for writing.");
+    }
+
+    ofs << "Epoch,CurrentTime,ComputeTime,DataType,SamplesTotal,SamplesCorrect,Entropy,Accuracy,Loss\n";
+    ofs.close();
 }

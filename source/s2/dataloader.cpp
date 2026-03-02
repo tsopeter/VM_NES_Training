@@ -76,8 +76,12 @@ void s2_Data::load_data () {
 
     // load the label data
     auto labels = np2lt::i64(label_path).to(m_device);
+
+    // std::cout << labels[0] << "\n";
+
     // Slice to only the first sz elements after argmax
     auto argmaxed = torch::argmax(labels, 2);
+
     ldata = argmaxed.index({torch::indexing::Slice(0, sz)}).view({sz, 1});
     loaded = true;
 }

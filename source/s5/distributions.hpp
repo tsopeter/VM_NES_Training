@@ -39,6 +39,24 @@ public:
     double m_std;
 };
 
+class Normal2 : public Definition {
+public:
+    Normal2 (torch::Tensor &mu, torch::Tensor &std);
+    ~Normal2 ();
+    torch::Tensor sample (int n) override;
+    torch::Tensor base(int n) override;
+    torch::Tensor log_prob(torch::Tensor &t) override;
+    std::string get_name() const override;
+    torch::Tensor entropy() override;
+    torch::Tensor entropy_no_grad() override;
+    torch::Tensor probs() override;
+    torch::Tensor &mu () override;
+    torch::Tensor &std () override;
+
+    torch::Tensor &m_mu;
+    torch::Tensor &m_std;
+};
+
 class xNES_Normal : public Definition {
 public:
     xNES_Normal (torch::Tensor &mu, torch::Tensor &std);

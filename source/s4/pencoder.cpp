@@ -338,6 +338,9 @@ torch::Tensor PEncoder::MEncode_u8Tensor4 (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
+    torch::Tensor plane = q[x];
+    return MEncode_u8Tensor_Categorical(plane);
+    /*
     int64_t N       = x.size(0);
     int64_t input_h = x.size(1);
     int64_t input_w = x.size(2);
@@ -364,6 +367,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
     image = torch::fliplr(image);
 
     return image;
+    */
 }
 
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
@@ -551,6 +555,13 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Binary (const torch::Tensor &x) {
 
 torch::Tensor PEncoder::level_mapping (torch::Tensor x) {
     switch (m_num_levels) {
+        case 2:
+            // Map 0 -> 0
+            // Map 1 -> 11
+            x = torch::where(x == 0, torch::zeros_like(x), x);
+            x = torch::where(x == 1, torch::full_like(x, 11), x);
+            
+            break;
         case 4:
             // Map 0 -> 0
             // Map 1 -> 8

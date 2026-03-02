@@ -18,7 +18,8 @@ enum DistributionType {
         NORMAL,
         CATEGORICAL,
         BINARY,
-        XNES_NORMAL
+        XNES_NORMAL,
+        NORMAL2
 };
 
 int ModelHeight = 400;
@@ -29,6 +30,7 @@ double xNES_lr_std = 0.1;
 DistributionType ModelDistribution = DistributionType::NORMAL;
 std::string checkpoint_directory = "./checkpoints/";
 Helpers::Parameters params;
+bool save_only_last_checkpoint = false;
 
 struct ConfigKeyMap {
     std::string      name;
@@ -41,6 +43,13 @@ void InitConfigKeyMap ();
 
 void ParseConfigFile (const std::string &filename);
 void ExportConfig    (const std::string &filename);
+
+void InitCSVFile (const std::string &filename);
+void WriteTrainingEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch);
+void WriteValidationEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch);
+void WriteTestEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch);
+
+void WriteEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch, int type);
 
 void SaveCheckpoint  (int epoch, torch::Tensor mask , const std::string &directory);
 
@@ -55,16 +64,17 @@ public:
     void squash ();
     torch::Tensor logp_action () override;
     torch::Tensor action () override;
-    std::vector<torch::Tensor> parameters ();
+    std::vector<torch::Tensor> parameters () override;
     torch::Tensor &get_parameters ();
     int64_t N_samples () const override;
     void set_definition (Distributions::Definition* def) override;
     Distributions::Definition* get_definition () override;
 
 
-
+    DistributionType m_model_distribution;
     Distributions::Definition *m_dist = nullptr;
     torch::Tensor m_parameter;
+    torch::Tensor m_parameter_std; /* Only used for Normal2 */
     torch::Tensor m_std;
     torch::Tensor m_action;
     std::vector<torch::Tensor> m_action_s;
@@ -87,6 +97,7 @@ std::string m_checkpoint_mask_location;
 int m_sub_texture_offset_h = 0;
 int m_sub_texture_offset_w = 0;
 bool m_auto = false;
+bool m_save_only_test = true;
 
 double m_sub_texture_scale_h = 1.0;
 double m_sub_texture_scale_w = 1.0;

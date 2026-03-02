@@ -31,7 +31,7 @@ void s4_Optimizer::step_a (torch::Tensor &rewards) {
 
     auto sum_rewards = rewards.sum();
     auto baseline    = (sum_rewards - rewards)/(m_model.N_samples()-1);
-    auto norm_sum    = (rewards - baseline)/rewards.std(true);
+    auto norm_sum    = (rewards - baseline)/(rewards.std(true) + 1e-8);
 
     auto logp        = m_model.logp_action();
     logp             = torch::sum(logp.view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
@@ -124,6 +124,7 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
 
     m_opt.zero_grad();
     loss.backward();
+    torch::nn::utils::clip_grad_norm_(m_model.parameters(), 1.0);
     m_opt.step();
 
     // Detach logp to avoid memory leak ??
@@ -150,18 +151,19 @@ torch::Tensor s4_Optimizer::utilities (torch::Tensor &rewards) {
     std::cout << "INFO: [s4_Optimizer::utilities] Calculating utilities...\n";
     torch::NoGradGuard no_grad;
     int64_t N = rewards.size(0);
-    auto order = std::get<1>(rewards.sort(/*dim=*/0, /*descending=*/true));
-    auto ranks = torch::empty_like(order);
-    auto arange = torch::arange(N, rewards.options()).to(torch::kLong);
-    ranks.index_put_({order}, arange);
+    auto sorted = rewards.sort(0, /*descending=*/true);
+    auto order = std::get<1>(sorted);
 
-    auto denom = torch::log(torch::tensor(static_cast<double>(N) / 2.0 + 1.0, rewards.options()));
-    auto util = denom - torch::log(ranks.to(rewards.dtype()) + 1.0);
-    util = torch::clamp(util, /*min=*/0.0);
+    auto ranks = torch::empty_like(order, torch::kLong);
+    ranks.index_copy_(0, order, torch::arange(N, rewards.options().dtype(torch::kLong)));
 
+    const double log_n2p1 = std::log(N / 2.0 + 1.0);
+
+
+    auto util = torch::log(log_n2p1 - ranks.to(rewards.dtype()) - 1);
+    util = torch::clamp(util, 0);
     util = util / util.sum();
-    util = util - 1.0 / static_cast<double>(N);
-
+    util = util - 1.0 / N;
     return util;
 }
 

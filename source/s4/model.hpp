@@ -13,6 +13,7 @@ public:
     virtual int64_t N_samples () const = 0;
     virtual void set_definition (Distributions::Definition* def) = 0;
     virtual Distributions::Definition* get_definition () = 0;
+    virtual std::vector<torch::Tensor> parameters () = 0;
 };
 
 #endif

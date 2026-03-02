@@ -29,14 +29,16 @@ Helpers::Parameters::Parameters () {
         auto preds = sums.argmax(1); // [1]
         auto targets = l.to(torch::kLong).to(sums.device()); // [1]
 
-        if (_PDF.process_count % _PDF.save_iter == 0) {
+        if (_PDF.process_count % _PDF.save_iter == 0 && this->save_images && this->save_images_count != 0) {
             std::cout << "INFO: [process_fn] Processed " << _PDF.process_count << " samples so far.\n";
             auto img_img = img * 255.0f;
             img_img = img_img.contiguous().to(torch::kUInt8);
+            std::string filepath = this->save_images_directory + "/sample_" + std::to_string(_PDF.process_count) + "_" + std::to_string(ts.label) + "_" + std::to_string(preds.item<int>()) + ".png";
 
             auto Img = s4_Utils::TensorToImage(img_img);
-            ExportImage(Img, "sample.bmp");
+            ExportImage(Img, filepath.c_str());
             UnloadImage(Img);
+            --this->save_images_count;
         } 
 
         if (_PDF.process_count % _PDF.accuracy_interval == 0) {
@@ -65,6 +67,11 @@ Helpers::Parameters::Parameters () {
             case 3: // MSE Loss (only considers first mask)
                 {
                     loss = _PDF.mse_loss(img);
+                    break;
+                }
+            case 4: // Vertically Stablized Cross Entropy Loss
+                {
+                    loss = _PDF.cross_entropy_loss_fn_vert_stablized(img, targets);
                     break;
                 }
             default:
@@ -188,6 +195,8 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
             // Process the data
 
             auto li = l.item<int>();
+            // std::cout << "Label: " << li << "\n";
+            // assert(false);
 
             d = 255.0 - d;
             d = d.squeeze();
@@ -307,7 +316,8 @@ void Helpers::Run::Setup_Scheduler (
 
     );
 
-    scheduler.EnableSampleImageCapture();
+    //scheduler.EnableSampleImageCapture();
+    scheduler.DisableSampleImageCapture();
     scheduler.SetRewardDevice(DEVICE);
     scheduler.EnableLabelQueueing();
     scheduler.EnableBlendMode();    /* For use with DLP/PLM system, disable if only PLM */
@@ -328,6 +338,7 @@ void Helpers::Run::Setup_Scheduler (
 
     scheduler.SetSubShaderThreshold(params.sub_shader_threshold);
     scheduler.SetBatchSize(params.n_batch_size);
+    scheduler.SetPosterization(params.use_posterization);
 }
 
 void Helpers::Run::Performance::Save (
@@ -385,6 +396,8 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
             Iterate(params, scheduler);
             ++params.steps;
         }
+
+        //TakeScreenshot("screenshot.png");
 
     }
 
@@ -614,6 +627,89 @@ Helpers::_pdf::_pdf () {
         auto loss = diff * diff; // [H, W]
 
         return -loss.mean(); // [1]
+    };
+
+    cross_entropy_loss_fn_vert_stablized = [this](torch::Tensor &img, torch::Tensor &targets) -> torch::Tensor {
+        // Vertically stablized 
+
+        // Code to obtain sums for each region
+        //auto q    = img.unsqueeze(0).unsqueeze(0); // [1, 1, H, W]
+        // auto sums = (q.unsqueeze(1) * _PDF.masks.to(img.device())).sum({2,3,4}); // [1, 10]
+
+        // We first shift the image +/- vert_dK pixels vertically and compute the sums
+        auto q    = img.unsqueeze(0).unsqueeze(0); // [1, 1, H, W]
+
+        torch::Tensor min_loss = torch::tensor({1e10}).to(img.device());
+
+        int64_t H = q.size(2);
+            int64_t W = q.size(3);
+
+        for (int dy = -this->vert_dK; dy <= this->vert_dK; ++dy) {
+            torch::Tensor shifted_img;
+
+            torch::Tensor padded;
+
+            if (dy > 0) {
+                // Shift UP by dy:
+                //   1) pad at the BOTTOM by dy
+                //   2) crop from row [dy, dy + H) → same H, content moved up
+                padded = torch::nn::functional::pad(
+                    q,
+                    torch::nn::functional::PadFuncOptions({0, 0, 0, dy})  // left, right, top, bottom
+                        .mode(torch::kConstant)
+                        .value(0)
+                ); // [N, C, H + dy, W]
+
+                shifted_img = padded.index({
+                    torch::indexing::Slice(),                  // N
+                    torch::indexing::Slice(),                  // C
+                    torch::indexing::Slice(dy, dy + H),        // H
+                    torch::indexing::Slice(0, W)               // W
+                }); // [N, C, H, W]
+            }
+            else if (dy < 0) { // dy < 0
+                int pad_top = -dy;
+
+                // Shift DOWN by |dy|:
+                //   1) pad at the TOP by |dy|
+                //   2) crop from row [0, H) → same H, content moved down
+                padded = torch::nn::functional::pad(
+                    q,
+                    torch::nn::functional::PadFuncOptions({0, 0, pad_top, 0})  // left, right, top, bottom
+                        .mode(torch::kConstant)
+                        .value(0)
+                ); // [N, C, H + |dy|, W]
+
+                shifted_img = padded.index({
+                    torch::indexing::Slice(),                  // N
+                    torch::indexing::Slice(),                  // C
+                    torch::indexing::Slice(0, H),              // H
+                    torch::indexing::Slice(0, W)               // W
+                }); // [N, C, H, W]
+            }
+            else {
+                shifted_img = q;
+            }
+
+
+
+
+            auto sums = (shifted_img.unsqueeze(1) * this->masks.to(img.device())).sum({2,3,4}); // [1, 10]
+            sums = sums * this->ratios.to(sums.device());
+
+            auto loss = -torch::nn::functional::cross_entropy(
+                sums,
+                targets,
+                torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone)
+            );
+
+            if (loss.item<float>() < min_loss.item<float>()) {
+                min_loss = loss;
+            }
+        }
+
+        return min_loss;
+
     };
 
 }
