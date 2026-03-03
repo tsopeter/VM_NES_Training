@@ -5,6 +5,8 @@
 #include "raylib.h"
 
 void Runner::Run (std::string config_file) {
+    srand(42);
+    torch::manual_seed(42);
     Pylon::PylonAutoInitTerm init {};
 
     int epoch = 0;

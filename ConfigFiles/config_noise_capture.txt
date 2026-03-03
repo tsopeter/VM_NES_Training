@@ -7,8 +7,8 @@ TrainingSamples 5
 TrainingBatchSize 1
 ValidationSamples 1
 ValidationBatchSize 1
-TestSamples 1
-TestBatchSize 1
+TestSamples 5
+TestBatchSize 5
 Samples 20
 Padding 0
 SubShaderThreshold 0.8
@@ -17,13 +17,13 @@ UpscaleFactor 2
 IterationAmount 4
 RegionFile source/Assets/custom_mask_single.npy
 MinLimit 2
-SaveInterval 100
-SaveImages 0
-SaveImagesDirectory 2026_01_27/noise_info/59_us_digit_5/train/images
-CheckpointDirectory 2026_01_27/noise_info/59_us_digit_5/train
+SaveInterval 1
+SaveImages 1
+SaveImagesDirectory 2026_01_27/noise_info/digit_1/train/images
+CheckpointDirectory 2026_01_27/noise_info/digit_1/train
 ExposureTime 59
 DatasetPath Datasets3/
-Epochs 10
+Epochs 20
 InputFlipUD 0
 InputFlipLR 0
 AffineOffsetX -0.02496718056499958
@@ -35,5 +35,5 @@ SchedUpdateAmount 0
 LossFn 3
 NumLevels 16
 SaveAll 0
-SaveImageCount 1
+SaveImageCount 100
 SaveOnlyLastCheckpoint 1

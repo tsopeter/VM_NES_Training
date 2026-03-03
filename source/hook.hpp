@@ -16,6 +16,9 @@ public:
 private:
     Scheduler2* scheduler;
     Vibration vibration;
+    Shader dither_shader;
+    bool dither_enabled = false;
+    bool vibration_enabled = false;
 };
 
 #endif

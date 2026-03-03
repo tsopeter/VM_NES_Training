@@ -273,6 +273,8 @@ public:
     void SetBackgroundTexture (Texture tex);
     void SetPosterization (bool enable);
 
+    float GetSubShaderThreshold() const;
+
 private:
     // Private methods 
     std::pair<torch::Tensor, torch::Tensor> ReadCamera();

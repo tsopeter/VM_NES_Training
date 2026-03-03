@@ -100,7 +100,7 @@ void Scheduler2::StartWindow() {
     // Load shader
     shader = LoadShader(nullptr, "source/shaders/alpha_ignore.fs");
     sub_shader = LoadShader(nullptr, "source/shaders/alpha_mask.fs");
-    val_shader = LoadShader(nullptr, "source/shaders/selective_mask.fs");
+    // val_shader = LoadShader(nullptr, "source/shaders/selective_mask.fs");
     sub_shader_blend = LoadShader(nullptr, "source/shaders/alpha_mask_b4.fs");
     sub_shader_blend_posterize = LoadShader(nullptr, "source/shaders/alpha_mask_posterize_b4.fs");
     std::cout << "INFO: [Scheduler2::StartWindow] Shader loaded.\n";
@@ -1309,6 +1309,10 @@ void Scheduler2::SetSubShaderThreshold(float threshold) {
         SHADER_UNIFORM_FLOAT
     );
     m_sub_shader_threshold = threshold;
+}
+
+float Scheduler2::GetSubShaderThreshold() const {
+    return m_sub_shader_threshold;
 }
 
 torch::Tensor Scheduler2::Collect () {

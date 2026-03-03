@@ -2,7 +2,7 @@ Height 400
 Width  640
 Distribution normal
 Std 0.6
-LearningRate 0.07
+LearningRate 0.05
 TrainingSamples 1000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -19,7 +19,7 @@ RegionFile source/Assets/phy8_10.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0
-CheckpointDirectory 2026_01_27/16/normal/mnist/001/train
+CheckpointDirectory 2026_01_27/16/normal/mnist/002/train
 ExposureTime 59
 DatasetPath Datasets/
 Epochs 20
