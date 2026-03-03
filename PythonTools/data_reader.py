@@ -64,6 +64,9 @@ def read_data(file_path):
         'Training_Data' : None,
         'Validation_Data' : None,
         'Test_Data' : None,
+        'Training_Results' : None,
+        'Validation_Results' : None,
+        'Test_Results' : None
     }
 
     data = pd.read_csv(results_path)
@@ -72,6 +75,15 @@ def read_data(file_path):
     info['Training_Data'] = data[data['DataType'] == 'Training']
     info['Validation_Data'] = data[data['DataType'] == 'Validation']
     info['Test_Data'] = data[data['DataType'] == 'Test']
+
+    # Read the csv files
+    train_csv = f'{file_path}/train/epoch_{Epochs - 1}/training_inference_results.csv'
+    val_csv   = f'{file_path}/train/epoch_{Epochs - 1}/validation_results.csv'
+    test_csv  = f'{file_path}/train/test_results.csv'
+
+    info['Training_Results'] = pd.read_csv(train_csv)
+    info['Validation_Results'] = pd.read_csv(val_csv)
+    info['Test_Results'] = pd.read_csv(test_csv)
 
     return info
 
@@ -139,6 +151,7 @@ def read_file_old (filename : str, mode : int= 0):
     ...
     '''
     data = {}
+    file_path = filename
     filename = filename + '/a/mean_reward.txt'
 
     with open (filename, 'r') as f:
@@ -212,6 +225,9 @@ def read_file_old (filename : str, mode : int= 0):
             'Accuracy' : np.zeros(1),
             'Loss' : np.zeros(1)
         }
+        data['Training_Results'] = None
+        data['Validation_Results'] = None
+        data['Test_Results'] = None
 
         try:
             while True:
@@ -277,6 +293,15 @@ def read_file_old (filename : str, mode : int= 0):
     data['Training_Data'] = pd.DataFrame(data['Training_Data'])
     data['Validation_Data'] = pd.DataFrame(data['Validation_Data'])
     data['Test_Data'] = pd.DataFrame(data['Test_Data'])
+
+    # Read the csv files
+    train_csv = f'{file_path}/epoch_{Epochs - 1}/training_inference_results.csv'
+    val_csv   = f'{file_path}/epoch_{Epochs - 1}/validation_results.csv'
+    test_csv  = f'{file_path}/test_results.csv'
+
+    data['Training_Results'] = pd.read_csv(train_csv)
+    data['Validation_Results'] = pd.read_csv(val_csv)
+    data['Test_Results'] = pd.read_csv(test_csv)
 
     return data
   
