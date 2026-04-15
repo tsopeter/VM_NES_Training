@@ -44,6 +44,7 @@ struct _Result {
 
 struct _pdf {
     _pdf ();
+    ~_pdf();
     std::atomic<int64_t> correct = 0;
     std::atomic<int64_t> total   = 0;
 
@@ -73,6 +74,12 @@ struct _pdf {
     // 4: Vertically Stablized Cross Entropy Loss
 
     void clear_data ();
+
+    std::string save_dir;
+    moodycamel::ConcurrentQueue<torch::Tensor> image_queue;
+    std::thread save_image_thread;
+    std::atomic<bool> save_image_thread_running {false};
+    int num_images_per_batch = 20;
 };
 
 /**
@@ -84,6 +91,7 @@ struct _pdf {
  */
 struct Parameters {
     Parameters ();
+    ~Parameters ();
 
     // Number of samples to use during training
     int64_t n_training_samples   = 1000;
@@ -144,8 +152,18 @@ struct Parameters {
     _Training Training;
     _Camera Camera;
 
+    bool collect_data = false;
+    std::string collect_data_directory = "./collected_data/";
+    std::vector<torch::Tensor> collect_data_masks = {};
+
     void ExportResults (const std::string &filename, int mode=0, int dataset_size=0, int batch_size=0);
     std::vector<_Result> GetResults (int mode=0, int dataset_size=0, int batch_size=0);
+
+    void SaveCollectedMasks ();
+
+    moodycamel::ConcurrentQueue<torch::Tensor> masks_queue;
+    std::atomic<bool> save_masks_thread_running {false};
+    std::thread save_mask_thread;
 };
 
 /**

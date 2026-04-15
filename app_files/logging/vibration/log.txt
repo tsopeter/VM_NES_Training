@@ -1,3 +1,4 @@
 Vibration Parameters:
 uMin: -1
 uMax: 1
+Dither Enabled: No

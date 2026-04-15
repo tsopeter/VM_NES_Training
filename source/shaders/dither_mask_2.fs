@@ -39,7 +39,7 @@ void main() {
 	float ditheredGray = gray + (b - 0.5) / MAX_LEVELS;
 
 	// Soft transition around threshold to reduce visible discontinuity.
-	float edge = 10.0 / MAX_LEVELS;
+	float edge = 100.0 / MAX_LEVELS;
     float lower = threshold - edge;
     float upper = threshold + edge;
 

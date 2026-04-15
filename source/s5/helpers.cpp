@@ -5,6 +5,7 @@
 #include "../s2/np2lt.hpp"
 #include <fstream>
 #include <filesystem>
+#include <future>
 
 Helpers::Parameters::Parameters () {
 
@@ -30,6 +31,7 @@ Helpers::Parameters::Parameters () {
         auto targets = l.to(torch::kLong).to(sums.device()); // [1]
 
         if (_PDF.process_count % _PDF.save_iter == 0 && this->save_images && this->save_images_count != 0) {
+            /*
             std::cout << "INFO: [process_fn] Processed " << _PDF.process_count << " samples so far.\n";
             auto img_img = img * 255.0f;
             img_img = img_img.contiguous().to(torch::kUInt8);
@@ -38,6 +40,12 @@ Helpers::Parameters::Parameters () {
             auto Img = s4_Utils::TensorToImage(img_img);
             ExportImage(Img, filepath.c_str());
             UnloadImage(Img);
+            */
+            if (_PDF.save_dir.length() == 0) {
+                _PDF.save_dir = this->save_images_directory;
+            }
+
+            _PDF.image_queue.enqueue(img.cpu());
             --this->save_images_count;
         } 
 
@@ -92,6 +100,48 @@ Helpers::Parameters::Parameters () {
         return {loss, true};
     };
 
+    save_masks_thread_running.store (true, std::memory_order_release);
+
+    // Create the save mask thread
+    save_mask_thread = std::thread([this]() {
+        torch::Tensor mask;
+        int mask_count = 0;
+        std::vector<torch::Tensor> batch_masks;
+        while (save_masks_thread_running.load(std::memory_order_acquire)) {
+            // Check if there are masks to save
+            if (!masks_queue.try_dequeue(mask)) {
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+                continue;
+            }
+
+            batch_masks.push_back(mask.detach().cpu()); // each mask is [n, H, W]
+            if (batch_masks.size() >= this->n_samples) {
+                // stack into a single [n*20, H, W] tensor
+                auto bms = torch::cat(batch_masks, 0);
+
+                // launch async task to save the batch of masks, so that the saving process doesn't block the main thread
+                std::string filepath = this->collect_data_directory + "/mask_" + std::to_string(mask_count) + ".pt";
+                std::async(std::launch::async, [bms, filepath]() {
+                    torch::save(bms, filepath);
+                });
+
+                batch_masks.clear();
+                ++mask_count;
+            }
+        };
+    });
+}
+
+Helpers::Parameters::~Parameters () {
+    // Wait until all masks have been saved
+    while (masks_queue.size_approx() > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+    }
+
+    save_masks_thread_running.store(false, std::memory_order_release);
+    if (save_mask_thread.joinable()) {
+        save_mask_thread.join();
+    }
 }
 
 void Helpers::Data::Delete (std::vector<Batch> &batches) {
@@ -378,7 +428,12 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
     int batch_size = batch.textures.size();
 
     for (int i = 0; i < params.n_samples; ++i) {
-        torch::Tensor action = eval_fn.sample(scheduler.maximum_number_of_frames_in_image);
+        torch::Tensor action = eval_fn.sample(scheduler.maximum_number_of_frames_in_image); // [20, H, W]
+
+        if (params.collect_data) {
+            // Save action into collect_data_masks
+            params.masks_queue.enqueue(action.cpu());
+        }
 
         action = Utils::UpscaleTensor(
             action,
@@ -712,6 +767,51 @@ Helpers::_pdf::_pdf () {
 
     };
 
+
+    save_dir = "";
+    save_image_thread_running.store(true, std::memory_order_release);
+    num_images_per_batch = 20; // Save 20 images per .pt file
+    // Create the save image thread
+
+    save_image_thread = std::thread([this]() {
+        torch::Tensor img;
+        int image_idx = 0;
+        std::vector<torch::Tensor> batch_images;
+        while (save_image_thread_running.load(std::memory_order_acquire)) {
+            // Load img from queue
+            if (!this->image_queue.try_dequeue(img)) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
+
+
+            batch_images.push_back(img.detach().cpu());
+            if (batch_images.size() >= this->num_images_per_batch) {
+                auto bi = torch::stack(batch_images, 0); // [num_images_per_batch, H, W]
+                // Save the batch of images as a single .pt file
+                std::string filepath = this->save_dir + "/batch_" + std::to_string(image_idx) + ".pt";
+
+                // launch async task to save the batch of images, so that the saving process doesn't block the main thread
+                std::async(std::launch::async, [bi, filepath]() {
+                    torch::save(bi, filepath);
+                });
+                batch_images.clear();
+                ++image_idx;
+            }
+        }
+    });
+}
+
+Helpers::_pdf::~_pdf () {
+    // Wait until queue is clear
+    while (image_queue.size_approx() > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    save_image_thread_running.store(false, std::memory_order_release);
+    if (save_image_thread.joinable()) {
+        save_image_thread.join();
+    }
 }
 
 void Helpers::_pdf::clear_data () {
@@ -881,4 +981,23 @@ void Helpers::Run::Set_SubTextureHook (
     std::function<void(Shader[2], Texture[10], bool[10])> hook_function
 ) {
     scheduler.SetSubTextureHook(hook_function);
+}
+
+void Helpers::Parameters::SaveCollectedMasks () {
+    if (collect_data == false)
+        return;
+
+    if (collect_data_masks.empty()) {
+        std::cout << "INFO: [SaveCollectedMasks] No masks collected, skipping save.\n";
+        return;
+    }
+
+    // Stack the collected masks into a single tensor
+    torch::Tensor all_masks = torch::stack(collect_data_masks); // [N, 20, H, W]
+
+    // Save the tensor to a file dictated in directory collected_masks_directory
+    std::string save_path = collect_data_directory + "/masks.pt";
+    torch::save(all_masks, save_path);
+    std::cout << "INFO: [SaveCollectedMasks] Saved " << collect_data_masks.size() << " masks to " << save_path << '\n';
+
 }

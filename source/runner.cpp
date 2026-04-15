@@ -107,6 +107,9 @@ void Runner::Run (std::string config_file) {
     hooks.SetScheduler(&scheduler);
     hooks.SetHooks();
 
+    // Set helpers stuff
+    params._PDF.num_images_per_batch = params.n_batch_size * params.n_samples * 20;
+
 
     double previous_accuracy = 0.0f;
     for (; epoch < n_epochs; ++epoch) {
@@ -1290,6 +1293,20 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {
                 ifs >> save_only_last_checkpoint;
                 std::cout << "Setting Save Only Last Checkpoint to " << (save_only_last_checkpoint ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "CollectData",
+            [this](std::ifstream &ifs) {
+                ifs >> params.collect_data;
+                std::cout << "Setting Collect Data to " << (params.collect_data ? "true" : "false") << "...\n";
+            }
+        },
+        {
+            "CollectDataDirectory",
+            [this](std::ifstream &ifs) {                
+                ifs >> params.collect_data_directory;
+                std::cout << "Setting Collect Data Directory to " << params.collect_data_directory << "...\n";
             }
         }
     };
