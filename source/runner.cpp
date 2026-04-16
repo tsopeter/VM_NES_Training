@@ -70,16 +70,92 @@ void Runner::Run (std::string config_file) {
 
     //TestIfScreenIsOkay(params, scheduler); // Wait until screen is okay
 
-    auto train_data = Helpers::Data::Get_Training(params);
-    auto train_infer_data = Helpers::Data::Get (
-        params,
-        params.n_training_samples,
-        params.n_training_samples,
-        s2_DataTypes::TRAIN,
-        params.n_padding
-    );
-    auto val_data   = Helpers::Data::Get_Validation(params);
-    auto test_data  = Helpers::Data::Get_Test(params);
+    // Modification for having variable training data based on epoch
+
+    std::vector<std::tuple<
+        int, std::vector<std::vector<Helpers::Data::Batch>>,
+        torch::Tensor
+    >> adaptive_dataset;
+    if (m_adaptive_optics_mode) {
+        for (int i = 0; i < m_adaptive_optics_dataset.size(); ++i) {
+            auto entry = m_adaptive_optics_dataset[i];
+
+            // Load the datasets
+            std::vector<Helpers::Data::Batch> dataset_batches;
+
+            params.n_training_samples    = entry.training_size;
+            params.n_batch_size          = entry.training_batch_size;
+
+            params.n_validation_samples  = entry.training_size;
+            params.n_validation_batch_size = entry.training_batch_size;
+
+            params.n_test_samples        = entry.training_size;
+            params.n_test_batch_size     = entry.training_batch_size;
+
+            params.Training.dataset_path = entry.loc;
+            auto train_batches = Helpers::Data::Get_Training(params);
+            auto val_batches   = Helpers::Data::Get_Validation(params);
+            auto test_batches  = Helpers::Data::Get_Test(params);
+
+            // get inference train batch
+            auto train_infer_batches = Helpers::Data::Get (
+                params,
+                entry.training_size,
+                entry.training_size,
+                s2_DataTypes::TRAIN,
+                params.n_padding
+            );
+
+            int  epoch_start   = entry.epoch_start;
+
+            std::vector<std::vector<Helpers::Data::Batch>> data {
+                train_batches,
+                val_batches,
+                test_batches,
+                train_infer_batches
+            };
+
+            // Load the target
+            torch::Tensor target = np2lt::f32(
+                entry.loc + "/target.npy"
+            ).to(DEVICE);
+
+            // Store the batches with the epoch start
+            adaptive_dataset.push_back(
+                {
+                    epoch_start,
+                    data,
+                    target
+                }
+            );
+        }
+    }
+    else {
+        // we utilize the adaptive_dataset but with only one entry which is the entire dataset for all epochs
+        auto train_data = Helpers::Data::Get_Training(params);
+        auto train_infer_data = Helpers::Data::Get (
+            params,
+            params.n_training_samples,
+            params.n_training_samples,
+            s2_DataTypes::TRAIN,
+            params.n_padding
+        );
+        auto val_data   = Helpers::Data::Get_Validation(params);
+        auto test_data  = Helpers::Data::Get_Test(params);
+
+        // Store the batches with epoch start 0
+        adaptive_dataset.push_back(
+            {0, 
+                {
+                    train_data,
+                    val_data,
+                    test_data,
+                    train_infer_data
+                },
+             params._PDF.masks
+            }
+        );
+    }
 
     Helpers::Run::EvalFunctions eval_fn;
 
@@ -111,9 +187,33 @@ void Runner::Run (std::string config_file) {
     params._PDF.num_images_per_batch = params.n_batch_size * params.n_samples * 20;
 
 
+    auto train_data = std::get<1>(adaptive_dataset[0])[0];
+    auto val_data   = std::get<1>(adaptive_dataset[0])[1];
+    auto test_data  = std::get<1>(adaptive_dataset[0])[2];
+    auto train_infer_data = std::get<1>(adaptive_dataset[0])[3];
+
     double previous_accuracy = 0.0f;
     for (; epoch < n_epochs; ++epoch) {
         std::cout << "INFO: [Runner::Run] Starting Epoch " << epoch << "...\n";
+
+        if (m_adaptive_optics_mode) {
+            // Check if we need to update the dataset based on epoch
+            for (int i = 0; i < adaptive_dataset.size(); ++i) {
+                if (epoch == std::get<0>(adaptive_dataset[i])) {
+                    train_data = std::get<1>(adaptive_dataset[i])[0];
+                    val_data   = std::get<1>(adaptive_dataset[i])[1];
+                    test_data  = std::get<1>(adaptive_dataset[i])[2];
+                    train_infer_data = std::get<1>(adaptive_dataset[i])[3];
+                    std::cout << "INFO: [Runner::Run] Updated dataset for epoch " << epoch << " with " << train_data.size() << " training samples.\n";
+
+                    // set the target
+                    params._PDF.masks = std::get<2>(adaptive_dataset[i]);
+                    std::cout << "INFO: [Runner::Run] Updated target for epoch " << epoch << ".\n";
+
+                    break;
+                }
+            }
+        }
 
         // Create the checkpoint directory for this epoch
         std::string epoch_checkpoint_dir = checkpoint_directory + "/epoch_" + std::to_string(epoch);
@@ -291,10 +391,20 @@ void Runner::Run (std::string config_file) {
     scheduler.StopCamera();
     scheduler.StopWindow();
 
-    Helpers::Data::Delete(train_data);
-    Helpers::Data::Delete(val_data);
-    Helpers::Data::Delete(test_data);
-    Helpers::Data::Delete(train_infer_data);
+    //Helpers::Data::Delete(train_data);
+    //Helpers::Data::Delete(val_data);
+    //Helpers::Data::Delete(test_data);
+    //Helpers::Data::Delete(train_infer_data);
+
+    // clean up the adaptive dataset
+    for (auto &entry : adaptive_dataset) {
+        Helpers::Data::Delete(std::get<1>(entry)[0]);
+        Helpers::Data::Delete(std::get<1>(entry)[1]);
+        Helpers::Data::Delete(std::get<1>(entry)[2]);
+        Helpers::Data::Delete(std::get<1>(entry)[3]);
+    }
+
+
 }
 
 void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_data_points) {
@@ -1307,6 +1417,47 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {                
                 ifs >> params.collect_data_directory;
                 std::cout << "Setting Collect Data Directory to " << params.collect_data_directory << "...\n";
+            }
+        },
+        {
+            "AdaptiveOpticsMode",
+            [this](std::ifstream &ifs) {
+                // In adaptive optics mode,
+                // we utilize N datasets
+                // <n_datasets>
+                // <epoch_start> <dataset_folder> 
+                // <train_size> <train_batch_size> 
+                // <valid_size> <valid_batch_size>
+                // <test_size> <test_batch_size>
+                m_adaptive_optics_mode = true;
+
+                int n_datasets;
+                ifs >> n_datasets;
+
+                for (int i = 0; i < n_datasets; ++i) {
+                    int epoch_start;
+                    std::string dataset;
+                    int train_size, train_batch_size;
+                    int valid_size, valid_batch_size;
+                    int test_size, test_batch_size;
+
+                    ifs >> epoch_start >> dataset >> train_size >> train_batch_size >>
+                        valid_size >> valid_batch_size >>
+                        test_size >> test_batch_size;
+
+                    m_adaptive_optics_dataset.push_back(
+                        Dataset_Entry{
+                            .epoch_start = epoch_start,
+                            .training_batch_size = train_batch_size,
+                            .training_size = train_size,
+                            .validation_batch_size = valid_batch_size,
+                            .validation_size = valid_size,
+                            .test_batch_size = test_batch_size,
+                            .test_size = test_size,
+                            .loc = dataset
+                        }
+                    );
+                }
             }
         }
     };
