@@ -128,6 +128,8 @@ void Runner::Run (std::string config_file) {
                     target
                 }
             );
+
+            std::cout << "INFO: [Runner::Run] Loaded adaptive dataset entry " << i << " with dataset dir: " << entry.loc << "\n";
         }
     }
     else {
@@ -186,11 +188,13 @@ void Runner::Run (std::string config_file) {
     // Set helpers stuff
     params._PDF.num_images_per_batch = params.n_batch_size * params.n_samples * 20;
 
+    std::cout << "INFO: [Runner::Run] Loaded " << adaptive_dataset.size() << " dataset entries...\n";
 
     auto train_data = std::get<1>(adaptive_dataset[0])[0];
     auto val_data   = std::get<1>(adaptive_dataset[0])[1];
     auto test_data  = std::get<1>(adaptive_dataset[0])[2];
     auto train_infer_data = std::get<1>(adaptive_dataset[0])[3];
+    std::cout << "INFO: [Runner::Run] Datasets loaded...\n";
 
     double previous_accuracy = 0.0f;
     for (; epoch < n_epochs; ++epoch) {

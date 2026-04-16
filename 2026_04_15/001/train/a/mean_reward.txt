@@ -1,0 +1,28 @@
+Dataset parameters:
+	Data Padding Amount: 0
+	Sub Shader Threshold: 0.8
+	Training Dataset:
+		Training Size: 5
+		Training Batch Size: 1
+	Validation Dataset:
+		Validation Size: 1
+		Validation Batch Size: 1
+	Test Dataset:
+		Test Size: 1
+		Test Batch Size: 1
+Model Parameters:
+	Model Height: 400
+	Model Width: 640
+	Model Distribution: categorical
+	Upscale Factor: 2
+	Number of Levels: 16
+Training Parameters:
+	Learning Rate: 0.15
+	Optimizer: Adam
+	Samples per Image: 200
+	Epochs: 20
+	Sample Update Rate: -1
+	Sample Update Amount: 0
+Image Saving: Enabled
+	Image Save Directory: 2026_04_15/001/images
+	Number of Images to Save: 10
