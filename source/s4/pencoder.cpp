@@ -415,7 +415,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
     int64_t input_w = x.size(2);
 
     // firstly, quantize the input tensor first (which is often much smaller than x)
-    torch::Tensor plane = q[x];
+    torch::Tensor plane = m_plm_device[x];
 
     std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Generating encoding...\n";
     if (masks.device() != x.device())
@@ -452,7 +452,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
         throw std::runtime_error("PEncoder::MEncode_u8Tensor5 is only implemented for VISIBLE PLM device for now.\n");
     }
 
-    torch::Tensor plane = q[x];
+    torch::Tensor plane = m_plm_device[x];
     return MEncode_u8Tensor_Categorical(plane);
 }
 
