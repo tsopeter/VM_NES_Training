@@ -358,13 +358,29 @@ void Scheduler2::DrawTextureToScreenCentered () {
         BeginShaderMode(shader);
         //ClearBackground((m_blend_mode_enabled) ? WHITE : BLACK);
         ClearBackground(BLACK);
-        DrawTexturePro(
-            m_texture,
-            {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
-            {static_cast<float>(centerX), static_cast<float>(centerY),
-             static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
-            {0, 0}, 0.0f, WHITE
-        );
+
+        switch (m_plm_device_enum) {
+            case PLM_Device_Enum::PLM_DEVICE_VISIBLE:
+                DrawTexturePro(
+                    m_texture,
+                    {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                    {static_cast<float>(centerX), static_cast<float>(centerY),
+                    static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                    {0, 0}, 0.0f, WHITE
+                );
+                break;
+            case PLM_Device_Enum::PLM_DEVICE_NIR:
+                DrawTexturePro(
+                    m_texture,
+                    {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                    {static_cast<float>(centerX + 2), static_cast<float>(centerY),
+                    static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+                    {0, 0}, 0.0f, WHITE
+                );
+                break;
+            default:
+                throw std::runtime_error("Scheduler2::DrawTextureToScreenCentered: Invalid PLM device.\n");
+        }
         EndShaderMode();
         if (!m_sub_texture_hook_enabled) {
             if (!m_blend_mode_enabled)

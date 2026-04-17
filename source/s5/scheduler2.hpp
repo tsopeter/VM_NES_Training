@@ -8,6 +8,7 @@
 #include "../s3/window.hpp"
 #include "../s4/optimizer.hpp"
 #include "../s2/np2lt.hpp"
+#include "../s2/plm_device.hpp"
 #include "utils.hpp"
 
 #include <iostream>
@@ -432,6 +433,8 @@ private:
     // SubTexture hook
     std::function<void(Shader[2], Texture[10], bool[10])> m_sub_texture_hook;
     bool m_sub_texture_hook_enabled = false;
+
+    PLM_Device_Enum m_plm_device_enum = PLM_Device_Enum::PLM_DEVICE_VISIBLE;
 };
 
 
