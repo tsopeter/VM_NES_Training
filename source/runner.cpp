@@ -86,11 +86,11 @@ void Runner::Run (std::string config_file) {
             params.n_training_samples    = entry.training_size;
             params.n_batch_size          = entry.training_batch_size;
 
-            params.n_validation_samples  = entry.training_size;
-            params.n_validation_batch_size = entry.training_batch_size;
+            params.n_validation_samples  = entry.validation_size;
+            params.n_validation_batch_size = entry.validation_batch_size;
 
-            params.n_test_samples        = entry.training_size;
-            params.n_test_batch_size     = entry.training_batch_size;
+            params.n_test_samples        = entry.test_size;
+            params.n_test_batch_size     = entry.test_batch_size;
 
             params.Training.dataset_path = entry.loc;
             auto train_batches = Helpers::Data::Get_Training(params);

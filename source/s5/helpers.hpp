@@ -61,6 +61,7 @@ struct _pdf {
     std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> loss_fn;
     std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> per_pixel_loss_fn;
     std::function<torch::Tensor(torch::Tensor&)> mse_loss;
+    std::function<torch::Tensor(torch::Tensor&)> smse_loss;
     std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> cross_entropy_loss_fn_vert_stablized;
 
     torch::Tensor masks;

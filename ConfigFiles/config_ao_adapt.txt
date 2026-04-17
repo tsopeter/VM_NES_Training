@@ -19,11 +19,11 @@ RegionFile source/Assets/custom_mask_single.npy
 MinLimit 2
 SaveInterval 1
 SaveImages 1
-SaveImagesDirectory 2026_04_15/001/images
-CheckpointDirectory 2026_04_15/001/train
+SaveImagesDirectory 2026_04_15/002/images
+CheckpointDirectory 2026_04_15/002/train
 ExposureTime 59
 DatasetPath Datasets_AO_0/
-Epochs 10
+Epochs 25
 InputFlipUD 0
 InputFlipLR 0
 AffineOffsetX -0.02496718056499958
@@ -39,8 +39,12 @@ SaveImageCount 100
 SaveOnlyLastCheckpoint 1
 
 AdaptiveOpticsMode
-1
+2
 0 Datasets_AO_0 
+    1 1
+    1 1
+    1 1
+9 Datasets_AO_1
     1 1
     1 1
     1 1

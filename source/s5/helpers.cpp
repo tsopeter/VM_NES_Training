@@ -82,6 +82,11 @@ Helpers::Parameters::Parameters () {
                     loss = _PDF.cross_entropy_loss_fn_vert_stablized(img, targets);
                     break;
                 }
+            case 5:
+                {
+                    loss = _PDF.smse_loss(img);
+                    break;
+                }
             default:
                 throw std::runtime_error("process_fn: Unsupported loss function mode.");
         }
@@ -677,8 +682,17 @@ Helpers::_pdf::_pdf () {
 
     mse_loss = [this](torch::Tensor &img) -> torch::Tensor {
         // MSE Loss considering only the first mask
-        auto target_mask = this->masks[0].squeeze(); // [1, H, W]
-        auto diff = img - target_mask.to(img.device()); // [H, W]
+        auto target_mask = this->masks[0].squeeze().to(img.device()); // [1, H, W]
+        auto diff = img - target_mask; // [H, W]
+        auto loss = diff * diff; // [H, W]
+
+        return -loss.mean(); // [1]
+    };
+
+    smse_loss = [this](torch::Tensor &img) -> torch::Tensor {
+        // MSE Loss considering only the first mask
+        auto target_mask = this->masks[0].squeeze().to(img.device()); // [1, H, W]
+        auto diff = (img * target_mask) - target_mask; // [H, W]
         auto loss = diff * diff; // [H, W]
 
         return -loss.mean(); // [1]
@@ -799,6 +813,16 @@ Helpers::_pdf::_pdf () {
                 ++image_idx;
             }
         }
+
+        // If any images are left in the batch_images vector, save them as well
+        if (!batch_images.empty()) {
+            auto bi = torch::stack(batch_images, 0); // [num_images_per_batch, H, W]
+            std::string filepath = this->save_dir + "/batch_" + std::to_string(image_idx) + ".pt";
+            torch::save(bi, filepath);
+        }
+
+        std::cout << "INFO: [Helpers::_pdf] Save image thread exiting. Total images saved: " << image_idx * this->num_images_per_batch + batch_images.size() << "\n";
+
     });
 }
 
@@ -947,7 +971,7 @@ std::vector<Helpers::_Result> Helpers::Parameters::GetResults (int mode, int p_d
             batch_size = p_batch_size;
             break;
         default:
-            throw std::runtime_error("Runner::GetResults: Unsupported mode for getting results.");
+            throw std::runtime_error("WARNING: [Helpers::Parameters::GetResults] Unsupported mode for getting results.");
     }
 
     // Within a batch, stride by 20
@@ -966,7 +990,13 @@ std::vector<Helpers::_Result> Helpers::Parameters::GetResults (int mode, int p_d
         for (int i = 0; i < batch_size; ++i) {
             int index = b * batch_stride + i * sample_stride;
             if (index >= results.size()) {
-                throw std::runtime_error("Runner::GetResults: Index out of bounds while getting results.");
+                std::cerr << "WARNING: [Helpers::Parameters::GetResults] On dataset: " << mode << "...\n";
+                std::cerr << "WARNING: [Helpers::Parameters::GetResults] \tDataset Size: " << dataset_size << "\n";
+                std::cerr << "WARNING: [Helpers::Parameters::GetResults] \tNumber of Batches: " << num_batches << "\n";
+                std::cerr << "WARNING: [Helpers::Parameters::GetResults] \tBatch Size: " << batch_size << "\n";
+                std::cerr << "WARNING: [Helpers::Parameters::GetResults] \tBatch Stride: " << batch_stride << "\n";
+                std::cerr << "WARNING: [Helpers::Parameters::GetResults] Index " << index << " is out of bounds for results size " << results.size() << "\n";
+                throw std::runtime_error("WARNING: [Helpers::Parameters::GetResults] Index out of bounds while getting results. Aborting.");
             }
             const auto &res = results[index];
             output_results.push_back(res);
