@@ -41,8 +41,7 @@ constexpr int32_t shifted_values[24] =
     static_cast<int32_t>(1u << 22), static_cast<int32_t>(1u << 23)
 };
 
-
-
+// For legacy reasons...
 constexpr uint8_t logical_masks[16][2][2] = {
     {{1, 0}, {1, 0}},  // 0
     {{1, 0}, {0, 0}},  // 1
@@ -62,12 +61,130 @@ constexpr uint8_t logical_masks[16][2][2] = {
     {{0, 1}, {0, 1}}   //15
 };
 
-PEncoder::PEncoder (int num_levels) :
+constexpr uint8_t m_plm_visible_logical_masks[16][2][2] = {
+    {{1, 0}, {1, 0}},  // 0
+    {{1, 0}, {0, 0}},  // 1
+    {{0, 0}, {1, 0}},  // 2
+    {{1, 0}, {1, 1}},  // 3
+    {{0, 0}, {0, 0}},  // 4
+    {{1, 0}, {0, 1}},  // 5
+    {{0, 0}, {1, 1}},  // 6
+    {{0, 0}, {0, 1}},  // 7
+    {{1, 1}, {1, 0}},  // 8
+    {{1, 1}, {0, 0}},  // 9
+    {{0, 1}, {1, 0}},  //10
+    {{0, 1}, {0, 0}},  //11
+    {{1, 1}, {1, 1}},  //12
+    {{1, 1}, {0, 1}},  //13
+    {{0, 1}, {1, 1}},  //14
+    {{0, 1}, {0, 1}}   //15
+};
+
+constexpr uint8_t m_plm_nir_logical_masks[32][2][3] = {
+    {
+        {0, 0, 0}, {0, 0, 0} // 0 (1)
+    },
+    {
+        {0, 0, 0}, {0, 1, 0} // 1 (2)
+    },
+    {
+        {0, 1, 0}, {0, 0, 0} // 2 (3)
+    },
+    {
+        {0, 1, 0}, {0, 1, 0} // 3 (4)
+    },
+    {
+        {0, 0, 1}, {1, 0, 0} // 4 (5)
+    },
+    {
+        {0, 0, 1}, {1, 1, 0} // 5 (6)
+    },
+    {
+        {0, 1, 1}, {1, 0, 0} // 6 (7)
+    },
+    {
+        {0, 1, 1}, {1, 1, 0} // 7 (8)
+    },
+    {
+        {1, 0, 0}, {0, 0, 0} // 8 (9)
+    },
+    {
+        {1, 0, 0}, {0, 1, 0} // 9 (10)
+    },
+    {
+        {1, 1, 0}, {0, 0, 0} // 10 (11)
+    },
+    {
+        {1, 1, 0}, {0, 1, 0} // 11 (12)
+    },
+    {
+        {1, 0, 1}, {1, 0, 0} // 12 (13)
+    },
+    {
+        {1, 0, 1}, {1, 1, 0} // 13 (14)
+    },
+    {
+        {1, 1, 1}, {1, 0, 0} // 14 (15)
+    },
+    {
+        {1, 1, 1}, {1, 1, 0} // 15 (16)
+    },
+    {
+        {0, 0, 0}, {0, 0, 1} // 16 (17)
+    },
+    {
+        {0, 0, 0}, {0, 1, 1} // 17 (18)
+    },
+    {
+        {0, 1, 0}, {0, 0, 1} // 18 (19)
+    },
+    {
+        {0, 1, 0}, {0, 1, 1} // 19 (20)
+    },
+    {
+        {0, 0, 1}, {1, 0, 1} //20 (21)
+    },
+    {
+        {0, 0, 1}, {1, 1, 1} //21 (22)
+    },
+    {
+        {0, 1, 1}, {1, 0, 1} //22 (23)
+    },
+    {
+        {0, 1, 1}, {1, 1, 1} //23 (24)
+    },
+    {
+        {1, 0, 0}, {0, 0, 1} //24 (25)
+    },
+    {
+        {1, 0, 0}, {1, 1, 0} //25 (26)
+    },
+    {
+        {1, 1, 0}, {0, 0, 1} //26 (27)
+    },
+    {
+        {1, 1, 0}, {0, 1, 1} //27 (28)
+    },
+    {
+        {1, 0, 1}, {1, 0 ,1} //28 (29)
+    },
+    {
+        {1 ,0 ,1}, {1 ,1 ,1} //29 (30)
+    },
+    {
+        {1 ,1 ,1}, {1 ,0 ,1} //30 (31)
+    },
+    {
+        {1, 1, 1}, {1, 1, 1} //31 (32)
+    }
+};
+
+PEncoder::PEncoder (PLM_Device_Enum device, int num_levels) :
 m_x(-1), m_y(-1), m_h(-1), m_w(-1),
 m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
     m_num_levels = num_levels;
-    q.set_levels(m_num_levels);
+    m_plm_device.set_device(device, num_levels);
     /* Loads mask and stores it to reduce memory calls */
     masks = torch::from_blob(
         (void*)logical_masks,
@@ -82,14 +199,14 @@ m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(fa
     ).clone().to(DEVICE);
 }
 
-PEncoder::PEncoder (int x, int y, int h, int w, int num_levels) :
+PEncoder::PEncoder (int x, int y, int h, int w, int num_levels, PLM_Device_Enum device) :
 m_x(x), m_y(y), m_h(h), m_w(w),
 m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
     assert (m_h % 2 == 0);
     assert (m_w % 2 == 0);
     m_num_levels = num_levels;
-    q.set_levels(m_num_levels);
+    m_plm_device.set_device(device, num_levels);
 
     /* Loads mask and stores it to reduce memory calls */
     masks = torch::from_blob(
@@ -125,21 +242,8 @@ PEncoder::~PEncoder () {
     #endif
 }
 
-u8Image PEncoder::Encode_u8Image (torch::Tensor &x) {
-    torch::Tensor encoding = Encode_u8Tensor(x).contiguous();
-    auto* data_ptr = encoding.data_ptr<uint8_t>();
-    auto total_size = encoding.numel();
-
-    u8Image result(data_ptr, data_ptr + total_size);
-    return result;
-}
-
-Image PEncoder::Encode_Image (torch::Tensor &x) {
-    auto y = Encode_u8Tensor(x);
-    return u8Tensor_Image(y);
-}
-
 torch::Tensor PEncoder::Encode_u8Tensor (torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::Encode_u8Tensor is deprecated.\n");
     if (x.device() != masks.device())
         masks = masks.to(x.device());   /* Assign device correctly */
 
@@ -166,6 +270,7 @@ torch::Tensor PEncoder::Encode_u8Tensor (torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor (torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::MEncode_u8Tensor is deprecated.\n");
     validate_args();    /* Validate input arguments m_* */
     int64_t N = x.size(0);
     if (N > 24) {
@@ -186,6 +291,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor (torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor2 (const torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::MEncode_u8Tensor2 is deprecated.\n");
     validate_args();
 
     int64_t N = x.size(0);
@@ -225,6 +331,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::MEncode_u8Tensor2 is deprecated.\n");
     validate_args();
 
     int64_t N = x.size(0);
@@ -267,7 +374,33 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
 
 }
 
+torch::Tensor PEncoder::MEncode_u8Tensor4 (const torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::MEncode_u8Tensor4 is deprecated.\n");
+    int64_t N       = x.size(0);
+    int64_t input_h = x.size(1);
+    int64_t input_w = x.size(2);
+
+    /* Apply normalization */
+    auto norm_x = (x + M_PI) / (2 * M_PI); // Normalize to [0, 1]
+    auto mean_x = norm_x.mean();
+    auto binary_x = (norm_x > mean_x/*0.3197875,0.5*/).to(torch::kInt32); // Convert to binary [0, 1]
+
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    torch::Tensor down_image = torch::sum(binary_x * shifts_used, 0).to(torch::kFloat64);
+
+    /* Upscale x using torchvision */
+    auto image = torch::nn::functional::interpolate(
+        down_image.unsqueeze(0).unsqueeze(0),    // Add batch dimension [1, 1, H, W]
+        torch::nn::functional::InterpolateFuncOptions()
+            .size(std::vector<int64_t>{static_cast<int64_t>(m_h), static_cast<int64_t>(m_w)})   // Scale to [H, W]
+            .mode(torch::kNearest)
+    ).squeeze().to(torch::kInt32);   // [N, H, W]  
+
+    return image;
+}
+
 torch::Tensor PEncoder::upscale_ (const torch::Tensor &x, int scale_h, int scale_w) {
+    throw std::runtime_error("PEncoder::upscale_ is deprecated.\n");
     int64_t H = x.size(0) * scale_h;
     int64_t W = x.size(1) * scale_w;
 
@@ -276,6 +409,7 @@ torch::Tensor PEncoder::upscale_ (const torch::Tensor &x, int scale_h, int scale
     return x_blocks.permute({0,2,1,3}).reshape({H, W}).contiguous();
 }
 torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::MEncode_u8Tensor3 is deprecated.\n");
     int64_t N       = x.size(0);
     int64_t input_h = x.size(1);
     int64_t input_w = x.size(2);
@@ -313,69 +447,23 @@ torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
     return upscale_(image, scale_h, scale_w).to(torch::kInt32);
 }
 
-torch::Tensor PEncoder::MEncode_u8Tensor4 (const torch::Tensor &x) {
-    int64_t N       = x.size(0);
-    int64_t input_h = x.size(1);
-    int64_t input_w = x.size(2);
-
-    /* Apply normalization */
-    auto norm_x = (x + M_PI) / (2 * M_PI); // Normalize to [0, 1]
-    auto mean_x = norm_x.mean();
-    auto binary_x = (norm_x > mean_x/*0.3197875,0.5*/).to(torch::kInt32); // Convert to binary [0, 1]
-
-    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
-    torch::Tensor down_image = torch::sum(binary_x * shifts_used, 0).to(torch::kFloat64);
-
-    /* Upscale x using torchvision */
-    auto image = torch::nn::functional::interpolate(
-        down_image.unsqueeze(0).unsqueeze(0),    // Add batch dimension [1, 1, H, W]
-        torch::nn::functional::InterpolateFuncOptions()
-            .size(std::vector<int64_t>{static_cast<int64_t>(m_h), static_cast<int64_t>(m_w)})   // Scale to [H, W]
-            .mode(torch::kNearest)
-    ).squeeze().to(torch::kInt32);   // [N, H, W]  
-
-    return image;
-}
-
 torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
+    if (m_plm_device.m_device != PLM_Device_Enum::PLM_DEVICE_VISIBLE) {
+        throw std::runtime_error("PEncoder::MEncode_u8Tensor5 is only implemented for VISIBLE PLM device for now.\n");
+    }
+
     torch::Tensor plane = q[x];
     return MEncode_u8Tensor_Categorical(plane);
-    /*
-    int64_t N       = x.size(0);
-    int64_t input_h = x.size(1);
-    int64_t input_w = x.size(2);
-
-    // firstly, quantize the input tensor first (which is often much smaller than x)
-    torch::Tensor plane = q[x];
-    plane = level_mapping(plane);
-
-    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Generating encoding...\n";
-    if (masks.device() != x.device())
-        masks = masks.to(x.device());
-
-    auto logical = masks.index_select(0, plane.view({-1}));
-    logical = logical.view({N, input_h, input_w, 2, 2});
-    logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
-    torch::Tensor encoded = logical.view({N, input_h * 2, input_w * 2});
-
-    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor3] Generating bit representation...\n";
-
-    // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
-    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
-    encoded = encoded.to(torch::kInt32);
-    torch::Tensor image = torch::sum(encoded * shifts_used, 0);
-    image = torch::fliplr(image);
-
-    return image;
-    */
 }
 
 Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::u8Tensor_Image is deprecated.\n");
     torch::Tensor encoding = MEncode_u8Tensor(x).contiguous();
     return u8MTensor_Image (encoding);
 }
 
 Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
+    throw std::runtime_error("PEncoder::u8MTensor_Image is deprecated.\n");
     int32_t *data_ptr = nullptr;
     torch::Tensor tmp;
     if (x.device() == torch::kCPU)
@@ -454,6 +542,7 @@ Texture PEncoder::u8Tensor_Texture_CPU (torch::Tensor &encoding) {
 }
 
 torch::Tensor PEncoder::ImageTensorMap (torch::Tensor &x1, torch::Tensor &i0) {
+    throw std::runtime_error("PEncoder::ImageTensorMap is deprecated.\n");
     auto s1 = x1.sizes();
     auto s2 = i0.sizes();
 
@@ -472,6 +561,7 @@ torch::Tensor PEncoder::ImageTensorMap (torch::Tensor &x1, torch::Tensor &i0) {
 }
 
 torch::Tensor PEncoder::BImageTensorMap (torch::Tensor &x1, torch::Tensor &i0) {
+    throw std::runtime_error("PEncoder::BImageTensorMap is deprecated.\n");
     auto i0_broadcasted = (i0.size(0) == 1) ? i0 : i0.unsqueeze(0); // shape [1, H, W]
     return x1 * i0_broadcasted; // broadcasted multiplication
 }
@@ -510,6 +600,17 @@ void PEncoder::init_pbo () {
 #endif
 
 torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &q) {
+    switch (m_plm_device.m_device) {
+        case PLM_Device_Enum::PLM_DEVICE_VISIBLE:
+            return MEncode_u8Tensor_Categorical_visible_implt(q);
+        case PLM_Device_Enum::PLM_DEVICE_NIR:
+            return MEncode_u8Tensor_Categorical_nir_implt(q);
+        default:
+            throw std::runtime_error("PEncoder::MEncode_u8Tensor_Categorical: Invalid PLM device.\n");
+    }
+}
+
+torch::Tensor PEncoder::MEncode_u8Tensor_Categorical_visible_implt (const torch::Tensor &q) {
     // x is [N, H, W] with values in [0, 15]
     // This means, unlike MEncode_u8Tensor*, we do not need to quantize x first
 
@@ -538,6 +639,35 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &q) {
     return image;
 }
 
+torch::Tensor PEncoder::MEncode_u8Tensor_Categorical_nir_implt (const torch::Tensor &q) {
+    // x is [N, H, W] with values in [0, 31]
+
+    torch::Tensor x = level_mapping(q.clone());
+
+    int64_t N = x.size(0);
+    int64_t input_h = x.size(1);
+    int64_t input_w = x.size(2);
+
+    if (masks.device() != x.device())
+        masks = masks.to(x.device());
+
+    auto logical = masks.index_select(0, x.view({-1}));
+
+    logical = logical.view({N, input_h, input_w, 2, 3});
+    logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
+    torch::Tensor encoded = logical.view({N, input_h * 2, input_w * 3});
+
+    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor_Categorical] Generating bit representation...\n";
+
+    // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
+    torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});
+    encoded = encoded.to(torch::kInt32);
+    torch::Tensor image = torch::sum(encoded * shifts_used, 0);
+    image = torch::fliplr(image);
+    return image;
+}
+
+
 torch::Tensor PEncoder::MEncode_u8Tensor_Binary (const torch::Tensor &x) {
     // x is [N, H, W] with values in {0, 1}
     // This means, unlike MEncode_u8Tensor*, we do not need to quantize x first
@@ -554,54 +684,5 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Binary (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::level_mapping (torch::Tensor x) {
-    switch (m_num_levels) {
-        case 2:
-            // Map 0 -> 0
-            // Map 1 -> 11
-            x = torch::where(x == 0, torch::zeros_like(x), x);
-            x = torch::where(x == 1, torch::full_like(x, 11), x);
-            
-            break;
-        case 4:
-            // Map 0 -> 0
-            // Map 1 -> 8
-            // Map 2 -> 13
-            // Map 3 -> 15
-
-            // Apply mapping
-            x = torch::where(x == 0, torch::zeros_like(x), x);
-            x = torch::where(x == 1, torch::full_like(x, 8), x);
-            x = torch::where(x == 2, torch::full_like(x, 13), x);
-            x = torch::where(x == 3, torch::full_like(x, 15), x);
-
-            break;
-        case 8:
-            // Map 0 -> 0
-            // Map 1 -> 6
-            // Map 2 -> 8
-            // Map 3 -> 10
-            // Map 4 -> 12
-            // Map 5 -> 13
-            // Map 6 -> 14
-            // Map 7 -> 15
-
-            // Apply mapping
-            x = torch::where(x == 0, torch::zeros_like(x), x);
-            x = torch::where(x == 1, torch::full_like(x, 6), x);
-            x = torch::where(x == 2, torch::full_like(x, 8), x);
-            x = torch::where(x == 3, torch::full_like(x, 10), x);
-            x = torch::where(x == 4, torch::full_like(x, 12), x);
-            x = torch::where(x == 5, torch::full_like(x, 13), x);
-            x = torch::where(x == 6, torch::full_like(x, 14), x);
-            x = torch::where(x == 7, torch::full_like(x, 15), x);
-
-            break;
-        case 16:
-            /* Do nothing */
-            break;
-        default:
-            throw std::runtime_error("PEncoder::MEncode_u8Tensor_Categorical: Unsupported number of levels: " + std::to_string(m_num_levels) + "\n");
-            break;
-    }
-    return x;
+    return m_plm_device.level_mapping(x); 
 }

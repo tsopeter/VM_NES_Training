@@ -264,6 +264,7 @@ std::pair<torch::Tensor, torch::Tensor> Scheduler2::ReadCamera() {
 
 // Set Texture from Tensor
 void Scheduler2::SetTextureFromTensor(const torch::Tensor &tensor) {
+    throw std::runtime_error("Scheduler2::SetTextureFromTensor is deprecated. Use SetTextureFromTensorTiled instead.\n");
 
     auto timage = pen->MEncode_u8Tensor4(tensor).contiguous().to(torch::kInt32);  // faster speed
     //auto timage = pen->MEncode_u8Tensor3(tensor).contiguous().to(torch::kInt32);    // high resolution

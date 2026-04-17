@@ -6,6 +6,7 @@
 
 #include "../s2/quantize.hpp"
 #include "../s3/cam.hpp" /* u8Image */
+#include "../s2/plm_device.hpp" /* PLM_Device */
 
 #if defined(__linux__)
 #define GL_GLEXT_PROTOTYPES
@@ -21,9 +22,6 @@
 using cudaGraphicsResource=int;
 #endif
 
-
-
-
 /**
  * @brief PEncoder is used to generate variable-sized binary mask for PLM.
  * 
@@ -35,8 +33,8 @@ public:
      *        If you need to simply generate a Image from Tensor, use s4_Utils::TensorToImage.
      * 
      */
-    PEncoder (int num_levels=16);
-    PEncoder (int x, int y, int h, int w, int num_levels=16);
+    PEncoder (int num_levels=16, PLM_Device_Enum device=PLM_Device_Enum::VISIBLE);
+    PEncoder (int x, int y, int h, int w, int num_levels=16, PLM_Device_Enum device=PLM_Device_Enum::VISIBLE);
     ~PEncoder();
 
     /* Default methods for encoding torchTensors to other types */
@@ -148,9 +146,11 @@ public:
     void init_pbo ();
 
 private:
+    torch::Tensor MEncode_u8Tensor_Categorical_visible_implt(const torch::Tensor &x);
+    torch::Tensor MEncode_u8Tensor_Categorical_nir_implt(const torch::Tensor &x);
 
     /* Quantize is used for mapping float32 to 4-bit pseudo-quantized */
-    Quantize q;
+    PLM_Device m_plm_device;
 
     /* Masks determine the actual mapping from 4-bit depth to 4-bit spatial, used by PLM */
     torch::Tensor masks;
