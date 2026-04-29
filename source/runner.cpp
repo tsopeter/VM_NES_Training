@@ -104,8 +104,8 @@ void Runner::Run (std::string config_file) {
     };
 
     // Hooks
-    hooks.SetScheduler(&scheduler);
-    hooks.SetHooks();
+    //hooks.SetScheduler(&scheduler);
+    //hooks.SetHooks();
 
     // Set helpers stuff
     params._PDF.num_images_per_batch = params.n_batch_size * params.n_samples * 20;
