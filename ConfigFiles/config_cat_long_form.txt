@@ -3,10 +3,10 @@ Width  640
 Distribution categorical
 Std 0.2
 LearningRate 0.1
-TrainingSamples 5000
+TrainingSamples 10000
 TrainingBatchSize 50
-ValidationSamples 5000
-ValidationBatchSize 5000
+ValidationSamples 1000
+ValidationBatchSize 1000
 TestSamples 5000
 TestBatchSize 5000
 Samples 10
@@ -19,7 +19,7 @@ RegionFile source/Assets/phy8_15.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0
-CheckpointDirectory 2026_01_27/long_form/categorical/mnist/003/train
+CheckpointDirectory 2026_04_29/001/train
 ExposureTime 59
 DatasetPath Datasets/
 Epochs 10
