@@ -149,42 +149,29 @@ void Runner::Run (std::string config_file) {
         // Export the results to .csv file within the checkpoint directory
         params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/validation_results.csv", 1);
 
-        // Run inference on training data
+        // Run inference on training 
+        /*
         auto train_infer_perf = Helpers::Run::Inference(
             params,
             scheduler,
             eval_fn,
             train_infer_data
         );
+        */
 
         // Export the results to .csv file within the checkpoint directory
-        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 3, params.n_training_samples, params.n_training_samples);
+        // params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 3, params.n_training_samples, params.n_training_samples);
 
         // Save the training performance to run_loss and run_parameter
-        run_parameter.push_back(model.get_parameters().detach());
-        run_loss.push_back(train_perf.loss);
+        // run_parameter.push_back(model.get_parameters().detach());
+        // run_loss.push_back(train_perf.loss);
 
         // Clear the params results for the next evaluation
         //params.results.clear();
 
-
         if (epoch == 0) {
             previous_accuracy = train_perf.accuracy;
         }
-
-        // If the current accuracy is 20% less than previous accuracy, revert
-        /*
-        if (train_perf.accuracy < 0.8 * previous_accuracy) {
-            std::cout << "WARNING: [Runner::Run] Training accuracy dropped from "
-                      << previous_accuracy << " to " << train_perf.accuracy
-                      << ". Reverting to previous model parameters.\n";
-            model.init(prev_params.to(DEVICE), ModelDistribution);
-            revert = true;
-        }
-        else {
-            previous_accuracy = train_perf.accuracy;
-        }
-        */
 
         Time current_time = GetCurrentTime();
 
@@ -213,6 +200,7 @@ void Runner::Run (std::string config_file) {
         );
 
         // Save the train inference performance
+        /*
         std::string train_infer_perf_message = "Training Inference\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
         train_infer_perf_message += (revert ? "\nModel parameters reverted due to increased training loss." : "");
         train_infer_perf.Save(
@@ -226,6 +214,7 @@ void Runner::Run (std::string config_file) {
             train_infer_perf,
             epoch
         );
+        */
 
         // Save checkpoint
         Helpers::Checkpoint cp;
@@ -249,6 +238,7 @@ void Runner::Run (std::string config_file) {
     std::cout << "INFO: [Runner::Run] Running final testing after training...\n";
 
     // Find the model parameter with highest loss (as loss is negative reward)
+    /*
     double best_loss = -1000000.0f;
     int best_index = -1;
     for (size_t i = 0; i < run_loss.size(); ++i) {
@@ -258,9 +248,10 @@ void Runner::Run (std::string config_file) {
         }
     }
     torch::Tensor best_parameter = run_parameter[best_index];
+    */
 
     // Re-initialize the model with best parameters
-    model.init(best_parameter.to(DEVICE), ModelDistribution);
+    // model.init(best_parameter.to(DEVICE), ModelDistribution);
 
     if (save_images) {
         params.save_images = true;
