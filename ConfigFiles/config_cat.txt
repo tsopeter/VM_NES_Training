@@ -19,7 +19,7 @@ RegionFile source/Assets/phy8_10.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0
-CheckpointDirectory 2026_01_27/16/categorical/mnist/dither/train
+CheckpointDirectory 2026_04_29/test/train
 ExposureTime 59
 DatasetPath Datasets/
 Epochs 20

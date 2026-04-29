@@ -18,7 +18,7 @@ IterationAmount 4
 RegionFile source/Assets/phy8_10.npy
 MinLimit 2
 SaveInterval 10000
-CheckpointDirectory 2026_01_27/2/categorical/fashion/001/train
+CheckpointDirectory 2026_04_29/test/train
 ExposureTime 59
 DatasetPath FashionDatasets/
 Epochs 20
@@ -31,7 +31,7 @@ AffineScaleY 1.0418670177459717
 SchedSampleRate -1
 SchedUpdateAmount 0
 LossFn 0
-NumLevels 2
+NumLevels 16
 SaveAll 0
 SaveImageCount 0
 SaveOnlyLastCheckpoint 1

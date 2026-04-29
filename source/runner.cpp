@@ -183,6 +183,11 @@ void Runner::Run (std::string config_file) {
             epoch,
             train_perf_message
         );
+        WriteTrainingEntryToCSVFile(
+            csv_file,
+            train_perf,
+            epoch
+        );
 
         std::string val_perf_message = "Validation\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
         val_perf_message += (revert ? "\nModel parameters reverted due to increased training loss." : "");

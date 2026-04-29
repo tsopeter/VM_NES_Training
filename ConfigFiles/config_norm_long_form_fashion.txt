@@ -1,8 +1,8 @@
 Height 400
 Width  640
-Distribution categorical
-Std 0.2
-LearningRate 0.03
+Distribution normal
+Std 0.6
+LearningRate 0.018
 TrainingSamples 10000
 TrainingBatchSize 20
 ValidationSamples 1000
@@ -19,7 +19,7 @@ RegionFile source/Assets/phy8_10.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0
-CheckpointDirectory 2026_04_29/001/train
+CheckpointDirectory 2026_04_29/002/train
 ExposureTime 59
 DatasetPath FashionDatasets/
 Epochs 10
