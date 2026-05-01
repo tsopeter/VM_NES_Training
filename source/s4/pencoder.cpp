@@ -528,7 +528,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &q) {
     logical = logical.permute({0, 1, 3, 2, 4}).contiguous();
     torch::Tensor encoded = logical.view({N, input_h * 2, input_w * 2});
 
-    std::cout<<"INFO: [PEncoder::MEncode_u8Tensor_Categorical] Generating bit representation...\n";
+    //std::cout<<"INFO: [PEncoder::MEncode_u8Tensor_Categorical] Generating bit representation...\n";
 
     // Use precomputed shifts tensor from class, slice to N, move to device, and reshape
     torch::Tensor shifts_used = shifts.index({torch::indexing::Slice(0, N)}).to(x.device()).view({N, 1, 1});

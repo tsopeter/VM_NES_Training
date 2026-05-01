@@ -14,7 +14,7 @@ Padding 3
 SubShaderThreshold 0.8
 UsePosterizationShader 0
 UpscaleFactor 2
-IterationAmount 5
+IterationAmount 4
 RegionFile source/Assets/phy8_15.npy
 MinLimit 2
 SaveInterval 10000

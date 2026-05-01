@@ -14,8 +14,8 @@ Helpers::Parameters::Parameters () {
         auto img = ts.full.to(DEVICE);
         auto l   = torch::tensor({ts.label}).to(DEVICE);
 
-        std::cout << "DEBUG: [process_fn] Received image tensor of shape: " << img.sizes() << "\n";
-        std::cout << "DEBUG: [process_fn] Mask is of shape: " << _PDF.masks.sizes() << "\n";
+        //std::cout << "DEBUG: [process_fn] Received image tensor of shape: " << img.sizes() << "\n";
+        //std::cout << "DEBUG: [process_fn] Mask is of shape: " << _PDF.masks.sizes() << "\n";
 
         // Preprocess the image
         img      = torch::clamp(img, 0, 255).to(torch::kFloat32);
@@ -199,23 +199,23 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
 ) {
     s2_Dataloader data_loader {params.Training.dataset_path};
     auto data = data_loader.load(dtype, start_index+n_data_points);
-    std::cout << "INFO: [Helpers::Data::Get] Loaded data with " << data.len() << " samples.\n";
+    //std::cout << "INFO: [Helpers::Data::Get] Loaded data with " << data.len() << " samples.\n";
 
     switch (dtype) {
         case s2_DataTypes::TRAIN:
-            std::cout << "INFO: [Helpers::Data::Get] Data Type: TRAIN\n";
+            //std::cout << "INFO: [Helpers::Data::Get] Data Type: TRAIN\n";
             break;
         case s2_DataTypes::VALID:
-            std::cout << "INFO: [Helpers::Data::Get] Data Type: VALID\n";
+            //std::cout << "INFO: [Helpers::Data::Get] Data Type: VALID\n";
             break;
         case s2_DataTypes::TEST:
-            std::cout << "INFO: [Helpers::Data::Get] Data Type: TEST\n";
+            //std::cout << "INFO: [Helpers::Data::Get] Data Type: TEST\n";
             break;
     }
 
-    std::cout << "INFO: [Helpers::Data::Get] Number of Data Points: " << n_data_points << "\n";
-    std::cout << "INFO: [Helpers::Data::Get] Batch Size: " << batch_size << "\n";
-    std::cout << "INFO: [Helpers::Data::Get] Start Index: " << start_index << "\n";
+    //std::cout << "INFO: [Helpers::Data::Get] Number of Data Points: " << n_data_points << "\n";
+    //std::cout << "INFO: [Helpers::Data::Get] Batch Size: " << batch_size << "\n";
+    //std::cout << "INFO: [Helpers::Data::Get] Start Index: " << start_index << "\n";
 
     std::vector<Helpers::Data::Batch> batches;
     batches.resize(n_data_points / batch_size);
@@ -225,7 +225,7 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
     torch::Tensor map_x = torch::Tensor();
     torch::Tensor map_y = torch::Tensor();
     if (!params.prewarped_directory.empty()) {
-        std::cout << "INFO: [Helpers::Data::Get] Loading prewarped images from directory: " << params.prewarped_directory << "\n";
+        //std::cout << "INFO: [Helpers::Data::Get] Loading prewarped images from directory: " << params.prewarped_directory << "\n";
         use_prewarped = true;
 
 
@@ -237,10 +237,10 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
     int end   = start_index + n_data_points;
     int index = 0;
     for (int i = start; i < end; i += batch_size) {
-        std::cout << "Index: " << index << "\n";
+        //std::cout << "Index: " << index << "\n";
         for (int j = 0; j < batch_size; ++j) {
 
-            std::cout << "Loading: " << (i + j) << "\n";
+            //std::cout << "Loading: " << (i + j) << "\n";
 
             auto [d, l] = data[i + j];
             // Process the data
@@ -302,14 +302,14 @@ std::vector<Helpers::Data::Batch> Helpers::Data::Get (
 
                 if ((i + j) == 0) {
                     ExportImage(di, "prewarped_sample.bmp");
-                    std::cout << "INFO: [Helpers::Data::Get] Saved prewarped sample image to prewarped_sample.bmp\n";
+                    //std::cout << "INFO: [Helpers::Data::Get] Saved prewarped sample image to prewarped_sample.bmp\n";
                 }
 
                 Texture ti = LoadTextureFromImage(di);
                 SetTextureFilter(ti, TEXTURE_FILTER_POINT);
                 UnloadImage(di);
 
-                std::cout << "INFO: [Helpers::Data::Get] Pushed to: batch " << index / batch_size << '\n';
+                //std::cout << "INFO: [Helpers::Data::Get] Pushed to: batch " << index / batch_size << '\n';
 
                 batches[index / batch_size].textures.push_back(ti);
                 batches[index / batch_size].labels.push_back(li);
@@ -375,16 +375,16 @@ void Helpers::Run::Setup_Scheduler (
     scheduler.EnableFullScreenSubTextures();
 
     if (dist.get_name() == "categorical") {
-        std::cout << "INFO: [e23] Using Categorical distribution for the model.\n";
+        //std::cout << "INFO: [e23] Using Categorical distribution for the model.\n";
         scheduler.EnableCategoricalMode(); // For Categorical distribution
     } else if (dist.get_name() == "normal") {
-        std::cout << "INFO: [e23] Using Normal distribution for the model.\n";
+        //std::cout << "INFO: [e23] Using Normal distribution for the model.\n";
     } else if (dist.get_name() == "bernoulli" || dist.get_name() == "binary") {
-        std::cout << "INFO: [e23] Using Binary distribution for the model.\n";
+        //std::cout << "INFO: [e23] Using Binary distribution for the model.\n";
         scheduler.EnableBinaryMode(); // For Binary distribution
     }
     else {
-        std::cout << "INFO: [e23] Using unknown distribution (" << dist.get_name() << ") for the model.\n";
+        //std::cout << "INFO: [e23] Using unknown distribution (" << dist.get_name() << ") for the model.\n";
     }
 
     scheduler.SetSubShaderThreshold(params.sub_shader_threshold);
@@ -989,7 +989,7 @@ void Helpers::Parameters::SaveCollectedMasks () {
         return;
 
     if (collect_data_masks.empty()) {
-        std::cout << "INFO: [SaveCollectedMasks] No masks collected, skipping save.\n";
+        //std::cout << "INFO: [SaveCollectedMasks] No masks collected, skipping save.\n";
         return;
     }
 
@@ -999,6 +999,6 @@ void Helpers::Parameters::SaveCollectedMasks () {
     // Save the tensor to a file dictated in directory collected_masks_directory
     std::string save_path = collect_data_directory + "/masks.pt";
     torch::save(all_masks, save_path);
-    std::cout << "INFO: [SaveCollectedMasks] Saved " << collect_data_masks.size() << " masks to " << save_path << '\n';
+    //std::cout << "INFO: [SaveCollectedMasks] Saved " << collect_data_masks.size() << " masks to " << save_path << '\n';
 
 }

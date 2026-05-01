@@ -10,10 +10,21 @@ s4_Optimizer::s4_Optimizer (torch::optim::Optimizer& opt, s4_Model& model)
     // possible value
     best_reward = -100000000;
 
+    // Open the log file for writing rewards
+    log_ofs = std::ofstream(log_file);
+
+    if (!log_ofs.is_open()) {
+        throw std::runtime_error("Failed to open log file: " + log_file);
+    }
+
+    log_ofs << "Update,Mean,Std,MinNorm,MaxNorm\n";
 }
 
 s4_Optimizer::~s4_Optimizer () {
-
+    // Close
+    if (log_ofs.is_open()) {
+        log_ofs.close();
+    }
 }
 
 void s4_Optimizer::step_a (torch::Tensor &rewards) {
@@ -179,12 +190,22 @@ torch::Tensor s4_Optimizer::norm_reward (torch::Tensor &rewards) {
     auto N    = rewards.size(0);
 
     auto min_std = torch::tensor(1e-1, rewards.options());
-    auto std  = rewards.std(true);
+    auto std  = rewards.std();
 
     std = torch::maximum(std, min_std);
 
     auto baseline = rewards.mean();
     auto norm     = (rewards - baseline)/std;
+
+    std::cout << "INFO: [s4_Optimizer::norm_reward] Rewards mean: " << baseline.item<double>() << ", std: " << std.item<double>() <<", actual std: " << rewards.std().item<double>() << '\n';
+    std::cout << "INFO: [s4_Optimizer::norm_reward] Normalized Rewards Min: " << norm.min().item<double>() << ", Max: " << norm.max().item<double>() << '\n';
+
+    // Write the normalized rewards to a file for debugging
+    
+    if (log_ofs.is_open()) {
+        log_ofs << update_count << ',' << baseline.item<double>() << ',' << std.item<double>() << ',' << norm.min().item<double>() << ',' << norm.max().item<double>() << '\n';
+        ++update_count;
+    }
 
     return norm;
 }

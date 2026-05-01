@@ -268,7 +268,7 @@ void Scheduler2::SetTextureFromTensor(const torch::Tensor &tensor) {
     auto timage = pen->MEncode_u8Tensor4(tensor).contiguous().to(torch::kInt32);  // faster speed
     //auto timage = pen->MEncode_u8Tensor3(tensor).contiguous().to(torch::kInt32);    // high resolution
     m_texture = pen->u8Tensor_Texture(timage);
-    std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Texture set from tensor.\n";
+    //std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Texture set from tensor.\n";
 }
 
 void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
@@ -282,16 +282,16 @@ void Scheduler2::SetTextureFromTensorTiled (const torch::Tensor &tensor) {
     }
     
     if (m_texture.width > 0 && m_texture.height > 0) {
-        printf("Texture is valid!\n");
+        //printf("Texture is valid!\n");
         UnloadTexture(m_texture);
     } else {
-        printf("Texture not loaded.\n");
+        //printf("Texture not loaded.\n");
     }
     
 
     m_texture = pen->u8Tensor_Texture_CPU(timage);
-    std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture set from tensor (tiled).\n";
-    std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture size: " << m_texture.width << "x" << m_texture.height << '\n';
+    //std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture set from tensor (tiled).\n";
+    //std::cout << "INFO: [Scheduler2::SetTextureFromTensorTiled] Texture size: " << m_texture.width << "x" << m_texture.height << '\n';
 }
 
 // Draw Texture to Screen
@@ -312,7 +312,7 @@ void Scheduler2::DrawTextureToScreen() {
             DrawSubTexturesToScreen_BlendMode();
 
     EndDrawing();
-    std::cout<< "INFO: [Scheduler2::DrawTextureToScreen] Texture drawn to screen.\n";
+    //std::cout<< "INFO: [Scheduler2::DrawTextureToScreen] Texture drawn to screen.\n";
 }
 
 void Scheduler2::DrawTextureToScreenTiled() {
@@ -381,6 +381,7 @@ void Scheduler2::DrawSubTexturesToScreen() {
     BeginShaderMode(sub_shader);
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
+            /*
             std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
             std::cout << "INFO: [Sub Texture " << i << "] (" 
                 << m_sub_textures[i].width 
@@ -391,6 +392,7 @@ void Scheduler2::DrawSubTexturesToScreen() {
                 << ", "
                 << window.Height
                 << ")\n";
+            */
             DrawTexturePro(
                 m_sub_textures[i],
                 {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
@@ -416,6 +418,7 @@ void Scheduler2::DrawSubTexturesToScreenCentered () {
     BeginShaderMode(sub_shader);
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
+            /*
             std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
             std::cout << "INFO: [Sub Texture " << i << "] (" 
                 << m_sub_textures[i].width 
@@ -426,6 +429,7 @@ void Scheduler2::DrawSubTexturesToScreenCentered () {
                 << ", "
                 << window.Height
                 << ")\n";
+            */
             DrawTexturePro (
                 m_sub_textures[i],
                 {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
@@ -598,7 +602,7 @@ double Scheduler2::UpdatePPO () {
 }
 
 torch::Tensor Scheduler2::GetRewards () {
-    std::cout << "INFO: [Scheduler2::GetRewards] Getting rewards...\n";
+    //std::cout << "INFO: [Scheduler2::GetRewards] Getting rewards...\n";
     // Calculate the number of rewards we need
     int64_t required_rewards = number_of_frames_sent * maximum_number_of_frames_in_image;
     std::vector<torch::Tensor> rewards_collected;
@@ -615,7 +619,7 @@ torch::Tensor Scheduler2::GetRewards () {
     auto stacked_rewards = torch::stack(rewards_collected).view({-1});
 
     stacked_rewards = Uninterleave(stacked_rewards);
-    std::cout << stacked_rewards.sizes() << '\n';
+    //std::cout << stacked_rewards.sizes() << '\n';
 
 
     stacked_rewards = stacked_rewards.mean({1});
@@ -629,7 +633,7 @@ torch::Tensor Scheduler2::GetRewards () {
 }
 
 double Scheduler2::Loss() {
-    std::cout << "INFO: [Scheduler2::Update] Updating scheduler...\n";
+    //std::cout << "INFO: [Scheduler2::Update] Updating scheduler...\n";
     // Calculate the number of rewards we need
     int64_t required_rewards = number_of_frames_sent * maximum_number_of_frames_in_image;
     std::vector<torch::Tensor> rewards_collected;
@@ -646,7 +650,7 @@ double Scheduler2::Loss() {
     auto stacked_rewards = torch::stack(rewards_collected).view({-1});
 
     stacked_rewards = Uninterleave(stacked_rewards);
-    std::cout << stacked_rewards.sizes() << '\n';
+    //std::cout << stacked_rewards.sizes() << '\n';
 
 
     stacked_rewards = stacked_rewards.mean({1});
@@ -661,7 +665,7 @@ double Scheduler2::Loss() {
 }
 
 double Scheduler2::Loss (torch::Tensor t) {
-    std::cout << "INFO: [Scheduler2::Loss] Calculating loss...\n";
+    //std::cout << "INFO: [Scheduler2::Loss] Calculating loss...\n";
 
     t = t.to(reward_device);
 
@@ -687,19 +691,19 @@ void Scheduler2::SetupVSYNCTimer() {
 }
 
 void Scheduler2::wait_till_capture_pending_is_zero () {
-    std::cout << "INFO: [Scheduler2::wait_till_capture_pending_is_zero] Waiting for capture pending to be zero...\n";
+    //std::cout << "INFO: [Scheduler2::wait_till_capture_pending_is_zero] Waiting for capture pending to be zero...\n";
     while (captures_pending.load(std::memory_order_acquire) != 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(50));
     }
 }
 
 void Scheduler2::wait_till_capture_enable_is_false () {
-    std::cout << "INFO: [Scheduler2::wait_till_capture_enable_is_false] Waiting for capture enable to be false...\n";
+    //std::cout << "INFO: [Scheduler2::wait_till_capture_enable_is_false] Waiting for capture enable to be false...\n";
     while (enable_capture.load(std::memory_order_acquire));
 }
 
 void Scheduler2::send_ready_to_capture () {
-    std::cout << "INFO: [Scheduler2::send_ready_to_capture] Sending ready to capture signal...\n";
+    //std::cout << "INFO: [Scheduler2::send_ready_to_capture] Sending ready to capture signal...\n";
     enable_capture.store(true, std::memory_order_release);
 }
 
@@ -710,7 +714,7 @@ void Scheduler2::schedule_camera_capture(std::atomic<uint64_t>& counter) {
 
     // Signal to serial port
     serial.Signal();
-    std::cout << "INFO: [Scheduler2::schedule_camera_capture] Sending trigger signal...\n";
+    //std::cout << "INFO: [Scheduler2::schedule_camera_capture] Sending trigger signal...\n";
 
     captures_pending.fetch_add(1, std::memory_order_release);
     enable_capture.store(false, std::memory_order_release);
@@ -739,13 +743,13 @@ void Scheduler2::CameraThread() {
             // store the first image as a sample
             if (count == 1 && sample_image_capture_enabled.load(std::memory_order_acquire)) {
                 sample_images.enqueue(image);
-                std::cout << "INFO: [Scheduler2::CameraThread] Sample image captured.\n";
+                //std::cout << "INFO: [Scheduler2::CameraThread] Sample image captured.\n";
             }
         }
-        std::cout << "INFO: [Scheduler2::CameraThread] All images for current frame captured.\n";
+        //std::cout << "INFO: [Scheduler2::CameraThread] All images for current frame captured.\n";
         captures_pending.fetch_sub(1, std::memory_order_release);
     }
-    std::cout << "INFO: [Scheduler2::CameraThread] Camera thread ended.\n";
+    //std::cout << "INFO: [Scheduler2::CameraThread] Camera thread ended.\n";
 }
 
 void Scheduler2::Start (
@@ -1122,7 +1126,8 @@ void Scheduler2::DrawSubTexturesToScreen_BlendMode () {
 
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
-            std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
+            //std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
+            /*
             std::cout << "INFO: [Sub Texture " << i << "] (" 
                 << m_sub_textures[i].width 
                 << ", " 
@@ -1132,6 +1137,7 @@ void Scheduler2::DrawSubTexturesToScreen_BlendMode () {
                 << ", "
                 << window.Height
                 << ")\n";
+            */
             DrawTexturePro(
                 m_sub_textures[i],
                 {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},
@@ -1180,6 +1186,7 @@ void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
 
     for (int i = 0; i < 10; ++i) {
         if (m_sub_textures_enable[i]) {
+            /*
             std::cout << "INFO: [scheduler2] Drawing sub texture: " << i << '\n';
             std::cout << "INFO: [Sub Texture " << i << "] (" 
                 << m_sub_textures[i].width 
@@ -1190,6 +1197,7 @@ void Scheduler2::DrawSubTexturesToScreenCentered_BlendMode () {
                 << ", "
                 << window.Height
                 << ")\n";
+            */
             DrawTexturePro (
                 m_sub_textures[i],
                 {0, 0, static_cast<float>(m_sub_textures[i].width), static_cast<float>(m_sub_textures[i].height)},

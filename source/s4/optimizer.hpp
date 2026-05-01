@@ -2,6 +2,8 @@
 #define s4_optimizer_hpp__
 
 #include <torch/torch.h>
+#include <iostream>
+#include <fstream>
 #include "../s2/dist.hpp"   /* Distribution used */
 #include "model.hpp"        /* Model */
 
@@ -31,6 +33,10 @@ private:
     torch::Tensor norm_reward (torch::Tensor &rewards);
 
     void xNES_update (torch::Tensor &rewards);
+
+    std::string log_file = "app_files/logging/rewards/log.txt";
+    std::ofstream log_ofs;
+    int update_count = 0;
 };
 
 #endif
