@@ -2,11 +2,11 @@ Height 400
 Width  640
 Distribution normal
 Std 0.6
-LearningRate 0.03
+LearningRate 0.05
 TrainingSamples 10000
 TrainingBatchSize 20
-ValidationSamples 1000
-ValidationBatchSize 1000
+ValidationSamples 5000
+ValidationBatchSize 5000
 TestSamples 5000
 TestBatchSize 5000
 Samples 10
@@ -14,12 +14,12 @@ Padding 3
 SubShaderThreshold 0.8
 UsePosterizationShader 0
 UpscaleFactor 2
-IterationAmount 4
+IterationAmount 5
 RegionFile source/Assets/phy8_15.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0
-CheckpointDirectory 2026_04_29/002/train
+CheckpointDirectory 2026_04_29/003/train
 ExposureTime 59
 DatasetPath Datasets/
 Epochs 10
@@ -36,3 +36,14 @@ NumLevels 16
 SaveAll 0
 SaveImageCount 0
 SaveOnlyLastCheckpoint 1
+Ratios
+    0.01
+    0.01
+    0.01
+    0.01
+    0.01
+    0.01
+    0.01
+    0.01
+    0.01
+    0.01

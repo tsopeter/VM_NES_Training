@@ -127,6 +127,14 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
     torch::nn::utils::clip_grad_norm_(m_model.parameters(), 1.0);
     m_opt.step();
 
+    // If after update, the model parameters is NaN, throw error
+    for (const auto &param : m_model.parameters()) {
+        if (torch::isnan(param).any().item<bool>()) {
+            throw std::runtime_error("NaN detected in model parameters after optimization step.");
+        }
+    }
+
+
     // Detach logp to avoid memory leak ??
     // Maybe the optimizer holds onto the computation graph otherwise
     logp.detach();
@@ -169,9 +177,14 @@ torch::Tensor s4_Optimizer::utilities (torch::Tensor &rewards) {
 
 torch::Tensor s4_Optimizer::norm_reward (torch::Tensor &rewards) {
     auto N    = rewards.size(0);
+
+    auto min_std = torch::tensor(1e-1, rewards.options());
     auto std  = rewards.std(true);
-    auto baseline = (rewards.sum() - rewards)/(N-1);
-    auto norm     = (rewards - baseline)/(std + 1e-10);
+
+    std = torch::maximum(std, min_std);
+
+    auto baseline = rewards.mean();
+    auto norm     = (rewards - baseline)/std;
 
     return norm;
 }

@@ -26,6 +26,7 @@ Helpers::Parameters::Parameters () {
 
         auto q    = img.unsqueeze(0).unsqueeze(0); // [1, 1, H, W]
         auto sums = (q.unsqueeze(1) * _PDF.masks.to(img.device())).sum({2,3,4}); // [1, 10]
+
         sums = sums * _PDF.ratios.to(sums.device());
         auto preds = sums.argmax(1); // [1]
         auto targets = l.to(torch::kLong).to(sums.device()); // [1]

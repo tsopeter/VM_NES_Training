@@ -5,8 +5,8 @@ Std 0.2
 LearningRate 0.1
 TrainingSamples 10000
 TrainingBatchSize 50
-ValidationSamples 1000
-ValidationBatchSize 1000
+ValidationSamples 5000
+ValidationBatchSize 5000
 TestSamples 5000
 TestBatchSize 5000
 Samples 10
@@ -15,7 +15,7 @@ SubShaderThreshold 0.8
 UsePosterizationShader 0
 UpscaleFactor 2
 IterationAmount 4
-RegionFile source/Assets/phy8_15.npy
+RegionFile source/Assets/phy8_10.npy
 MinLimit 2
 SaveInterval 10000
 SaveImages 0

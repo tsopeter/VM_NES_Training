@@ -121,11 +121,6 @@ void Runner::Run (std::string config_file) {
             std::filesystem::create_directories(epoch_checkpoint_dir);
         }
 
-        // Save the previous model parameters, so if 
-        // validation loss increases, we can revert back
-        auto prev_params = model.get_parameters().detach().cpu();
-        bool   revert = false;
-
         auto train_perf = Helpers::Run::Evaluate(
             params,
             scheduler,
@@ -135,9 +130,6 @@ void Runner::Run (std::string config_file) {
 
         // Export the results to .csv file within the checkpoint directory
         params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_results.csv", 0);
-
-        // Clear the params results for the next evaluation
-        //params.results.clear();
 
         auto val_perf = Helpers::Run::Inference(
             params,
@@ -150,53 +142,46 @@ void Runner::Run (std::string config_file) {
         params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/validation_results.csv", 1);
 
         // Run inference on training 
-        /*
         auto train_infer_perf = Helpers::Run::Inference(
             params,
             scheduler,
             eval_fn,
             train_infer_data
         );
-        */
-
+        
         // Export the results to .csv file within the checkpoint directory
-        // params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 3, params.n_training_samples, params.n_training_samples);
+        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/training_inference_results.csv", 3, params.n_training_samples, params.n_training_samples);
 
-        // Save the training performance to run_loss and run_parameter
-        // run_parameter.push_back(model.get_parameters().detach());
-        // run_loss.push_back(train_perf.loss);
+        auto test_perf = Helpers::Run::Inference(
+            params,
+            scheduler,
+            eval_fn,
+            test_data
+        );
 
-        // Clear the params results for the next evaluation
-        //params.results.clear();
+        params.ExportResults(checkpoint_directory + "/epoch_" + std::to_string(epoch) + "/test_results.csv", 2);
 
-        if (epoch == 0) {
-            previous_accuracy = train_perf.accuracy;
-        }
 
         Time current_time = GetCurrentTime();
 
+        // Save the training performance to log
         std::string train_perf_message = "Training\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
-        train_perf_message += (revert ? "\nModel parameters reverted due to increased training loss." : "");
 
         train_perf.Save(
             log_file,
             epoch,
             train_perf_message
         );
-        WriteTrainingEntryToCSVFile(
-            csv_file,
-            train_perf,
-            epoch
-        );
 
+        // Save the validation performance to log
         std::string val_perf_message = "Validation\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
-        val_perf_message += (revert ? "\nModel parameters reverted due to increased training loss." : "");
 
         val_perf.Save(
             log_file,
             epoch,
             val_perf_message
         );
+
         // Also write to CSV file
         WriteValidationEntryToCSVFile(
             csv_file,
@@ -204,22 +189,37 @@ void Runner::Run (std::string config_file) {
             epoch
         );
 
-        // Save the train inference performance
-        /*
+        // Save the train inference performance to log
         std::string train_infer_perf_message = "Training Inference\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
-        train_infer_perf_message += (revert ? "\nModel parameters reverted due to increased training loss." : "");
         train_infer_perf.Save(
             log_file,
             epoch,
             train_infer_perf_message
         );
+
         // Also write to CSV file
         WriteTrainingEntryToCSVFile(
             csv_file,
             train_infer_perf,
             epoch
         );
-        */
+
+
+        // Save the test performance to log
+        std::string test_perf_message = "Test\nEpoch " + std::to_string(epoch) + "\nTime: " + current_time.to_string();
+
+        test_perf.Save(
+            log_file,
+            epoch,
+            test_perf_message
+        );
+        // Also write to CSV file
+        WriteTestEntryToCSVFile(
+            csv_file,
+            test_perf,
+            epoch
+        );
+        
 
         // Save checkpoint
         Helpers::Checkpoint cp;
@@ -242,46 +242,9 @@ void Runner::Run (std::string config_file) {
     // Run final testing after training
     std::cout << "INFO: [Runner::Run] Running final testing after training...\n";
 
-    // Find the model parameter with highest loss (as loss is negative reward)
-    /*
-    double best_loss = -1000000.0f;
-    int best_index = -1;
-    for (size_t i = 0; i < run_loss.size(); ++i) {
-        if (run_loss[i] > best_loss) {
-            best_loss = run_loss[i];
-            best_index = static_cast<int>(i);
-        }
-    }
-    torch::Tensor best_parameter = run_parameter[best_index];
-    */
-
-    // Re-initialize the model with best parameters
-    // model.init(best_parameter.to(DEVICE), ModelDistribution);
-
     if (save_images) {
         params.save_images = true;
     }
-
-    auto test_perf = Helpers::Run::Inference(
-        params,
-        scheduler,
-        eval_fn,
-        test_data
-    );
-
-    params.ExportResults(checkpoint_directory + "/test_results.csv", 2);
-
-    test_perf.Save(
-        log_file,
-        epoch,
-        "Final Testing Results\nEpoch " + std::to_string(epoch)
-    );
-    // Also write to CSV file
-    WriteTestEntryToCSVFile(
-        csv_file,
-        test_perf,
-        epoch
-    );
 
     scheduler.StopThreads();
     scheduler.StopCamera();
