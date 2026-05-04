@@ -1,0 +1,2 @@
+Update,Mean,Std,ActualStd,MinNorm,MaxNorm,Min,Max
+0,-2.29153,0.00195166,0.00195166,-2.63353,2.76346,-2.29667,-2.28614

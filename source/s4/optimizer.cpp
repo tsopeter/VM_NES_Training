@@ -1,4 +1,7 @@
 #include "optimizer.hpp"
+#include <thread>
+#include <future>
+#include <functional>
 
 s4_Optimizer::s4_Optimizer (torch::optim::Optimizer& opt, s4_Model& model)
 : m_opt(opt), m_model(model)
@@ -17,7 +20,8 @@ s4_Optimizer::s4_Optimizer (torch::optim::Optimizer& opt, s4_Model& model)
         throw std::runtime_error("Failed to open log file: " + log_file);
     }
 
-    log_ofs << "Update,Mean,Std,MinNorm,MaxNorm\n";
+    log_ofs << "Update,Mean,Std,ActualStd,MinNorm,MaxNorm,Min,Max\n";
+    log_ofs.close();
 }
 
 s4_Optimizer::~s4_Optimizer () {
@@ -189,23 +193,38 @@ torch::Tensor s4_Optimizer::utilities (torch::Tensor &rewards) {
 torch::Tensor s4_Optimizer::norm_reward (torch::Tensor &rewards) {
     auto N    = rewards.size(0);
 
-    auto min_std = torch::tensor(1e-1, rewards.options());
+    auto min_std = torch::tensor(1e-3, rewards.options());
     auto std  = rewards.std();
 
-    std = torch::maximum(std, min_std);
+    std = std.clamp_min(min_std);
 
     auto baseline = rewards.mean();
     auto norm     = (rewards - baseline)/std;
 
-    std::cout << "INFO: [s4_Optimizer::norm_reward] Rewards mean: " << baseline.item<double>() << ", std: " << std.item<double>() <<", actual std: " << rewards.std().item<double>() << '\n';
-    std::cout << "INFO: [s4_Optimizer::norm_reward] Normalized Rewards Min: " << norm.min().item<double>() << ", Max: " << norm.max().item<double>() << '\n';
+    double baseline_val = baseline.item<double>();
+    double std_val = std.item<double>();
+    double actual_std_val = rewards.std().item<double>();
+    double norm_min = norm.min().item<double>();
+    double norm_max = norm.max().item<double>();
+    double min_val = rewards.min().item<double>();
+    double max_val = rewards.max().item<double>();
 
-    // Write the normalized rewards to a file for debugging
-    
-    if (log_ofs.is_open()) {
-        log_ofs << update_count << ',' << baseline.item<double>() << ',' << std.item<double>() << ',' << norm.min().item<double>() << ',' << norm.max().item<double>() << '\n';
-        ++update_count;
-    }
+    std::cout << "INFO: [s4_Optimizer::norm_reward] Rewards mean: " << baseline_val << ", std: " << std_val <<", actual std: " << actual_std_val << '\n';
+    std::cout << "INFO: [s4_Optimizer::norm_reward] Normalized Rewards Min: " << norm_min << ", Max: " << norm_max << ", Original Rewards Min: " << min_val << ", Max: " << max_val << '\n';
+
+    // Launch async task to write the normalized rewards to a file for debugging
+    std::async(std::launch::async, [this, baseline_val, std_val, actual_std_val, norm_min, norm_max, min_val, max_val]() {
+        // Open the log file for appending
+        std::ofstream ofs(log_file, std::ios_base::app);
+
+        // Write the normalized rewards to a file for debugging
+        if (ofs.is_open()) {
+            ofs << update_count << ',' << baseline_val << ',' << std_val << ',' << actual_std_val << ',' << norm_min << ',' << norm_max << ',' << min_val << ',' << max_val << '\n';
+            ++update_count;
+        }
+
+        ofs.close();
+    });
 
     return norm;
 }
