@@ -133,7 +133,8 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
 
     auto logp        = m_model.logp_action();
     u                = u.to(logp.device());
-    logp             = torch::sum((logp).view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
+    //logp             = torch::sum((logp).view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
+    logp             = torch::mean(logp.view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
 
     auto loss        = -torch::mean(logp * u);
 
