@@ -1,4 +1,5 @@
 #include "plm_device.hpp"
+#include "../utils/utils.hpp"
 
 PLM_Device::PLM_Device(PLM_Device_Enum device, int num_levels) {
     set_device(device, num_levels);
@@ -8,7 +9,7 @@ PLM_Device::~PLM_Device() {
     /* Nothing to clean up for now */
 }
 
-torch::Tensor PLM_Device::mapper(torch::Tensor x) {
+torch::Tensor PLM_Device::mapper(torch::Tensor &x) {
     switch (m_device) {
         case PLM_Device_Enum::VISIBLE:
             
@@ -138,7 +139,7 @@ void PLM_Device::set_device(PLM_Device_Enum device, int num_levels) {
     }
 }
 
-void PLM_Device::operator[](torch::Tensor &x) {
+torch::Tensor PLM_Device::operator[](const torch::Tensor &x) {
     switch (m_device) {
         case PLM_Device_Enum::VISIBLE:
             return operator_implt_visible(x);
@@ -149,7 +150,7 @@ void PLM_Device::operator[](torch::Tensor &x) {
     }
 }
 
-torch::Tensor PLM_Device::operator_implt_visible(torch::Tensor &x) {
+torch::Tensor PLM_Device::operator_implt_visible(const torch::Tensor &x) {
     if (x.device() != m_table.device())
         m_table = m_table.to(x.device()).to(x.dtype());
 
@@ -176,6 +177,6 @@ torch::Tensor PLM_Device::operator_implt_visible(torch::Tensor &x) {
     return indices.view_as(x).contiguous();
 }
 
-torch::Tensor PLM_Device::operator_implt_nir(torch::Tensor &x) {
+torch::Tensor PLM_Device::operator_implt_nir(const torch::Tensor &x) {
     throw std::runtime_error("NIR device operator not implemented yet\n");
 }

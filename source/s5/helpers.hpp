@@ -13,6 +13,7 @@
 #include "scheduler2.hpp"
 #include "distributions.hpp"
 #include "../s2/np2lt.hpp"
+#include "../s2/plm_device.hpp"
 
 #include "../third-party/concurrentqueue.h"
 
@@ -135,6 +136,7 @@ struct Parameters {
     int     save_images_count    = -1;
 
     int     num_levels           = 16;
+    PLM_Device_Enum plm_device_enum = PLM_Device_Enum::VISIBLE;
     // available levels: 2, 4, 8, 16
     
     bool    use_posterization    = false;

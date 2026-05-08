@@ -1424,6 +1424,18 @@ void Runner::InitConfigKeyMap () {
             }
         },
         {
+            "Device",
+            [this](std::ifstream &ifs) {
+                std::string device_str;
+                ifs >> device_str;
+                if (device_str == "visible") {
+                    params.plm_device_enum = PLM_Device_Enum::VISIBLE;
+                } else if (device_str == "nir") {
+                    params.plm_device_enum = PLM_Device_Enum::NIR;
+                }
+            }
+        },
+        {
             "AdaptiveOpticsMode",
             [this](std::ifstream &ifs) {
                 // In adaptive optics mode,

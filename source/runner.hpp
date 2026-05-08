@@ -7,6 +7,7 @@
 #include "s5/distributions.hpp"
 #include "s5/helpers.hpp"
 #include "s5/utils.hpp"
+#include "s2/plm_device.hpp"
 #include "hook.hpp"
 #include <iostream>
 #include <fstream>

@@ -2,6 +2,7 @@
 #define s2_plm_device_hpp__
 
 #include <vector>
+#include <torch/torch.h>
 
 enum PLM_Device_Enum : int {
     VISIBLE = 0,
@@ -23,9 +24,9 @@ struct PLM_Device {
 
     torch::Tensor mapper(torch::Tensor &x);
 
-    torch::Tensor operator[](torch::Tensor &x);
-    torch::Tensor operator_implt_visible(torch::Tensor &x);
-    torch::Tensor operator_implt_nir(torch::Tensor &x);
+    torch::Tensor operator[](const torch::Tensor &x);
+    torch::Tensor operator_implt_visible(const torch::Tensor &x);
+    torch::Tensor operator_implt_nir(const torch::Tensor &x);
 
 };
 

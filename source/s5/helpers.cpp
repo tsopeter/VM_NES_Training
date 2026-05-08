@@ -364,6 +364,7 @@ void Helpers::Run::Setup_Scheduler (
         2 * Height * params.upscale_amount,   /* PEncoder Height */
         2 * Width  * params.upscale_amount,   /* PEncoder Width */
         params.num_levels,
+        params.plm_device_enum, /* PLM Device Enum */
 
         &opt,       /* Optimizer */
 

@@ -179,7 +179,7 @@ constexpr uint8_t m_plm_nir_logical_masks[32][2][3] = {
     }
 };
 
-PEncoder::PEncoder (PLM_Device_Enum device, int num_levels) :
+PEncoder::PEncoder (int num_levels, PLM_Device_Enum device) :
 m_x(-1), m_y(-1), m_h(-1), m_w(-1),
 m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
@@ -209,11 +209,24 @@ m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(fa
     m_plm_device.set_device(device, num_levels);
 
     /* Loads mask and stores it to reduce memory calls */
-    masks = torch::from_blob(
-        (void*)logical_masks,
-        {16, 2, 2},
-        torch::TensorOptions().dtype(torch::kUInt8)
-    ).clone().to(DEVICE);
+    switch (m_plm_device.m_device) {
+        case PLM_Device_Enum::VISIBLE:
+            masks = torch::from_blob(
+                (void*)m_plm_visible_logical_masks,
+                {16, 2, 2},
+                torch::TensorOptions().dtype(torch::kUInt8)
+            ).clone().to(DEVICE);
+            break;
+        case PLM_Device_Enum::NIR:
+            masks = torch::from_blob(
+                (void*)m_plm_nir_logical_masks,
+                {32, 2, 3},
+                torch::TensorOptions().dtype(torch::kUInt8)
+            ).clone().to(DEVICE);
+            break;
+        default:
+            throw std::runtime_error("Unsupported PLM device type: " + std::to_string(device) + "\n");
+    }
 
     shifts = torch::from_blob(
         (void*)shifted_values,
@@ -254,6 +267,7 @@ torch::Tensor PEncoder::Encode_u8Tensor (torch::Tensor &x) {
     if (x.dim() == 3) {
         return MEncode_u8Tensor(x);
     }
+    /*
 
     auto plane  = torch::zeros(std::vector<int64_t>{m_h/2, m_w/2}, x.options());
 
@@ -267,6 +281,8 @@ torch::Tensor PEncoder::Encode_u8Tensor (torch::Tensor &x) {
     logical = logical.permute({0, 2, 1, 3}).contiguous();           // [H/2,2,W/2,2]
     logical = logical.view({qplane.size(0) * 2, qplane.size(1) * 2}); // [H, W]
     return logical.to(torch::kUInt8);
+    */
+    return torch::empty({1}, torch::TensorOptions().dtype(torch::kUInt8));
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor (torch::Tensor &x) {
@@ -300,6 +316,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (const torch::Tensor &x) {
     }
 
 
+    /*
     torch::Tensor image = torch::zeros(std::vector<int64_t>{m_h, m_w}, x.options()).to(torch::kInt32);
     torch::Tensor plane = torch::zeros(std::vector<int64_t>{N, m_h >> 1, m_w >> 1}, x.options()).to(torch::kFloat32);
 
@@ -328,11 +345,14 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (const torch::Tensor &x) {
 
     // This encodes [N, H, W] to binary [H, W] for each pixel, it leaves the alpha channel alone (only 24-bits)
     return image.to(torch::kInt32);
+    */
+    return torch::empty({1}, torch::TensorOptions().dtype(torch::kUInt8));
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
     throw std::runtime_error("PEncoder::MEncode_u8Tensor2 is deprecated.\n");
     validate_args();
+    /*
 
     int64_t N = x.size(0);
     if (N > 24) {
@@ -371,7 +391,8 @@ torch::Tensor PEncoder::MEncode_u8Tensor2 (torch::Tensor &x) {
 
     // This encodes [N, H, W] to binary [H, W] for each pixel, it leaves the alpha channel alone (only 24-bits)
     return image.to(torch::kInt32);
-
+    */
+    return torch::empty({1}, torch::TensorOptions().dtype(torch::kUInt8));
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor4 (const torch::Tensor &x) {
@@ -448,7 +469,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
-    if (m_plm_device.m_device != PLM_Device_Enum::PLM_DEVICE_VISIBLE) {
+    if (m_plm_device.m_device != PLM_Device_Enum::VISIBLE) {
         throw std::runtime_error("PEncoder::MEncode_u8Tensor5 is only implemented for VISIBLE PLM device for now.\n");
     }
 
@@ -601,9 +622,9 @@ void PEncoder::init_pbo () {
 
 torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &q) {
     switch (m_plm_device.m_device) {
-        case PLM_Device_Enum::PLM_DEVICE_VISIBLE:
+        case PLM_Device_Enum::VISIBLE:
             return MEncode_u8Tensor_Categorical_visible_implt(q);
-        case PLM_Device_Enum::PLM_DEVICE_NIR:
+        case PLM_Device_Enum::NIR:
             return MEncode_u8Tensor_Categorical_nir_implt(q);
         default:
             throw std::runtime_error("PEncoder::MEncode_u8Tensor_Categorical: Invalid PLM device.\n");
@@ -684,5 +705,5 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Binary (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::level_mapping (torch::Tensor x) {
-    return m_plm_device.level_mapping(x); 
+    return m_plm_device.mapper(x); 
 }

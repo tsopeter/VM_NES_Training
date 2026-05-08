@@ -102,7 +102,8 @@ public:
     void SetupPEncoder (
         int pencoder_Height=1600,
         int pencoder_Width=2560,
-        int num_levels=16
+        int num_levels=16,
+        PLM_Device_Enum plm_device_enum=PLM_Device_Enum::VISIBLE
     );
 
     void EnableBlendMode ();
@@ -249,6 +250,7 @@ public:
         int pencoder_Height=0,
         int pencoder_Width=0,
         int num_levels=16,
+        PLM_Device_Enum plm_device_enum=PLM_Device_Enum::VISIBLE,
 
         /* Optimizer */
         s4_Optimizer *opt=nullptr,
@@ -434,7 +436,7 @@ private:
     std::function<void(Shader[2], Texture[10], bool[10])> m_sub_texture_hook;
     bool m_sub_texture_hook_enabled = false;
 
-    PLM_Device_Enum m_plm_device_enum = PLM_Device_Enum::PLM_DEVICE_VISIBLE;
+    PLM_Device_Enum m_plm_device_enum = PLM_Device_Enum::VISIBLE;
 };
 
 

@@ -82,9 +82,11 @@ void Scheduler2::SetupCamera(
 void Scheduler2::SetupPEncoder(
     int pencoder_Height,
     int pencoder_Width,
-    int num_levels
+    int num_levels,
+    PLM_Device_Enum plm_device_enum
 ) {
-    pen = new PEncoder(0, 0, pencoder_Height, pencoder_Width, num_levels);
+    m_plm_device_enum = plm_device_enum;
+    pen = new PEncoder(0, 0, pencoder_Height, pencoder_Width, num_levels, plm_device_enum);
     pen->init_pbo();
     std::cout << "INFO: [Scheduler2::SetupPEncoder] PEncoder created on heap.\n";
 }
@@ -360,7 +362,7 @@ void Scheduler2::DrawTextureToScreenCentered () {
         ClearBackground(BLACK);
 
         switch (m_plm_device_enum) {
-            case PLM_Device_Enum::PLM_DEVICE_VISIBLE:
+            case PLM_Device_Enum::VISIBLE:
                 DrawTexturePro(
                     m_texture,
                     {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
@@ -369,7 +371,7 @@ void Scheduler2::DrawTextureToScreenCentered () {
                     {0, 0}, 0.0f, WHITE
                 );
                 break;
-            case PLM_Device_Enum::PLM_DEVICE_NIR:
+            case PLM_Device_Enum::NIR:
                 DrawTexturePro(
                     m_texture,
                     {0, 0, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
@@ -794,6 +796,7 @@ void Scheduler2::Start (
         int pencoder_Height,
         int pencoder_Width,
         int num_levels,
+        PLM_Device_Enum plm_device_enum,
 
         /* Optimizer */
         s4_Optimizer *opt,
@@ -834,7 +837,8 @@ void Scheduler2::Start (
     SetupPEncoder(
         pencoder_Height,
         pencoder_Width,
-        num_levels
+        num_levels,
+        plm_device_enum
     );
     SetOptimizer(opt);
     SetupVSYNCTimer();
