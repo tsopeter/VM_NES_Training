@@ -411,307 +411,6 @@ void Runner::Run (std::string config_file) {
 
 }
 
-void Runner::Inference (std::string config_file, s2_DataTypes data_type, int n_data_points) {
-    Pylon::PylonAutoInitTerm init {};
-
-    Scheduler2 scheduler;
-    Model model;
-
-    std::cout << "INFO: [Runner::Inference] Starting Inference...\n";
-    InitConfigKeyMap(); 
-    ParseConfigFile(config_file);
-
-    if (!m_load_checkpoint) {
-        throw std::runtime_error("Runner::Inference: Inference mode requires a checkpoint to be loaded.");
-    }
-
-    switch (data_type) {
-        case s2_DataTypes::TRAIN:
-            std::cout << "INFO: [Runner::Inference] Data Type: TRAIN\n";
-            break;
-        case s2_DataTypes::VALID:
-            std::cout << "INFO: [Runner::Inference] Data Type: VALID\n";
-            break;
-        case s2_DataTypes::TEST:
-            std::cout << "INFO: [Runner::Inference] Data Type: TEST\n";
-            break;
-        default:
-            throw std::runtime_error("Runner::Inference: Unsupported data type for inference.");
-    }
-
-    std::cout << "INFO: [Runner::Inference] Loading checkpoint file...\n";
-    LoadCheckpointFile(config_file);
-    model.init(m_checkpoint_mask, ModelDistribution);
-
-    torch::optim::Adam adam_opt(model.parameters(), torch::optim::AdamOptions(params.Training.lr));
-    s4_Optimizer optimizer(
-        adam_opt,
-        model
-    );
-
-    std::cout << "INFO: [Runner::Inference] Setting up scheduler...\n";
-    Helpers::Run::Setup_Scheduler(
-        params,
-        scheduler,
-        optimizer,
-        *model.m_dist,
-        model.m_Height,
-        model.m_Width
-    );
-
-    std::cout << "INFO: [Runner::Inference] Setting up dataset...\n";
-    auto dataset = Helpers::Data::Get (
-        params,
-        n_data_points,
-        n_data_points,
-        data_type,
-        params.n_padding
-    );
-
-    Helpers::Run::EvalFunctions eval_fn;
-
-    eval_fn.sample = [&model](int i) -> torch::Tensor {
-        return model.sample(i);
-    };
-    eval_fn.base = [&model, &optimizer](int i) -> torch::Tensor {
-        //auto action = optimizer.average_mask; // [H, W]
-        
-        // Extend to [N, H, W]
-        //action = action.unsqueeze(0).expand({i, -1, -1}).contiguous();
-        //return action;
-        return model.m_dist->base(i);
-
-    };
-    eval_fn.squash = [&model]() -> void {
-        model.squash();
-    };
-    eval_fn.entropy = [&model]() -> double {
-        auto ent = model.m_dist->entropy().mean();
-        return ent.item<double>();
-    };
-    eval_fn.update = [&scheduler]() -> double {
-        return scheduler.Update();
-    };
-    eval_fn.loss = [&scheduler]() -> double {
-        return scheduler.Loss();
-    };
-
-    std::cout << "INFO: [Runner::Inference] Running inference...\n";
-    auto test_perf = Helpers::Run::Inference(
-        params,
-        scheduler,
-        eval_fn,
-        dataset
-    );
-
-    // Export the test performance to results.txt stored in ./
-
-    std::string msg;
-
-    // message stores
-    // the dataset used and the mask used
-    switch (data_type) {
-        case s2_DataTypes::TRAIN:
-            msg += "Dataset: TRAIN\n";
-            break;
-        case s2_DataTypes::VALID:
-            msg += "Dataset: VALID\n";
-            break;
-        case s2_DataTypes::TEST:
-            msg += "Dataset: TEST\n";
-            break;
-        default:
-            msg += "Dataset: UNKNOWN\n";
-            break;
-    }
-    msg += "Mask Location: " + m_checkpoint_mask_location + "\n";
-
-
-    test_perf.Save(
-        "./results.txt",
-        0,
-        msg
-    );
-
-    params.n_validation_batch_size = n_data_points;
-    params.n_validation_samples = n_data_points;
-
-    // Save the data
-    params.ExportResults(inference_output_file, 1);
-
-    scheduler.StopThreads();
-    scheduler.StopCamera();
-    scheduler.StopWindow();
-
-    Helpers::Data::Delete(dataset);
-}
-
-void Runner::StaticInference (std::string config_file, s2_DataTypes data_type, int n_start_index, int n_data_points, const std::string &mask_file) {
-    Pylon::PylonAutoInitTerm init {};
-
-    Scheduler2 scheduler;
-    Model model;
-
-    std::cout << "INFO: [Runner::Inference] Starting Inference...\n";
-    InitConfigKeyMap(); 
-    ParseConfigFile(config_file);
-
-    switch (data_type) {
-        case s2_DataTypes::TRAIN:
-            std::cout << "INFO: [Runner::Inference] Data Type: TRAIN\n";
-            break;
-        case s2_DataTypes::VALID:
-            std::cout << "INFO: [Runner::Inference] Data Type: VALID\n";
-            break;
-        case s2_DataTypes::TEST:
-            std::cout << "INFO: [Runner::Inference] Data Type: TEST\n";
-            break;
-        default:
-            throw std::runtime_error("Runner::Inference: Unsupported data type for inference.");
-    }
-
-    // Doesn't actually matter
-    // as the mask is statically loaded onto PLM
-    model.init(ModelHeight, ModelWidth, scheduler.maximum_number_of_frames_in_image, ModelDistribution);
-
-    torch::optim::Adam adam_opt(model.parameters(), torch::optim::AdamOptions(params.Training.lr));
-    s4_Optimizer optimizer(
-        adam_opt,
-        model
-    );
-    optimizer.xNES_lr_mu = xNES_lr_mu; // if xNES is used, set the learning rate
-    optimizer.xNES_lr_std = xNES_lr_std;
-
-    std::cout << "INFO: [Runner::Inference] Setting up scheduler...\n";
-    Helpers::Run::Setup_Scheduler(
-        params,
-        scheduler,
-        optimizer,
-        *model.m_dist,
-        model.m_Height,
-        model.m_Width
-    );
-
-
-    // Load the mask file
-    std::cout << "INFO: [Runner::Inference] Loading static mask from " << mask_file << "...\n";
-    Image mask_image = LoadImage(mask_file.c_str());
-    Texture2D mask_texture = LoadTextureFromImage(mask_image);
-
-    scheduler.EnableStaticMode();
-    scheduler.SetBackgroundTexture(mask_texture);
-
-    std::cout << "INFO: [Runner::Inference] Setting up dataset...\n";
-    auto dataset = Helpers::Data::Get (
-        params,
-        n_data_points,
-        n_data_points,
-        data_type,
-        params.n_padding,
-        n_start_index
-    );
-
-    Helpers::Run::EvalFunctions eval_fn;
-
-    eval_fn.sample = [&model](int i) -> torch::Tensor {
-        return model.sample(i);
-    };
-    eval_fn.base = [&model](int i) -> torch::Tensor {
-        return model.m_dist->base(i);
-    };
-    eval_fn.squash = [&model]() -> void {
-        model.squash();
-    };
-    eval_fn.entropy = [&model]() -> double {
-        auto ent = model.m_dist->entropy().mean();
-        return ent.item<double>();
-    };
-    eval_fn.update = [&scheduler]() -> double {
-        return scheduler.Update();
-    };
-    eval_fn.loss = [&scheduler]() -> double {
-        return scheduler.Loss();
-    };
-
-    double best_accuracy = 0.0f;
-    int    best_offset_h = 0;
-    int    best_offset_w = 0;
-    double best_scale_h  = 1.0;
-    double best_scale_w  = 1.0;
-
-    Helpers::Run::Performance best_perf;
-
-    // if disable_affine is true, we disable affine sub-textures
-    if (disable_affine) {
-        scheduler.EnablePrewarpedTextures ();
-    }
-
-    scheduler.EnableAffineSubTextures ();
-    scheduler.SetAffineParams (m_affine_params);
-
-
-    std::cout << "INFO: [Runner::Inference] Running inference...\n";
-    best_perf = Helpers::Run::Inference(
-        params,
-        scheduler,
-        eval_fn,
-        dataset
-    );
-
-    best_offset_h = m_sub_texture_offset_h;
-    best_offset_w = m_sub_texture_offset_w;
-    best_scale_h  = m_sub_texture_scale_h;
-    best_scale_w  = m_sub_texture_scale_w;
-
-    // Export the test performance to results.txt stored in ./
-
-    std::string msg;
-
-    // message stores
-    // the dataset used and the mask used
-    switch (data_type) {
-        case s2_DataTypes::TRAIN:
-            msg += "Dataset: TRAIN\n";
-            break;
-        case s2_DataTypes::VALID:
-            msg += "Dataset: VALID\n";
-            break;
-        case s2_DataTypes::TEST:
-            msg += "Dataset: TEST\n";
-            break;
-        default:
-            msg += "Dataset: UNKNOWN\n";
-            break;
-    }
-    msg += "Mask Location: " + m_checkpoint_mask_location + "\n";
-
-    // Also store the best offset and scale
-    msg += "Best Offset H: " + std::to_string(best_offset_h) + "\n";
-    msg += "Best Offset W: " + std::to_string(best_offset_w) + "\n";
-    msg += "Best Scale H: " + std::to_string(best_scale_h) + "\n";
-    msg += "Best Scale W: " + std::to_string(best_scale_w) + "\n";
-
-    best_perf.Save(
-        "./results.txt",
-        0,
-        msg
-    );
-
-    params.n_validation_batch_size = n_data_points;
-    params.n_validation_samples = n_data_points;
-
-    // Save the data
-    params.ExportResults(inference_output_file, 1);
-
-    scheduler.StopThreads();
-    scheduler.StopCamera();
-    scheduler.StopWindow();
-
-    Helpers::Data::Delete(dataset);
-    UnloadImage (mask_image);
-    UnloadTexture (mask_texture);
-}
-
 Runner::Model::Model () {
     m_dist = nullptr;
 }
@@ -744,30 +443,10 @@ void Runner::Model::init (int64_t Height, int64_t Width, int64_t n, Distribution
         m_dist = new Distributions::Normal(m_parameter, std);
         m_parameter.set_requires_grad(true);
     }
-    else if (dist_type == DistributionType::NORMAL2) {
-        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
-        m_parameter_std = torch::ones({Height, Width}, torch::kFloat32).to(DEVICE) * std;
-        m_dist = new Distributions::Normal2(m_parameter, m_parameter_std);
-        m_parameter.set_requires_grad(true);
-        m_parameter_std.set_requires_grad(true);
-    }
     else if (dist_type == DistributionType::CATEGORICAL) {
         m_parameter = torch::randn({Height, Width, num_levels}, torch::kFloat32).to(DEVICE);
         m_dist = new Distributions::Categorical(m_parameter);
         m_parameter.set_requires_grad(true);
-    }
-    else if (dist_type == DistributionType::BINARY) {
-        m_Height = 2 * Height;
-        m_Width  = 2 * Width;
-        m_parameter = torch::randn({m_Height, m_Width, 2}, torch::kFloat32).to(DEVICE);
-        m_dist = new Distributions::Binary(m_parameter);
-        m_parameter.set_requires_grad(true);
-    }
-    else if (dist_type == DistributionType::XNES_NORMAL) {
-        m_parameter = torch::randn({Height, Width}, torch::kFloat32).to(DEVICE);
-        m_std       = torch::ones({Height, Width}, torch::kFloat32).to(DEVICE);
-        m_std.set_requires_grad(false);
-        m_dist = new Distributions::xNES_Normal(m_parameter, m_std);
     }
     else {
         throw std::runtime_error("Model::init: Unsupported distribution type.");
@@ -785,12 +464,6 @@ void Runner::Model::init (torch::Tensor tensor, DistributionType dist_type) {
         }
         else if (dist_type == DistributionType::CATEGORICAL) {
             m_dist = new Distributions::Categorical(m_parameter);
-        }
-        else if (dist_type == DistributionType::BINARY) {
-            m_dist = new Distributions::Binary(m_parameter);
-        }
-        else if (dist_type == DistributionType::XNES_NORMAL) {
-            throw std::runtime_error("Model::init: XNES_NORMAL not yet supported for tensor initialization.");
         }
         else {
             throw std::runtime_error("Model::init: Unsupported distribution type.");
@@ -991,18 +664,9 @@ void Runner::InitConfigKeyMap () {
                 if (dist_str == "normal") {
                     ModelDistribution = DistributionType::NORMAL;
                 }
-                else if (dist_str == "normal2") {
-                    ModelDistribution = DistributionType::NORMAL2;
-                }
                 else if (dist_str == "categorical") {
                     ModelDistribution = DistributionType::CATEGORICAL;
-                }
-                else if (dist_str == "binary") {
-                    ModelDistribution = DistributionType::BINARY;
-                }
-                else if (dist_str == "xnes_normal") {
-                    ModelDistribution = DistributionType::XNES_NORMAL;
-                }
+                } 
                 else {
                     throw std::runtime_error("Runner::Run: Unsupported distribution type in config file.");
                 }
@@ -1017,96 +681,6 @@ void Runner::InitConfigKeyMap () {
                 // Set learning rate in Training namespace
                 params.Training.lr = lr;
                 std::cout << "Setting Learning Rate...\n";
-            }
-        },
-        {
-            "TrainingSamples",
-            [this](std::ifstream &ifs) {
-                int64_t n_samples;
-                ifs >> n_samples;
-                // Set number of training samples in Helpers::Parameters namespace
-                params.n_training_samples = n_samples;
-                std::cout << "Setting Training Samples...\n";
-            }
-        },
-        {
-            "TrainingBatchSize",
-            [this](std::ifstream &ifs) {
-                int64_t batch_size;
-                ifs >> batch_size;
-                // Set training batch size in Helpers::Parameters namespace
-                params.n_batch_size = batch_size;
-                std::cout << "Setting Training Batch Size...\n";
-            }
-        },
-        {
-            "ValidationSamples",
-            [this](std::ifstream &ifs) {
-                int64_t n_val_samples;
-                ifs >> n_val_samples;
-                // Set number of validation samples in Helpers::Parameters namespace
-                params.n_validation_samples = n_val_samples;
-                std::cout << "Setting Validation Samples...\n";
-            }
-        },
-        {
-            "ValidationBatchSize",
-            [this](std::ifstream &ifs) {
-                int64_t val_batch_size;
-                ifs >> val_batch_size;
-                // Set validation batch size in Helpers::Parameters namespace
-                params.n_validation_batch_size = val_batch_size;
-                std::cout << "Setting Validation Batch Size...\n";
-            }
-        },
-        {
-            "TestSamples",
-            [this](std::ifstream &ifs) {
-                int64_t n_test_samples;
-                ifs >> n_test_samples;
-                // Set number of test samples in Helpers::Parameters namespace
-                params.n_test_samples = n_test_samples;
-                std::cout << "Setting Test Samples...\n";
-            }
-        },
-        {
-            "TestBatchSize",
-            [this](std::ifstream &ifs) {
-                int64_t test_batch_size;
-                ifs >> test_batch_size;
-                // Set test batch size in Helpers::Parameters namespace
-                params.n_test_batch_size = test_batch_size;
-                std::cout << "Setting Test Batch Size...\n";
-            }
-        },
-        {
-            "Samples",
-            [this](std::ifstream &ifs) {
-                int64_t n;
-                ifs >> n;
-                // Set number of samples in Helpers::Parameters namespace
-                params.n_samples = n;
-                std::cout << "Setting Samples...\n";
-            }
-        },
-        {
-            "Padding",
-            [this](std::ifstream &ifs) {
-                int padding;
-                ifs >> padding;
-                // Set padding in Helpers::Parameters namespace
-                params.n_padding = padding;
-                std::cout << "Setting Padding...\n";
-            }
-        },
-        {
-            "SubShaderThreshold",
-            [this](std::ifstream &ifs) {
-                float threshold;
-                ifs >> threshold;
-                // Set sub shader threshold in Helpers::Parameters namespace
-                params.sub_shader_threshold = threshold;
-                std::cout << "Setting Sub Shader Threshold...\n";
             }
         },
         {
@@ -1127,26 +701,6 @@ void Runner::InitConfigKeyMap () {
                 // Set number of iterate amount in Helpers::Parameters namespace
                 params.n_iterate_amount = n_iterate;
                 std::cout << "Setting Iteration Amount...\n";
-            }
-        },
-        {
-            "RegionFile",
-            [this](std::ifstream &ifs) {
-                std::string region_file;
-                ifs >> region_file;
-                // Set region file in Helpers::Parameters namespace
-                params._PDF.masks = np2lt::f32(region_file).to(DEVICE);
-                std::cout << "Setting Region File...\n";
-            }
-        },
-        {
-            "MinLimit",
-            [this](std::ifstream &ifs) {
-                int min_limit;
-                ifs >> min_limit;
-                // Set min_limit in Helpers::Parameters namespace
-                params._PDF.min_limit = min_limit;
-                std::cout << "Setting Min Limit...\n";
             }
         },
         {
@@ -1175,16 +729,6 @@ void Runner::InitConfigKeyMap () {
                 // Set exposure time in Camera namespace
                 params.Camera.exposure_time_us = exposure_time;
                 std::cout << "Setting Exposure Time...\n";
-            }
-        },
-        {
-            "DatasetPath",
-            [this](std::ifstream &ifs) {
-                std::string path;
-                ifs >> path;
-                // Set dataset path in Helpers::Data namespace
-                params.Training.dataset_path = path;
-                std::cout << "Setting Dataset Path...\n";
             }
         },
         {
@@ -1234,172 +778,10 @@ void Runner::InitConfigKeyMap () {
             }
         },
         {
-            "SubTextureOffsetH",
-            [this](std::ifstream &ifs) {
-                ifs >> m_sub_texture_offset_h;
-                std::cout << "Setting Sub Texture Offset X to " << m_sub_texture_offset_h << '\n';
-            }
-        },
-        {
-            "SubTextureOffsetW",
-            [this](std::ifstream &ifs) {
-                ifs >> m_sub_texture_offset_w;
-                std::cout << "Setting Sub Texture Offset Y to " << m_sub_texture_offset_w << '\n';
-            }
-        },
-        {
-            "SubTextureScaleW",
-            [this](std::ifstream &ifs) {
-                ifs >> m_sub_texture_scale_w;
-                std::cout << "Setting Sub Texture Scale X to " << m_sub_texture_scale_w << '\n';
-            }
-        },
-        {
-            "SubTextureScaleH",
-            [this](std::ifstream &ifs) {
-                ifs >> m_sub_texture_scale_h;
-                std::cout << "Setting Sub Texture Scale Y to " << m_sub_texture_scale_h << '\n';
-            }
-        },
-        {
-            "Auto",
-            [this](std::ifstream &ifs) {
-                ifs >> m_auto;
-                std::cout << "Setting Auto Mode to true...\n";
-            }
-        },
-        {
-            "AffineOffsetX",
-            [this](std::ifstream &ifs) {
-                ifs >> m_affine_params.offset_x;
-                std::cout << "Setting Affine Offset X to " << m_affine_params.offset_x << '\n';
-            }
-        },
-        {
-            "AffineOffsetY",
-            [this](std::ifstream &ifs) {
-                ifs >> m_affine_params.offset_y;
-                std::cout << "Setting Affine Offset Y to " << m_affine_params.offset_y << '\n';
-            }
-        },
-        {
-            "AffineScaleX",
-            [this](std::ifstream &ifs) {
-                ifs >> m_affine_params.scale_x;
-                std::cout << "Setting Affine Scale X to " << m_affine_params.scale_x << '\n';
-            }
-        },
-        {
-            "AffineScaleY",
-            [this](std::ifstream &ifs) {
-                ifs >> m_affine_params.scale_y;
-                std::cout << "Setting Affine Scale Y to " << m_affine_params.scale_y << '\n';
-            }
-        },
-        {
-            "AffineRotation",
-            [this](std::ifstream &ifs) {
-                ifs >> m_affine_params.rotation;
-                std::cout << "Setting Affine Rotation to " << m_affine_params.rotation << '\n';
-            }
-        },
-        {
-            "Ratios",
-            [this](std::ifstream &ifs) {
-                // If ratios are defined
-                // they are read in as a list of 10 floats
-                params._PDF.ratios = torch::empty({1, 10});
-                for (int i = 0; i < 10; ++i) {
-                    float x;
-                    ifs >> x;
-                    params._PDF.ratios[0][i] = x;
-                }
-            }
-        },
-        {
-            "Warp",
-            [this](std::ifstream &ifs) {
-                ifs >> params.prewarped_directory;
-                disable_affine = true;
-                std::cout << "Setting Prewarped Directory to " << params.prewarped_directory << "...\n";
-            }
-        },
-        {
             "NumLevels",
             [this](std::ifstream &ifs) {
                 ifs >> params.num_levels;
                 std::cout << "Setting Number of Levels to " << params.num_levels << "...\n";
-            }
-        },
-        {
-            "SchedSampleRate",
-            [this](std::ifstream &ifs) {
-                ifs >> params.n_samples_update_rate;
-                std::cout << "Setting Scheduler Sample Rate to " << params.n_samples_update_rate << "...\n";
-            }
-        },
-        {
-            "SchedUpdateAmount",
-            [this](std::ifstream &ifs) {
-                ifs >> params.n_samples_update_amount;
-                std::cout << "Setting Scheduler Update Amount to " << params.n_samples_update_amount << "...\n";
-            }
-        },
-        {
-            "XNES_lr",
-            [this](std::ifstream &ifs) {
-                // First is the mu learn rate
-                // second is the sigma learn rate
-                ifs >> xNES_lr_mu;
-                ifs >> xNES_lr_std;
-                std::cout << "Setting xNES Learning Rates to mu: " << xNES_lr_mu << ", sigma: " << xNES_lr_std << "...\n";
-            }
-        },
-        {
-            "LossFn",
-            [this](std::ifstream &ifs) {
-                ifs >> params._PDF.loss_fn_mode;
-                std::cout << "Setting Loss Function Mode to " << params._PDF.loss_fn_mode << "...\n";
-            }
-        },
-        {
-            "SaveImages",
-            [this](std::ifstream &ifs) {
-                ifs >> params.save_images;
-                std::cout << "Setting Save Images to " << (params.save_images ? "true" : "false") << "...\n";
-            }
-        },
-        {
-            "SaveImagesDirectory",
-            [this](std::ifstream &ifs) {
-                ifs >> params.save_images_directory;
-                // Test if the folder exists
-                if (!std::filesystem::exists(params.save_images_directory)) {
-                    throw std::runtime_error("Runner::ParseConfigFile: Save Images Directory does not exist: " + params.save_images_directory);
-                }
-                std::cout << "Setting Save Images Directory to " << params.save_images_directory << "...\n";
-            }
-        },
-        {
-            "SaveAll",
-            [this](std::ifstream &ifs) {
-                ifs >> m_save_only_test;
-                m_save_only_test = !m_save_only_test;
-                std::cout << "Setting Save All Images to " << (m_save_only_test ? "true" : "false") << "...\n";
-            }
-        },
-        {
-            "SaveImageCount",
-            [this](std::ifstream &ifs) {
-                ifs >>  params.save_images_count;
-                std::cout << "Setting Save Image Count to " << params.save_images_count << "...\n";
-            }
-        },
-        {
-            "UsePosterizationShader",
-            [this](std::ifstream &ifs) {
-                ifs >> params.use_posterization;
-                std::cout << "Setting Use Posterization Shader to " << (params.use_posterization ? "true" : "false") << "...\n";
             }
         },
         {
@@ -1432,47 +814,6 @@ void Runner::InitConfigKeyMap () {
                     params.plm_device_enum = PLM_Device_Enum::VISIBLE;
                 } else if (device_str == "nir") {
                     params.plm_device_enum = PLM_Device_Enum::NIR;
-                }
-            }
-        },
-        {
-            "AdaptiveOpticsMode",
-            [this](std::ifstream &ifs) {
-                // In adaptive optics mode,
-                // we utilize N datasets
-                // <n_datasets>
-                // <epoch_start> <dataset_folder> 
-                // <train_size> <train_batch_size> 
-                // <valid_size> <valid_batch_size>
-                // <test_size> <test_batch_size>
-                m_adaptive_optics_mode = true;
-
-                int n_datasets;
-                ifs >> n_datasets;
-
-                for (int i = 0; i < n_datasets; ++i) {
-                    int epoch_start;
-                    std::string dataset;
-                    int train_size, train_batch_size;
-                    int valid_size, valid_batch_size;
-                    int test_size, test_batch_size;
-
-                    ifs >> epoch_start >> dataset >> train_size >> train_batch_size >>
-                        valid_size >> valid_batch_size >>
-                        test_size >> test_batch_size;
-
-                    m_adaptive_optics_dataset.push_back(
-                        Dataset_Entry{
-                            .epoch_start = epoch_start,
-                            .training_batch_size = train_batch_size,
-                            .training_size = train_size,
-                            .validation_batch_size = valid_batch_size,
-                            .validation_size = valid_size,
-                            .test_batch_size = test_batch_size,
-                            .test_size = test_size,
-                            .loc = dataset
-                        }
-                    );
                 }
             }
         }
@@ -1571,61 +912,6 @@ std::string Runner::Time::to_string () const {
         << (minutes < 10 ? "0" : "") << minutes << ":"
         << (seconds < 10 ? "0" : "") << seconds;
     return oss.str();
-}
-
-bool Runner::TestIfScreenIsOkay (Helpers::Parameters &params, Scheduler2 &scheduler) {
-    // Load in a test image
-    Image test_image = LoadImage("source/Assets/test_image.png");
-    Texture test_texture = LoadTextureFromImage(test_image);
-
-    // The image is already 2560x1600,
-    // we just need to display it to the screen
-
-
-    while (true) {
-        for (int i = 0; i < params.n_iterate_amount; ++i) {
-            BeginDrawing();
-            ClearBackground(RAYWHITE);
-            DrawTexture(test_texture, 0, 0, WHITE);
-            EndDrawing();
-
-            scheduler.SetVSYNC_Marker();
-            scheduler.WaitVSYNC_Diff(1);
-
-            scheduler.SetLabel(0, 20); 
-            // Doesn't matter, we
-            // just need to display the image and
-            // don't care about what the processor does with it
-        }
-        // Read from camera
-        scheduler.ReadFromCamera();
-
-        // Get the sample image from the scheduler
-        auto sample = scheduler.GetSampleImage ();
-
-        // 
-
-
-    }
-    // Wait a bit
-    scheduler.SetVSYNC_Marker ();
-    scheduler.WaitVSYNC_Diff (4);
-
-    // Dump
-    scheduler.Dump();
-
-    UnloadImage(test_image);
-    UnloadTexture(test_texture);
-}
-
-void Runner::Alignment () {
-    // Alignment does not depend on any configuration file
-    // and is a standalone procedure
-
-    Pylon::PylonAutoInitTerm init {};
-    
-
-
 }
 
 void Runner::WriteTrainingEntryToCSVFile (const std::string &filename, Helpers::Run::Performance &perf, int epoch) {

@@ -34,54 +34,10 @@ struct _Camera {
 };
 
 struct _Result {
-    int label;
-    int prediction;
     int index;
-    int batch_id;
-    double reward;
+    int 
 
     _Result ();
-};
-
-struct _pdf {
-    _pdf ();
-    ~_pdf();
-    std::atomic<int64_t> correct = 0;
-    std::atomic<int64_t> total   = 0;
-
-    int64_t label_counts[10] = {0};
-    int64_t label_freq[10] = {0};
-
-    int64_t process_count = 0;
-    int64_t save_iter     = 10'000;
-    int min_limit = 20;
-
-    int64_t accuracy_interval = 20;
-    int     vert_dK = 2; // px
-
-    std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> loss_fn;
-    std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> per_pixel_loss_fn;
-    std::function<torch::Tensor(torch::Tensor&)> mse_loss;
-    std::function<torch::Tensor(torch::Tensor&)> smse_loss;
-    std::function<torch::Tensor(torch::Tensor&, torch::Tensor&)> cross_entropy_loss_fn_vert_stablized;
-
-    torch::Tensor masks;
-    torch::Tensor ratios;
-
-    int loss_fn_mode = 0;
-    // 0: Cross Entropy Loss
-    // 1: MSE Loss
-    // 2: Per Pixel Loss
-    // 3: MSE Loss (only considers first mask)
-    // 4: Vertically Stablized Cross Entropy Loss
-
-    void clear_data ();
-
-    std::string save_dir;
-    moodycamel::ConcurrentQueue<torch::Tensor> image_queue;
-    std::thread save_image_thread;
-    std::atomic<bool> save_image_thread_running {false};
-    int num_images_per_batch = 20;
 };
 
 /**
@@ -95,34 +51,12 @@ struct Parameters {
     Parameters ();
     ~Parameters ();
 
-    // Number of samples to use during training
-    int64_t n_training_samples   = 1000;
+    // Number of samples
+    int64_t n_samples = 200;
+    int     n_epochs  = 50;
 
-    // Size of each batch; note that n_batch_size must evenly divide n_training_samples
-   int64_t n_batch_size         = 20;
+    int     epoch_counter = 0;
 
-    // Number of samples per image; note that the actual number of samples is n_samples * 20
-    int64_t n_samples             = 10;
-    int     n_start_index         = 0;
-    int     n_samples_update_rate = -1; // if -1, no update, per epoch
-    int     n_samples_update_amount = 0; // Amount to update samples by, cumulative
-    int     epoch_counter         = 0; // Epoch counter
-
-    // Number of samples are updated using
-    // if epoch_counter != 0 and epoch_counter % n_samples_update_rate == 0
-    // then n_samples += n_samples_update_amount
-    // update scheduler...
-
-    int64_t n_validation_samples = 1000;
-    int64_t n_validation_batch_size = 1000;
-    int     n_validation_start_index = 0;
-
-    int64_t n_test_samples = 1000;
-    int64_t n_test_batch_size = 1000;
-    int     n_test_start_index = 0;
-
-    int64_t n_padding            = 0;
-    float   sub_shader_threshold = 0.8;
 
     int     upscale_amount       = 1;
     int     n_iterate_amount     = 4;
@@ -131,24 +65,12 @@ struct Parameters {
     bool    flip_input_V         = false;
     bool    flip_input_H         = false;
 
-    bool    save_images          = false;
-    std::string save_images_directory = "./Saved_Images/";
-    int     save_images_count    = -1;
 
     int     num_levels           = 16;
     PLM_Device_Enum plm_device_enum = PLM_Device_Enum::VISIBLE;
     // available levels: 2, 4, 8, 16
-    
-    bool    use_posterization    = false;
-
-    //bool    logging_enabled        = false;
-    //int     logging_interval       = 10;
-
-    std::string prewarped_directory = "";
 
     std::vector<_Result> results = {};
-
-    _pdf _PDF;
 
     PDFunction process_fn;
 

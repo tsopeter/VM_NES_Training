@@ -132,10 +132,8 @@ std::vector<
 
 void Run (std::string config_file);
 void Inference (std::string config_file, s2_DataTypes data_type, int n_data_points);
-void StaticInference (std::string config_file, s2_DataTypes data_type, int n_start_index, int n_data_points, const std::string&);
 
 void PopulateNewDirectory (const std::string &directory);
-bool TestIfScreenIsOkay (Helpers::Parameters &, Scheduler2&);
 
 struct Time {
     double hours;
@@ -144,9 +142,6 @@ struct Time {
 
     std::string to_string () const;
 };
-
-void Alignment ();
-
 
 Time GetCurrentTime ();
 
