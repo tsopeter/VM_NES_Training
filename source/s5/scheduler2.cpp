@@ -284,3 +284,12 @@ void Scheduler2::SetTextureFromTensor (const torch::Tensor &tensor) {
     m_texture = pen->u8Tensor_Texture_CPU(timage);
     std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Texture size: " << m_texture.width << "x" << m_texture.height << '\n';
 }
+
+void Scheduler2::UnloadTextures () {
+    if (m_texture.width > 0 && m_texture.height > 0) {
+        UnloadTexture(m_texture);
+        m_texture.width = 0;
+        m_texture.height = 0;
+        std::cout << "INFO: [Scheduler2::UnloadTexture] Texture unloaded.\n";
+    }
+}

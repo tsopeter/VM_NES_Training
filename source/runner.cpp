@@ -52,9 +52,15 @@ void Runner::Run (std::string config_file) {
         return 0.0f; /* Not implemented yet */
     };
 
+    for (int epoch = 0; epoch < params.n_epochs; ++epoch) {
+        for (int step = 0; step < params.n_steps; ++step) {
+            auto perf = Helpers::Run::Evaluate(params, scheduler, eval_fn);
 
+            // Save performance to csv file
+        }
+    }
 
-
+    scheduler.UnloadTextures();
     scheduler.StopThreads();
     scheduler.StopFPGA();
     scheduler.StopWindow();

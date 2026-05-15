@@ -40,6 +40,7 @@ public:
 
     void StopWindow(); // Does nothing
     void StopFPGA();
+    void UnloadTextures();
 
     void Start (
         int Monitor = 0,

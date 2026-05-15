@@ -74,6 +74,10 @@ void ADCS2::start() {
     }
 }
 
+void ADCS2::close() {
+    stop_collection();
+}
+
 double ADCS2::get_delay () {
     Send_Command("get", "adc_delay", {});
     ADCS2_CResponse response = Receive_Response();
