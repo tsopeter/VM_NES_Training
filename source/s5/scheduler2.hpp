@@ -27,6 +27,12 @@
     #error "Unsupported platform"
 #endif
 
+struct CaptureData {
+    torch::Tensor data;
+};
+
+using PDFunction = std::function<torch::Tensor(CaptureData)>;
+
 class Scheduler2 {
 public:
     Scheduler2();
@@ -53,14 +59,45 @@ public:
         int Num_Levels      = 16,
         PLM_Device_Enum plm_device_enum = PLM_Device_Enum::VISIBLE,
 
-        s4_Optimizer *opt = nullptr
-    )
+        s4_Optimizer *opt = nullptr,
 
+        PDFunction process_fn = nullptr
+    );
 
+    void set_device (const torch::Device &device);
+
+    ///////////////////////////////////////
+    // Threads
+    void schedule_fpga_capture(std::atomic<uint64_t> &counter);
+    void StartCaptureThread ();
+    void StartProcessThread (PDFunction process_function);
+    void StopThreads ();
+
+    ///////////////////////////////////////
+    // FPGA Reading
+    void ReadFromADC ();
+
+    ///////////////////////////////////////
+    // Update
+    double Update();
+
+    void DrawTextureToScreen ();
+    void SetTextureFromTensor (const torch::Tensor &tensor);
+    bool m_categorical_mode = false;
+
+    void SetVSYNC_Marker ();
+    void WaitVSYNC_Diff (uint64_t target_diff);
 
 private:
     // Windowing
     s3_Window window;
+    Texture m_texture;
+
+    // Data Pipeline
+    std::atomic<bool> processing_thread_running {false};
+    std::thread processing_thread;
+    moodycamel::ConcurrentQueue<torch::Tensor> process_queue;  // Thread-safe queue for ADC data
+    moodycamel::ConcurrentQueue<torch::Tensor> result_queue;   // Thread-safe queue for results
 
 
     // FPGA
@@ -68,12 +105,20 @@ private:
     std::atomic<int64_t> captures_pending {0};
     std::atomic<bool>    enable_fpga {false};
 
+    std::thread capture_thread;
+    std::atomic<bool> capture_thread_running {false};
+    void StartCaptureThread ();
+    void ReadFromADC ();
+
     // VSYNC scheduler
     sched2VSYNCtimer *mvt = nullptr;
+    uint64_t m_vsync_marker = 0;
     std::function<void(std::atomic<uint64_t>&) > timer_callback;
 
     void schedule_fpga_capture(std::atomic<uint64_t> &counter);
     std::atomic<uint64_t> m_vsync_count {0};
+
+    void GetVSYNC_Count ();
 
     // PEncoder
     PEncoder *pen = nullptr; 
@@ -81,7 +126,14 @@ private:
     // Optimizer
     s4_Optimizer *optimizer = nullptr;
 
+    // device
+    torch::Device device = DEVICE;
+    PLM_Device_Enum plm_device_enum = PLM_Device_Enum::VISIBLE;
 
+    ///////////////////////////////////////////////////
+    // Iterators
+    uint64_t frame_count = 0;
+    uint64_t burst_n     = 20;
 };
 
 

@@ -33,7 +33,8 @@ void Scheduler2::Start (
     int Num_Levels,
     PLM_Device_Enum plm_device_enum,
 
-    s4_Optimizer *opt
+    s4_Optimizer *opt,
+    PDFunction process_fn
 ) {
     // Setup Windowing
     window.Height  = Height;
@@ -47,6 +48,7 @@ void Scheduler2::Start (
     adc.set_delay(Delay_us);
     adc.set_average_n(Average_N);
     adc.set_burst_n(Burst_N);
+    burst_n = Burst_N;
 
     // Setup Optimizer
     optimizer = opt;
@@ -59,7 +61,7 @@ void Scheduler2::Start (
     adc.Set_IP_Address(Host_IP);
     adc.Set_Port(Host_Port);
     adc.start();
-    //adc.spin_up_collection();
+    adc.spin_up_collection();
 
 
     // Setup PEncoder
@@ -70,6 +72,7 @@ void Scheduler2::Start (
         plm_device_enum
     );
     pen->init_pbo();
+    this->plm_device_enum = plm_device_enum;
     
     // Setup VSYNC timer
     timer_callback = [this](std::atomic<uint64_t> &arg) {
@@ -77,6 +80,11 @@ void Scheduler2::Start (
     };
     mvt = new sched2VSYNCtimer(0, timer_callback);
 
+    // Start capture thread
+    StartCaptureThread();
+
+    // Setup Processing Thread
+    StartProcessThread(process_fn);
 }
 
 //////////////////////////////////////////////////////////////////
@@ -95,4 +103,176 @@ void Scheduler2::schedule_fpga_capture(std::atomic<uint64_t> &counter) {
 
     captures_pending.fetch_add(1, std::memory_order_release);
     enable_fpga.store(false, std::memory_order_release);
+}
+
+//////////////////////////////////////////////////////////////////
+// Capture Thread to read
+// from ADC
+void Scheduler2::StartCaptureThread () {
+    capture_thread_running.store(true, std::memory_order_release);
+    capture_thread = std::thread([this]() {
+        while (capture_thread_running.load(std::memory_order_acquire)) {
+            if (captures_pending.load(std::memory_order_acquire) <= 0) {
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+                continue;
+            }
+
+            // Read from ADC
+            std::vector<uint32_t> data;
+            while (!adc.try_get_data(data)) {
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+            }
+
+            // To tensor
+            torch::Tensor tensor_data = torch::from_blob(
+                data.data(),
+                {static_cast<long>(data.size())},
+                torch::kUInt32
+            ).clone(); // Clone to own the memory
+
+            // Queue to Processing Pipeline
+            process_queue.enqueue(tensor_data);
+
+            captures_pending.fetch_sub(1, std::memory_order_release);
+        }
+    });
+}
+
+void Scheduler2::set_device (const torch::Device &device) {
+    this->device = device;
+}
+
+void Scheduler2::StartProcessThread (PDFunction process_function) {
+    processing_thread_running.store(true, std::memory_order_release);
+    processing_thread = std::thread([this, process_function]() {
+        while (processing_thread_running.load(std::memory_order_acquire)) {
+            torch::Tensor data;
+            if (!process_queue.try_dequeue(data)) {
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+                continue;
+            }
+
+            // data -> CaptureData
+            CaptureData capture_data{
+                .data = data
+            };
+
+            // Process with user function
+            torch::Tensor result = process_function(capture_data);
+
+            // Place to result queue
+            result_queue.enqueue(result);
+        }
+    });
+}
+
+double Scheduler2::Update() {
+    // Dequeue results from results queue
+    uint64_t number_of_rewards = frame_count;
+    std::vector<torch::Tensor> results;
+
+    for (int i = 0; i < number_of_rewards; ++i) {
+        torch::Tensor reward;
+        while (!result_queue.try_dequeue(reward)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
+        results.push_back(reward);
+    }
+
+    // The rewards are structed as
+    /*
+        [
+            [r0, r1, r2, ... r19],
+            [r20, r21, r22, ... r39],
+            ...
+            [r(n-20), r(n-19), r(n-18), ... r(n-1)]
+        ]
+    */
+    // We want to place them in a 1D tensor of shape [n]
+    torch::Tensor rewards_tensor = torch::cat(results).to(device);
+
+    // Average rewards
+    double average_reward = rewards_tensor.mean().item<double>();
+
+    // Optimize
+    optimizer->step(rewards_tensor);
+
+    frame_count = 0; // Reset frame count after processing
+    return average_reward;
+}
+
+void Scheduler2::ReadFromADC () {
+    while (enable_capture.load(std::memory_order_acquire));        // wait till the current capture is done
+    enable_capture.store(true, std::memory_order_release);         // signal to start capture
+    while (captures_pending.load(std::memory_order_acquire) != 0); // wait till capture is done
+    ++frame_count; // Increment frame count after capture is done
+}
+
+void Scheduler2::DrawTextureToScreen () {
+    int centerX = (window.Width - m_texture.width) / 2;
+    int centerY = (window.Height - m_texture.height) / 2;
+
+    int offsetX = (plm_device_enum == PLM_Device_Enum::VISIBLE) ? 0 : 2;
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+
+    DrawTexturePro(
+        m_texture,
+        {0.0f, 0.0f, static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+        {static_cast<float>(centerX + offsetX), static_cast<float>(centerY), static_cast<float>(m_texture.width), static_cast<float>(m_texture.height)},
+        {0.0f, 0.0f},
+        0.0f,
+        WHITE
+    );
+    
+    EndDrawing();
+}
+
+uint64_t Scheduler2::GetVSYNC_Count () {
+    return m_vsync_count.load(std::memory_order_acquire);
+}
+
+void Scheduler2::SetVSYNC_Marker () {
+    m_vsync_marker = GetVSYNC_Count();
+}
+
+void Scheduler2::WaitVSYNC_Diff (uint64_t target_diff) {
+    while ((GetVSYNC_Count() - m_vsync_marker) < target_diff) {
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+    }
+}
+
+void Scheduler2::StopThreads () {
+    // Stop processing thread
+    processing_thread_running.store(false, std::memory_order_release);
+    if (processing_thread.joinable()) {
+        processing_thread.join();
+    }
+
+    // End capture thread
+    capture_thread_running.store(false, std::memory_order_release);
+    if (capture_thread.joinable()) {
+        capture_thread.join();
+    }
+}
+
+void Scheduler2::SetTextureFromTensor (const torch::Tensor &tensor) {
+    torch::Tensor timage;
+    if (m_categorical_mode) {
+        timage = pen->MEncode_u8Tensor_Categorical(tensor).contiguous().to(torch::kInt32); // Categorical
+    } else {
+        timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // Normal
+    }
+    
+    if (m_texture.width > 0 && m_texture.height > 0) {
+        printf("Texture is valid!\n");
+        UnloadTexture(m_texture);
+    } else {
+        printf("Texture not loaded.\n");
+    }
+    
+
+    m_texture = pen->u8Tensor_Texture_CPU(timage);
+    std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Texture size: " << m_texture.width << "x" << m_texture.height << '\n';
 }

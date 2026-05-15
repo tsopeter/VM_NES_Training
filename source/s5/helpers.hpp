@@ -23,147 +23,49 @@
 
 namespace Helpers {
 
-struct _Training {
-    double lr = 0.5;
-    std::string dataset_path = "./Datasets/";
-};
-
-struct _Camera {
-    bool partitioning = true;
-    double exposure_time_us = 300.0f;
-};
-
-struct _Result {
-    int index;
-    int 
-
-    _Result ();
-};
-
-/**
- * Helpers::Parameters
- *
- * Used to define system parameters.
- *
- *
- */
 struct Parameters {
-    Parameters ();
-    ~Parameters ();
+    // Windowing
+    int monitor_Height = 1600;
+    int monitor_Width  = 2716;
 
-    // Number of samples
-    int64_t n_samples = 200;
-    int     n_epochs  = 50;
+    // ADC
+    int adc_delay_us = 150.0f;
+    int adc_average_n = 10;
+    int adc_burst_n   = 20;
+    std::string adc_host_ip = "127.0.0.1";
+    int adc_host_port = 8000;
 
-    int     epoch_counter = 0;
-
-
-    int     upscale_amount       = 1;
-    int     n_iterate_amount     = 4;
-
-    int64_t steps                = 0;
-    bool    flip_input_V         = false;
-    bool    flip_input_H         = false;
-
-
-    int     num_levels           = 16;
+    // PLM
+    int num_levels = 16;
     PLM_Device_Enum plm_device_enum = PLM_Device_Enum::VISIBLE;
-    // available levels: 2, 4, 8, 16
 
-    std::vector<_Result> results = {};
-
+    // Processing Thread
     PDFunction process_fn;
 
-    _Training Training;
-    _Camera Camera;
+    int n_epochs = 10;
 
-    bool collect_data = false;
-    std::string collect_data_directory = "./collected_data/";
-    std::vector<torch::Tensor> collect_data_masks = {};
+    // total samples = n_samples * burst_n
+    int n_samples = 10;
+    int burst_n   = 20;
 
-    void ExportResults (const std::string &filename, int mode=0, int dataset_size=0, int batch_size=0);
-    std::vector<_Result> GetResults (int mode=0, int dataset_size=0, int batch_size=0);
+    int n_steps  = 50;
+    int n_epochs = 10;
 
-    void SaveCollectedMasks ();
+    int upscale_amount = 1;
+    int n_iterate = 4;
 
-    moodycamel::ConcurrentQueue<torch::Tensor> masks_queue;
-    std::atomic<bool> save_masks_thread_running {false};
-    std::thread save_mask_thread;
+    int steps = 0;
 };
-
-/**
- * Helpers::Data
- * 
- * Used to create/load datasets into program.
- */
-namespace Data {
-
-/**
- * Global parameters
- *
- */
-
-struct Batch {
-    std::vector<Texture> textures;
-    std::vector<int>     labels;
-};
-
-std::vector<Batch> Get (
-    Parameters &,
-    int n_data_points,
-    int batch_size,
-    s2_DataTypes dtype=s2_DataTypes::TRAIN,
-    int padding = 0,
-    int start_index = 0
-);
-
-std::vector<Batch> Get_Training (Parameters&);
-std::vector<Batch> Get_Validation (Parameters &);
-std::vector<Batch> Get_Test (Parameters &);
-void               Delete (std::vector<Batch> &);
-
-}
-
-namespace Run {
 
 void Setup_Scheduler (
-    Parameters &,
-    /* Scheduler used to coordinate system */
-    Scheduler2 &,
-
-    /* Optimizer */
-    s4_Optimizer &,
-
-    /* Distribution used by model */
-    Distributions::Definition &,
-
-    /* Model Parameter Height */
+    Parameters &params,
+    Scheduler2 &scheduler,
+    s4_Optimizer &optimizer,
+    Distributions::Definition &dist_def,
     int Height,
-
-    /* Model Parameter Width */
     int Width
-);
+)
 
-void Set_SubTextureHook (
-    Scheduler2 &,
-    std::function<void(Shader[2], Texture[10], bool[10])> hook_function
-);
-
-struct Performance {
-    Performance ();
-    double compute_time_s;
-
-    int64_t samples_total;
-    int64_t samples_correct;
-    double  entropy;
-    double  accuracy;
-
-    double  loss;
-
-    // Save performance metrics to file
-    void Save (const std::string &filename, int epoch, std::string msg);
-
-};
 
 struct EvalFunctions {
     std::function<torch::Tensor(int)> sample;
@@ -174,51 +76,24 @@ struct EvalFunctions {
     std::function<double()>           loss;
 };
 
-Performance Evaluate (
-    Parameters &,
-    Scheduler2 &,
-    EvalFunctions &,
-    Data::Batch &
-);
+struct Performance {
+    double  loss;
+    int64_t compute_time_s;
+};
 
-Performance Evaluate (
-    Parameters &,
-    Scheduler2 &,
-    EvalFunctions &,
-    std::vector<Data::Batch> &
-);
+namespace Run {
+    
+    Performance Evaluate (
+        Parameters &,
+        Scheduler2 &,
+        EvalFunctions &,
+    );
 
-Performance Inference (
-    Parameters &,
-    Scheduler2 &,
-    EvalFunctions &,
-    Data::Batch &
-);
-
-Performance Inference (
-    Parameters &,
-    Scheduler2 &,
-    EvalFunctions &,
-    std::vector<Data::Batch> &
-);
-
+}
 
 void Iterate (Parameters &, Scheduler2 &);
 
-}
-
-struct Checkpoint {
-    Checkpoint ();
-    int Epoch;
-    std::string config_file;
-
-    torch::Tensor mask;
-
-    void Save (const std::string &directory);
-};
-
-
-}
+} // namespace Helpers
 
 
 #endif
