@@ -10,6 +10,7 @@ PLM_Device::~PLM_Device() {
 }
 
 torch::Tensor PLM_Device::mapper(torch::Tensor &x) {
+    std::cout << "INFO: [PLM_Device::mapper] Mapping input tensor with device: " << static_cast<int>(m_device) << " and levels: " << m_levels << "\n";
     switch (m_device) {
         case PLM_Device_Enum::VISIBLE:
             
@@ -41,12 +42,14 @@ torch::Tensor PLM_Device::mapper(torch::Tensor &x) {
                     throw std::runtime_error("Unsupported number of levels: " + std::to_string(m_levels) + " for device: " + std::to_string(m_device) + "\n");
             }
 
+            break;
+
         case PLM_Device_Enum::NIR:
             
             switch (m_levels) {
                 case 32:
                     /* For 32 levels, we can directly use the input as the output, since it already maps to 0-31 which corresponds to the logical masks */
-                    break;
+                     break;
                 default:
                     throw std::runtime_error("Unsupported number of levels: " + std::to_string(m_levels) + " for device: " + std::to_string(m_device) + "\n");
             }
@@ -60,6 +63,7 @@ torch::Tensor PLM_Device::mapper(torch::Tensor &x) {
 }
 
 void PLM_Device::set_device(PLM_Device_Enum device, int num_levels) {
+    std::cout << "INFO: [PLM_Device::set_device] Setting PLM device to " << static_cast<int>(device) << " with num_levels: " << num_levels << "\n";
     m_device = device;
     m_levels = num_levels;
 
@@ -87,7 +91,13 @@ void PLM_Device::set_device(PLM_Device_Enum device, int num_levels) {
     }
 
     // If num_levels is not in supported levels, throw error
-    if (std::find(m_supported_levels.begin(), m_supported_levels.end(), num_levels) == m_supported_levels.end()) {
+    bool valid_level = false;
+    for (auto &lvl : m_supported_levels) {
+        if (num_levels == lvl) {
+            valid_level = true;
+        }
+    }
+    if (!valid_level) {
         throw std::runtime_error("Unsupported number of levels: " + std::to_string(num_levels) + " for device: " + std::to_string(device) + "\n");
     }
 

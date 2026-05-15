@@ -3,7 +3,7 @@
 #include <fstream>
 
 Scheduler2::Scheduler2 () {
-
+   
 }
 
 Scheduler2::~Scheduler2 () {
@@ -56,6 +56,7 @@ void Scheduler2::Start (
 
     // Start up window
     window.load();
+    m_alpha_ignore_shader = LoadShader(nullptr, "source/shaders/alpha_ignore.fs");
     
     // Start up FPGA
     adc.Set_IP_Address(Host_IP);
@@ -66,6 +67,8 @@ void Scheduler2::Start (
 
     // Setup PEncoder
     pen = new PEncoder(
+        0,
+        0,
         PEncoder_Height, 
         PEncoder_Width, 
         Num_Levels,
@@ -83,6 +86,11 @@ void Scheduler2::Start (
     // Start capture thread
     StartCaptureThread();
 
+
+    if (process_fn == nullptr) {
+        std::cerr << "ERROR: [Scheduler2::Start] process_fn is nullptr. Please provide a valid processing function.\n";
+        throw std::runtime_error("process_fn is nullptr");
+    }
     // Setup Processing Thread
     StartProcessThread(process_fn);
 }
@@ -100,6 +108,7 @@ void Scheduler2::schedule_fpga_capture(std::atomic<uint64_t> &counter) {
     }
 
     adc.trigger();
+    std::cout << "INFO: [Scheduler2::schedule_fpga_capture] VSYNC captured, FPGA triggered.\n";
 
     captures_pending.fetch_add(1, std::memory_order_release);
     enable_fpga.store(false, std::memory_order_release);
@@ -167,10 +176,12 @@ void Scheduler2::StartProcessThread (PDFunction process_function) {
 }
 
 double Scheduler2::Update() {
+    std::cout << "INFO: [Scheduler2::Update] Starting update cycle, waiting for results from processing thread...\n";
     // Dequeue results from results queue
     uint64_t number_of_rewards = frame_count;
     std::vector<torch::Tensor> results;
 
+    std::cout << "INFO: [Scheduler2::Update] Expecting " << number_of_rewards << " rewards to process.\n";
     for (int i = 0; i < number_of_rewards; ++i) {
         torch::Tensor reward;
         while (!result_queue.try_dequeue(reward)) {
@@ -202,8 +213,8 @@ double Scheduler2::Update() {
 }
 
 void Scheduler2::ReadFromADC () {
-    while (enable_capture.load(std::memory_order_acquire));        // wait till the current capture is done
-    enable_capture.store(true, std::memory_order_release);         // signal to start capture
+    while (enable_fpga.load(std::memory_order_acquire));           // wait till the current capture is done
+    enable_fpga.store(true, std::memory_order_release);            // signal to start capture
     while (captures_pending.load(std::memory_order_acquire) != 0); // wait till capture is done
     ++frame_count; // Increment frame count after capture is done
 }
@@ -215,6 +226,7 @@ void Scheduler2::DrawTextureToScreen () {
     int offsetX = (plm_device_enum == PLM_Device_Enum::VISIBLE) ? 0 : 2;
 
     BeginDrawing();
+    BeginShaderMode(m_alpha_ignore_shader);
     ClearBackground(BLACK);
 
     DrawTexturePro(
@@ -226,6 +238,7 @@ void Scheduler2::DrawTextureToScreen () {
         WHITE
     );
     
+    EndShaderMode();
     EndDrawing();
 }
 

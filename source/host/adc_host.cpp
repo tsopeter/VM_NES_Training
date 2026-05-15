@@ -79,6 +79,11 @@ void ADCHost::Start_Server () {
 
     // Start server thread
     m_server_thread = std::thread(&ADCHost::Server_Thread, this);
+
+    // Block until client connects
+    while (!m_client_connected) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 }
 
 void ADCHost::Stop_Server () {

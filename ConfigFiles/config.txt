@@ -7,7 +7,8 @@ Epochs          10
 Steps_Per_Epoch 5
 LearningRate    0.01
 IterateN        4
-PLMDevice       nir
+PLMDevice       visible
+NumLevels       16
 ADC_Delay_us    100
 ADC_AverageN    5
 ADC_BurstN      20

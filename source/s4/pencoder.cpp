@@ -203,10 +203,12 @@ PEncoder::PEncoder (int x, int y, int h, int w, int num_levels, PLM_Device_Enum 
 m_x(x), m_y(y), m_h(h), m_w(w),
 m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(false)
 {
+    std::cout << "INFO: [PEncoder::PEncoder] Initializing PEncoder with x: " << x << ", y: " << y << ", h: " << h << ", w: " << w << ", num_levels: " << num_levels << "\n";
     assert (m_h % 2 == 0);
     assert (m_w % 2 == 0);
     m_num_levels = num_levels;
     m_plm_device.set_device(device, num_levels);
+    std::cout << "INFO: [PEncoder::PEncoder] PEncoder initialized with PLM device: " << static_cast<int>(device) << " and num_levels: " << num_levels << "\n";
 
     /* Loads mask and stores it to reduce memory calls */
     switch (m_plm_device.m_device) {
@@ -484,7 +486,7 @@ Image PEncoder::u8Tensor_Image (torch::Tensor &x) {
 }
 
 Image PEncoder::u8MTensor_Image (torch::Tensor &x) {
-    throw std::runtime_error("PEncoder::u8MTensor_Image is deprecated.\n");
+    //throw std::runtime_error("PEncoder::u8MTensor_Image is deprecated.\n");
     int32_t *data_ptr = nullptr;
     torch::Tensor tmp;
     if (x.device() == torch::kCPU)

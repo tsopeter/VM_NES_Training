@@ -96,6 +96,7 @@ private:
     // Windowing
     s3_Window window;
     Texture m_texture;
+    Shader  m_alpha_ignore_shader;
 
     // Data Pipeline
     std::atomic<bool> processing_thread_running {false};
@@ -111,7 +112,6 @@ private:
 
     std::thread capture_thread;
     std::atomic<bool> capture_thread_running {false};
-    std::atomic<bool> enable_capture {false};
 
     // VSYNC scheduler
     sched2VSYNCtimer *mvt = nullptr;

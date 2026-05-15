@@ -54,6 +54,8 @@ struct Parameters {
 
     int steps = 0;
     double lr = 1e-3;
+
+    Parameters ();
 };
 
 void Setup_Scheduler (

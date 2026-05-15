@@ -28,13 +28,14 @@ Helpers::Performance Helpers::Run::Evaluate (
         );
 
         Iterate(params, scheduler);
+        ++params.steps;
     }
-    ++params.steps;
 
     scheduler.SetVSYNC_Marker();
     scheduler.WaitVSYNC_Diff(2);
 
     eval_fn.squash();
+    std::cout << "INFO: [Helpers::Run::Evaluate] Step Count: " << params.steps << "\n";
     double loss = eval_fn.update();
 
     int64_t end_time = Utils::GetCurrentTime_s ();
@@ -56,6 +57,43 @@ void Helpers::Iterate (Parameters &params, Scheduler2 &scheduler) {
         scheduler.WaitVSYNC_Diff (1);
     }
     scheduler.ReadFromADC ();
+}
+
+Helpers::Parameters::Parameters () {
+    monitor_Height = 1600;
+    monitor_Width  = 2716;
+
+    adc_delay_us  = 150.0f;
+    adc_average_n = 10;
+    adc_burst_n   = 20;
+    adc_host_ip   = "127.0.0.1";
+    adc_host_port = 8000;
+
+    num_levels = 16;
+    plm_device_enum = PLM_Device_Enum::VISIBLE;
+
+    n_samples = 10;
+    burst_n   = 20;
+    n_steps  = 50;
+    n_epochs = 10;
+    upscale_amount = 1;
+    n_iterate = 4;
+    lr = 1e-3;
+    steps = 0;
+
+
+    process_fn = [this](CaptureData data)->torch::Tensor {
+        // Capture data is stored as
+        // Convert to CUDA
+        auto data_cuda = data.data.to(DEVICE);
+
+        // Convert to float
+        data_cuda = data_cuda.to(torch::kFloat32);
+        return data_cuda;
+    };
+
+
+
 }
 
 void Helpers::Setup_Scheduler (

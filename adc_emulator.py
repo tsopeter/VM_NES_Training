@@ -57,7 +57,7 @@ class AppClient:
                 "r_params" : 0,
                 "w_params" : 1,
                 "r"        : lambda : self.adc_average_n_elements,
-                "w"        : lambda value : setattr(self, 'adc_average_n_elements', value)
+                "w"        : lambda value : setattr(self, 'adc_average_n_elements', int(value))
             },
             "adc_delay" : {
                 "r_enable" : True,
@@ -65,7 +65,7 @@ class AppClient:
                 "r_params" : 0,
                 "w_params" : 1,
                 "r"        : lambda : self.adc_delay,
-                "w"        : lambda value : setattr(self, 'adc_delay', value)
+                "w"        : lambda value : setattr(self, 'adc_delay', int(value))
             },
             "adc_burst_limit" : {
                 "r_enable" : True,
@@ -73,23 +73,23 @@ class AppClient:
                 "r_params" : 0,
                 "w_params" : 1,
                 "r"        : lambda : self.adc_burst_limit,
-                "w"        : lambda value : setattr(self, 'adc_burst_limit', value)
+                "w"        : lambda value : setattr(self, 'adc_burst_limit', int(value))
             },
             "adc_start_w" : {
                 "r_enable" : True,
                 "w_enable" : False,
                 "r_params" : 0,
-                "w_params" : 1,
+                "w_params" : 0,
                 "r"        : lambda : self.adc_start_w(),
                 "w"        : lambda value : None
             }
         }
-    
+
     def adc_start_w(self):
         # Simulate starting ADC acquisition and returning a dummy value
 
         values = []
-        for i in range(self.adc_average_n_elements):
+        for i in range(self.adc_burst_limit):
             values.append((i * 100) % 0xFFFFFFFF)  # Generate dummy values based on index
 
         # Wait burst_limit * 694 us
@@ -112,6 +112,7 @@ class AppClient:
         status = 1 if success else 0
         packet = struct.pack("!II", 1, status)
         self.client.send(packet)
+        print(f"[APP CLIENT] Sent set response: {'success' if success else 'failure'}")
 
     def send_get_response(self, values):
         """Send get command response: <2> <n_values> <value_1> ... <value_n>"""
@@ -119,12 +120,7 @@ class AppClient:
         n_values = len(encoded_values)
         packet = struct.pack(f"!II{n_values}I", 2, n_values, *encoded_values)
         self.client.send(packet)
-
-    def send_help_response(self, help_message):
-        """Send help command response: <3> <help_message> with utf-8 decoded text"""
-        command_type = struct.pack("!I", 3)
-        help_text = help_message.encode('utf-8')
-        self.client.send(command_type + help_text)
+        print(f"[APP CLIENT] Sent get response: {encoded_values}")
 
     def wait_for_connection(self):
         """Wait for connection to host with retry logic"""

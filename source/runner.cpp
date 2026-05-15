@@ -184,6 +184,13 @@ void Runner::InitConfigKeyMap () {
             }
         },
         {
+            "NumLevels",
+            [this](std::ifstream &ifs) {
+               ifs >> params.num_levels;
+                std::cout << "Setting Num Levels...\n";
+            }
+        },
+        {
             "ADC_Delay_us",
             [this](std::ifstream &ifs) {
                 ifs >> params.adc_delay_us;
