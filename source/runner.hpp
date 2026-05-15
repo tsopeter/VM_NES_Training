@@ -6,9 +6,9 @@
 #include "s4/optimizer.hpp"
 #include "s5/distributions.hpp"
 #include "s5/helpers.hpp"
-#include "s5/utils.hpp"
+//#include "s5/utils.hpp"
 #include "s2/plm_device.hpp"
-#include "hook.hpp"
+//#include "hook.hpp"
 #include <iostream>
 #include <fstream>
 #include <ostream>
@@ -18,21 +18,20 @@ class Runner {
 public:
     void Run (std::string config_file);
 
+    void InitConfigKeyMap ();
+    void ParseConfigFile (const std::string &config_file);
 
 private:
     enum DistributionType {
             NORMAL,
             CATEGORICAL
     };
-    DistributionType ModelDistribution = DistributionType::NORMAL;
-    std::string checkpoint_directory = "./checkpoints/";
-    Helpers::Parameters params;
+    DistributionType model_distribution = DistributionType::NORMAL;
 
     struct ConfigKeyMap {
         std::string      name;
         std::function<void(std::ifstream&)> setter;
     };
-
     std::vector<ConfigKeyMap> config_key_map = {};
 
     class Model : public s4_Model {
@@ -64,9 +63,15 @@ private:
         int64_t m_Width;
         int64_t m_n;
         double std; /* May be unused */
+    };
+    Model model;
+    int   model_height, model_width;
 
-};
 
+    Scheduler2 scheduler;
+
+    std::string checkpoint_directory = "./checkpoints/";
+    Helpers::Parameters params;
 };
 
 

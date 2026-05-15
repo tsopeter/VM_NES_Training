@@ -38,6 +38,9 @@ public:
     Scheduler2();
     ~Scheduler2();
 
+    void StopWindow(); // Does nothing
+    void StopFPGA();
+
     void Start (
         int Monitor = 0,
         int Height  = 1600,
@@ -107,18 +110,15 @@ private:
 
     std::thread capture_thread;
     std::atomic<bool> capture_thread_running {false};
-    void StartCaptureThread ();
-    void ReadFromADC ();
+    std::atomic<bool> enable_capture {false};
 
     // VSYNC scheduler
     sched2VSYNCtimer *mvt = nullptr;
     uint64_t m_vsync_marker = 0;
     std::function<void(std::atomic<uint64_t>&) > timer_callback;
-
-    void schedule_fpga_capture(std::atomic<uint64_t> &counter);
     std::atomic<uint64_t> m_vsync_count {0};
 
-    void GetVSYNC_Count ();
+    uint64_t GetVSYNC_Count ();
 
     // PEncoder
     PEncoder *pen = nullptr; 

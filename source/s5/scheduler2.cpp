@@ -243,6 +243,14 @@ void Scheduler2::WaitVSYNC_Diff (uint64_t target_diff) {
     }
 }
 
+void Scheduler2::StopWindow () {
+    // Do nothing
+}
+
+void Scheduler2::StopFPGA () {
+    adc.close ();
+}
+
 void Scheduler2::StopThreads () {
     // Stop processing thread
     processing_thread_running.store(false, std::memory_order_release);

@@ -42,8 +42,6 @@ struct Parameters {
     // Processing Thread
     PDFunction process_fn;
 
-    int n_epochs = 10;
-
     // total samples = n_samples * burst_n
     int n_samples = 10;
     int burst_n   = 20;
@@ -55,16 +53,17 @@ struct Parameters {
     int n_iterate = 4;
 
     int steps = 0;
+    double lr = 1e-3;
 };
 
 void Setup_Scheduler (
-    Parameters &params,
-    Scheduler2 &scheduler,
+    Parameters   &params,
+    Scheduler2   &scheduler,
     s4_Optimizer &optimizer,
     Distributions::Definition &dist_def,
     int Height,
     int Width
-)
+);
 
 
 struct EvalFunctions {
@@ -77,18 +76,16 @@ struct EvalFunctions {
 };
 
 struct Performance {
-    double  loss;
-    int64_t compute_time_s;
+    double  loss = 0.0f;
+    int64_t compute_time_s = 0;
 };
 
 namespace Run {
-    
     Performance Evaluate (
         Parameters &,
         Scheduler2 &,
-        EvalFunctions &,
+        EvalFunctions &
     );
-
 }
 
 void Iterate (Parameters &, Scheduler2 &);

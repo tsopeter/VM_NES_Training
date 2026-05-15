@@ -7,10 +7,10 @@
 #include <filesystem>
 #include <future>
 
-Helpers::Run::Performance Helpers::Run::Evaluate (
+Helpers::Performance Helpers::Run::Evaluate (
     Parameters &params,
     Scheduler2 &scheduler,
-    EvalFunctions &eval_fn,
+    EvalFunctions &eval_fn
 ) {
 
     int64_t start_time = Utils::GetCurrentTime_s();
@@ -48,9 +48,9 @@ Helpers::Run::Performance Helpers::Run::Evaluate (
     return perf;
 }
 
-void Helpers::Run::Iterate (Parameters &params, Scheduler2 &scheduler) {
+void Helpers::Iterate (Parameters &params, Scheduler2 &scheduler) {
     for (int i = 0; i < params.n_iterate; ++i) {
-        scheduler.DrawToScreen ();
+        scheduler.DrawTextureToScreen ();
 
         scheduler.SetVSYNC_Marker ();
         scheduler.WaitVSYNC_Diff (1);
@@ -85,13 +85,13 @@ void Helpers::Setup_Scheduler (
         params.num_levels, // Num_Levels
         params.plm_device_enum, // plm_device_enum
 
-        &optimizer // opt,
+        &optimizer, // opt,
 
         params.process_fn // process_fn
     );
 
     scheduler.set_device(DEVICE);
-    if (dist.get_name() == "categorical")
+    if (dist_def.get_name() == "categorical")
         scheduler.m_categorical_mode = true;
     else
         scheduler.m_categorical_mode = false;
