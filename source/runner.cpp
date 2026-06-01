@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sys/wait.h>
 #include <fstream>
+#include "utils/csv.hpp"
 #include "raylib.h"
 
 void Runner::Run (std::string config_file) {
@@ -52,12 +53,15 @@ void Runner::Run (std::string config_file) {
         return 0.0f; /* Not implemented yet */
     };
 
+    CSV csv(output_path + "/perf.csv");
+    csv.add_headers({"Loss", "Compute_Time_s"});
+    Helpers::Performance perf;
     for (int epoch = 0; epoch < params.n_epochs; ++epoch) {
         for (int step = 0; step < params.n_steps; ++step) {
-            auto perf = Helpers::Run::Evaluate(params, scheduler, eval_fn);
-
-            // Save performance to csv file
+            perf = Helpers::Run::Evaluate(params, scheduler, eval_fn);
         }
+        // Save performance to csv file
+        csv.write(perf);
     }
 
     scheduler.UnloadTextures();
@@ -223,6 +227,13 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {
                 ifs >> params.adc_host_port;
                 std::cout << "Setting ADC Host Port...\n";
+            }
+        },
+        {
+            "output_path",
+            [this](std::ifstream &ifs) {
+                ifs >> output_path;
+                std::cout << "Setting Output Path...\n";
             }
         }
     };

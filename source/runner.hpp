@@ -72,6 +72,8 @@ private:
 
     std::string checkpoint_directory = "./checkpoints/";
     Helpers::Parameters params;
+
+    std::string output_path = "output";
 };
 
 
