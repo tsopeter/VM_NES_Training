@@ -76,6 +76,8 @@ private:
     int average_n = 1;
     int burst_n   = 20;
 
+    std::atomic<bool> m_recv_valid {false};
+
 };
 
 #endif // adcs2_hpp

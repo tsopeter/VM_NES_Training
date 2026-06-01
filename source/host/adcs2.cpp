@@ -10,7 +10,29 @@ ADCS2::~ADCS2() {
 }
 
 void ADCS2::trigger () {
+    m_recv_valid.store(false, std::memory_order_release);
     m_host.Send_Command(trig_cmd);
+
+    // Launch async task to wait for 1 second
+    // if we do not receive data by then, we
+    // send another command called adc_data_all
+    std::thread([this]() {
+        // if m_recv_valid becomes true, we can stop waiting
+        // but if it is still false after 1 second, we send the adc_data_all command to prompt the ADC to resend the data
+        
+        // Check every 50ms for up to 1 second
+        for (int i = 0; i < 20; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            if (m_recv_valid.load(std::memory_order_acquire)) {
+                return; // Data received, exit early
+            }
+        }
+        
+        // After 1 second, if still no data, send the command
+        if (!m_recv_valid.load(std::memory_order_acquire)) {
+            m_host.Send_Command("get adc_data_all");
+        }
+    }).detach();
 }
 
 void ADCS2::stop_collection() {
@@ -179,7 +201,11 @@ void ADCS2::Send_Command (std::string command, std::string app_command, std::vec
 
 // Response receiving methods
 bool ADCS2::try_get_data(std::vector<uint32_t>& data) {
-    return adc_data_queue.try_dequeue(data);
+    bool result = adc_data_queue.try_dequeue(data);
+    if (result) {
+        m_recv_valid.store(true, std::memory_order_release);
+    }
+    return result;
 }
 
 bool ADCS2::has_data() const {

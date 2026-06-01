@@ -89,6 +89,14 @@ Helpers::Parameters::Parameters () {
 
         // Convert to float
         data_cuda = data_cuda.to(torch::kFloat32);
+
+        // It is originally stored as 32-bit integers (actually 16-bit offset binary)
+        // We need to convert it to a range of [-1, 1]
+        data_cuda = (data_cuda - 32768.0f) / 32768.0f;
+
+        // negate
+        data_cuda = -data_cuda;
+
         return data_cuda;
     };
 

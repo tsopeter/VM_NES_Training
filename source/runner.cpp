@@ -57,9 +57,20 @@ void Runner::Run (std::string config_file) {
     csv.add_headers({"Loss", "Compute_Time_s"});
     Helpers::Performance perf;
     for (int epoch = 0; epoch < params.n_epochs; ++epoch) {
+
+        // Log time
+        auto start_time = std::chrono::high_resolution_clock::now();
+
         for (int step = 0; step < params.n_steps; ++step) {
             perf = Helpers::Run::Evaluate(params, scheduler, eval_fn);
         }
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
+
+        // overwrite compute time with epoch duration
+        perf.compute_time_s = duration;
+
         // Save performance to csv file
         csv.write(perf);
     }
