@@ -14,4 +14,4 @@ ADC_AverageN    5
 ADC_BurstN      20
 ADC_Host_IP     192.168.2.100
 ADC_Host_Port   8000
-output_path     05_15/a
+output_path     06_02/a
