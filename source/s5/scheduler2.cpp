@@ -132,6 +132,8 @@ void Scheduler2::StartCaptureThread () {
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
             }
 
+            std::cout << "INFO: [Scheduler2::CaptureThread] Received ADC data, processing...\n";
+
             // To tensor
             torch::Tensor tensor_data = torch::from_blob(
                 data.data(),

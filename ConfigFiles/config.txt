@@ -3,7 +3,7 @@ Width           452
 Distribution    categorical
 Samples         10
 Upscale         2
-Epochs          20
+Epochs          100
 Steps_Per_Epoch 10
 LearningRate    0.2
 IterateN        4

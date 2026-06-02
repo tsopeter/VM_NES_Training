@@ -97,6 +97,8 @@ Helpers::Parameters::Parameters () {
         // negate
         data_cuda = -data_cuda;
 
+        std::cout << "INFO: [Helpers::Parameters::process_fn] Processed ADC data...\n";
+
         return data_cuda;
     };
 
