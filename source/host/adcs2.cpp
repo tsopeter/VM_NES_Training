@@ -27,6 +27,8 @@ void ADCS2::trigger () {
                 return; // Data received, exit early
             }
         }
+
+        std::cout << "INFO: [ADCS2::trigger] No data received after 1 second, sending adc_data_all command to prompt ADC to resend data.\n";
         
         // After 1 second, if still no data, send the command
         if (!m_recv_valid.load(std::memory_order_acquire)) {

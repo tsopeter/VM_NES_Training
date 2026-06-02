@@ -1,0 +1,17 @@
+Height          400
+Width           452
+Distribution    categorical
+Samples         10
+Upscale         2
+Epochs          20
+Steps_Per_Epoch 10
+LearningRate    0.2
+IterateN        4
+PLMDevice       nir
+NumLevels       32
+ADC_Delay_us    100
+ADC_AverageN    5
+ADC_BurstN      20
+ADC_Host_IP     192.168.2.100
+ADC_Host_Port   8000
+output_path     06_02/a

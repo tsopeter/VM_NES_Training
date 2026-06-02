@@ -12,6 +12,14 @@ void Runner::Run (std::string config_file) {
     InitConfigKeyMap(); 
     ParseConfigFile(config_file);
 
+    // Save a copy of the configuration file into the
+    // output directory for reference
+    std::ifstream src(config_file, std::ios::binary);
+    std::ofstream dst(output_path + "/config_copy.txt", std::ios::binary);
+    dst << src.rdbuf();
+    dst.close();
+    src.close();
+
     model.init(model_height, model_width, params.burst_n, model_distribution, params.num_levels);
 
     std::cout << "INFO: [Runner::Run] Setting up optimizer...\n";
