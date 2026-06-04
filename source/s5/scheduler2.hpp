@@ -135,6 +135,7 @@ private:
     // Iterators
     uint64_t frame_count = 0;
     uint64_t burst_n     = 20;
+    std::atomic<int64_t> results_count {0};
 };
 
 

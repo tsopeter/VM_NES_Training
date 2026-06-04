@@ -39,11 +39,13 @@ Helpers::Performance Helpers::Run::Evaluate (
     double loss = eval_fn.update();
 
     int64_t end_time = Utils::GetCurrentTime_s ();
-    int64_t delta = end_time - start_time;
+    int64_t delta    = end_time - start_time;
+    auto    entropy  = eval_fn.entropy();
 
     Helpers::Performance perf {
         .loss = loss,
-        .compute_time_s = delta
+        .compute_time_s = delta,
+        .entropy = entropy
     };
 
     return perf;
@@ -94,8 +96,9 @@ Helpers::Parameters::Parameters () {
         // We need to convert it to a range of [-1, 1]
         data_cuda = (data_cuda - 32768.0f) / 32768.0f;
 
-        // negate
-        data_cuda = -data_cuda;
+        // do not invert if adc_invert is false, otherwise invert the signal
+        if (!this->adc_invert)
+            data_cuda = -data_cuda;
 
         std::cout << "INFO: [Helpers::Parameters::process_fn] Processed ADC data...\n";
 
@@ -143,4 +146,7 @@ void Helpers::Setup_Scheduler (
         scheduler.m_categorical_mode = true;
     else
         scheduler.m_categorical_mode = false;
+
+    optimizer.entropy_regularization = params.entropy_regularization;
+    optimizer.entropy_coeff = params.entropy_coeff;
 }

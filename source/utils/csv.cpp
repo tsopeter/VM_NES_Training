@@ -41,6 +41,23 @@ void CSV::write (const Helpers::Performance &perf) {
         return;
     }
 
-    ofs << perf.loss << "," << perf.compute_time_s << "\n";
+    ofs << perf.loss << "," << perf.compute_time_s << ", " << perf.entropy << "\n";
+    ofs.close();
+}
+
+void CSV::write (const std::vector<std::string> &row) {
+    std::ofstream ofs(filename, std::ios::out | std::ios::app);
+    if (!ofs) {
+        std::cerr << "Error opening file for writing: " << filename << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < row.size(); ++i) {
+        ofs << row[i];
+        if (i < row.size() - 1) {
+            ofs << ",";
+        }
+    }
+    ofs << "\n";
     ofs.close();
 }

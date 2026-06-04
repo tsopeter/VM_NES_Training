@@ -18,6 +18,8 @@ public:
     double epsilon = 0.1;
     double xNES_lr_mu = 0.1;
     double xNES_lr_std = 0.1;
+    bool   entropy_regularization = false;
+    double entropy_coeff = 1.0;
 
     torch::Tensor best_mask;
     torch::Tensor average_mask;

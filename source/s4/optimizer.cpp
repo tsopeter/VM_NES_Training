@@ -37,6 +37,11 @@ void s4_Optimizer::step_a (torch::Tensor &rewards) {
     logp             = torch::sum(logp.view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
     auto loss        = -torch::mean(logp * norm_sum);
 
+    if (entropy_regularization) {
+        auto ent = m_model.get_definition()->entropy().mean();
+        loss = loss + entropy_coeff * ent;   // 
+    }
+
     m_opt.zero_grad();
     loss.backward();
     m_opt.step();
@@ -118,9 +123,14 @@ void s4_Optimizer::step (torch::Tensor &rewards) {
 
     auto logp        = m_model.logp_action();
     u                = u.to(logp.device());
-    logp             = torch::sum((logp).view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
+    logp             = torch::mean((logp).view(std::vector<int64_t>{m_model.N_samples(), -1}), 1);
 
     auto loss        = -torch::mean(logp * u);
+
+    if (entropy_regularization) {
+        auto ent = m_model.get_definition()->entropy().mean();
+        loss = loss - entropy_coeff * ent;   // 
+    }
 
     m_opt.zero_grad();
     loss.backward();

@@ -62,7 +62,7 @@ void Runner::Run (std::string config_file) {
     };
 
     CSV csv(output_path + "/perf.csv");
-    csv.add_headers({"Loss", "Compute_Time_s"});
+    csv.add_headers({"Loss", "Compute_Time_s", "Entropy"});
     Helpers::Performance perf;
     for (int epoch = 0; epoch < params.n_epochs; ++epoch) {
 
@@ -200,6 +200,9 @@ void Runner::InitConfigKeyMap () {
                 else if (device_str == "nir") {
                     params.plm_device_enum = PLM_Device_Enum::NIR;
                 }
+                else if (device_str == "nir2") {
+                    params.plm_device_enum = PLM_Device_Enum::NIR2;
+                }
                 else {
                     throw std::runtime_error("Runner::Run: Unsupported PLM device type in config file.");
                 }
@@ -231,6 +234,7 @@ void Runner::InitConfigKeyMap () {
             "ADC_BurstN",
             [this](std::ifstream &ifs) {
                 ifs >> params.adc_burst_n;
+                params.burst_n = params.adc_burst_n; // Update burst_n in params as well
                 std::cout << "Setting ADC BurstN...\n";
             }
         },
@@ -253,6 +257,34 @@ void Runner::InitConfigKeyMap () {
             [this](std::ifstream &ifs) {
                 ifs >> output_path;
                 std::cout << "Setting Output Path...\n";
+            }
+        },
+        {
+            "Std",
+            [this](std::ifstream &ifs) {
+                ifs >> model.std;
+                std::cout << "Setting Std...\n";
+            }
+        },
+        {
+            "Invert",
+            [this](std::ifstream &ifs) {
+                ifs >> params.adc_invert;
+                std::cout << "Setting ADC Invert...\n";
+            }
+        },
+        {
+            "EntropyReg",
+            [this](std::ifstream &ifs) {
+                ifs >> params.entropy_regularization;
+                std::cout << "Setting Entropy Regularization...\n";
+            }
+        },
+        {
+            "EntropyCoeff",
+            [this](std::ifstream &ifs) {
+                ifs >> params.entropy_coeff;
+                std::cout << "Setting Entropy Coefficient...\n";
             }
         }
     };

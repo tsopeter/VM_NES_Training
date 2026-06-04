@@ -107,11 +107,11 @@ void Scheduler2::schedule_fpga_capture(std::atomic<uint64_t> &counter) {
         return;
     }
 
-    adc.trigger();
-    std::cout << "INFO: [Scheduler2::schedule_fpga_capture] VSYNC captured, FPGA triggered.\n";
-
     captures_pending.fetch_add(1, std::memory_order_release);
     enable_fpga.store(false, std::memory_order_release);
+
+    adc.trigger();
+    std::cout << "INFO: [Scheduler2::schedule_fpga_capture] VSYNC captured, FPGA triggered.\n";
 }
 
 //////////////////////////////////////////////////////////////////
@@ -173,6 +173,7 @@ void Scheduler2::StartProcessThread (PDFunction process_function) {
 
             // Place to result queue
             result_queue.enqueue(result);
+            results_count.fetch_add(1, std::memory_order_release);
         }
     });
 }
@@ -184,12 +185,14 @@ double Scheduler2::Update() {
     std::vector<torch::Tensor> results;
 
     std::cout << "INFO: [Scheduler2::Update] Expecting " << number_of_rewards << " rewards to process.\n";
+
     for (int i = 0; i < number_of_rewards; ++i) {
         torch::Tensor reward;
         while (!result_queue.try_dequeue(reward)) {
             std::this_thread::sleep_for(std::chrono::microseconds(50));
         }
         results.push_back(reward);
+        std::cout << "INFO: [Scheduler2::Update] Received reward " << i + 1 << "/" << number_of_rewards << " from processing thread.\n";
     }
 
     // The rewards are structed as
@@ -215,10 +218,18 @@ double Scheduler2::Update() {
 }
 
 void Scheduler2::ReadFromADC () {
+    std::cout << "INFO: [Scheduler2::ReadFromADC] Waiting for FPGA capture to complete...\n";
+    /*
     while (enable_fpga.load(std::memory_order_acquire));           // wait till the current capture is done
     enable_fpga.store(true, std::memory_order_release);            // signal to start capture
     while (captures_pending.load(std::memory_order_acquire) != 0); // wait till capture is done
+    std::cout << "INFO: [Scheduler2::ReadFromADC] FPGA capture complete, data should be in the queue.\n";
+    */
+    while (!adc.recv_valid()) {}
+    adc.trigger();
+    captures_pending.fetch_add(1, std::memory_order_release);
     ++frame_count; // Increment frame count after capture is done
+    std::cout << "INFO: [Scheduler2::ReadFromADC] Frame count incremented to " << frame_count << "\n";
 }
 
 void Scheduler2::DrawTextureToScreen () {

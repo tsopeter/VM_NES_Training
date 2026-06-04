@@ -267,3 +267,7 @@ void ADCS2::Set_IP_Address(const std::string& ip) {
 void ADCS2::Set_Port(int port) {
     m_host.Set_Port(port);
 }
+
+bool ADCS2::recv_valid() const {
+    return m_recv_valid.load(std::memory_order_acquire);
+}

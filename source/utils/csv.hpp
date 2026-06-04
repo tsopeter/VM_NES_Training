@@ -12,6 +12,7 @@ public:
 
     void add_headers (const std::vector<std::string> &header);
     void write (const Helpers::Performance &perf);
+    void write (const std::vector<std::string> &row);
 
 private:
     std::string filename;

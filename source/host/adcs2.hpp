@@ -45,6 +45,7 @@ public:
     void spin_up_collection();
     void stop_collection();
     void trigger ();
+    bool recv_valid() const;
     
     // Response receiving
     bool try_get_data(std::vector<uint32_t>& data);
@@ -76,7 +77,7 @@ private:
     int average_n = 1;
     int burst_n   = 20;
 
-    std::atomic<bool> m_recv_valid {false};
+    std::atomic<bool> m_recv_valid {true};
 
 };
 

@@ -29,9 +29,10 @@ struct Parameters {
     int monitor_Width  = 2716;
 
     // ADC
-    int adc_delay_us = 150.0f;
-    int adc_average_n = 10;
-    int adc_burst_n   = 20;
+    int  adc_delay_us = 150.0f;
+    int  adc_average_n = 10;
+    int  adc_burst_n   = 20;
+    bool adc_invert    = false;
     std::string adc_host_ip = "127.0.0.1";
     int adc_host_port = 8000;
 
@@ -54,6 +55,8 @@ struct Parameters {
 
     int steps = 0;
     double lr = 1e-3;
+    bool entropy_regularization = false;
+    double entropy_coeff = 1.0;
 
     Parameters ();
 };
@@ -80,6 +83,7 @@ struct EvalFunctions {
 struct Performance {
     double  loss = 0.0f;
     int64_t compute_time_s = 0;
+    double  entropy = 0.0f;
 };
 
 namespace Run {

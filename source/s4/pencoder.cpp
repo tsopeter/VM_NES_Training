@@ -220,6 +220,7 @@ m_textureID(0), m_pbo(0), m_cuda_pbo_resource(nullptr), m_texture_initialized(fa
             ).clone().to(DEVICE);
             break;
         case PLM_Device_Enum::NIR:
+        case PLM_Device_Enum::NIR2:
             masks = torch::from_blob(
                 (void*)m_plm_nir_logical_masks,
                 {32, 2, 3},
@@ -471,9 +472,6 @@ torch::Tensor PEncoder::MEncode_u8Tensor3 (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::MEncode_u8Tensor5 (const torch::Tensor &x) {
-    if (m_plm_device.m_device != PLM_Device_Enum::VISIBLE) {
-        throw std::runtime_error("PEncoder::MEncode_u8Tensor5 is only implemented for VISIBLE PLM device for now.\n");
-    }
 
     torch::Tensor plane = m_plm_device[x];
     return MEncode_u8Tensor_Categorical(plane);
@@ -627,6 +625,7 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Categorical (const torch::Tensor &q) {
         case PLM_Device_Enum::VISIBLE:
             return MEncode_u8Tensor_Categorical_visible_implt(q);
         case PLM_Device_Enum::NIR:
+        case PLM_Device_Enum::NIR2:
             return MEncode_u8Tensor_Categorical_nir_implt(q);
         default:
             throw std::runtime_error("PEncoder::MEncode_u8Tensor_Categorical: Invalid PLM device.\n");

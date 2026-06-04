@@ -45,6 +45,7 @@ torch::Tensor PLM_Device::mapper(torch::Tensor &x) {
             break;
 
         case PLM_Device_Enum::NIR:
+        case PLM_Device_Enum::NIR2:
             
             switch (m_levels) {
                 case 32:
@@ -78,6 +79,7 @@ void PLM_Device::set_device(PLM_Device_Enum device, int num_levels) {
 
             break;
         case PLM_Device_Enum::NIR:
+        case PLM_Device_Enum::NIR2:
             m_max_num_levels = 32;
 
             // supported levels (so far)
@@ -113,6 +115,26 @@ void PLM_Device::set_device(PLM_Device_Enum device, int num_levels) {
                 },
                 torch::TensorOptions().dtype(torch::kFloat32)
             );
+            m_table_r = m_table.view({1, -1});
+            break;
+        case PLM_Device_Enum::NIR2:
+            // Technically, we don't need
+            // odd and even columns
+            // since we are using reinforcement learning
+            m_table = torch::tensor(
+                {
+                    0.0000, 0.0127, 0.0293, 0.0662,
+                    0.0522, 0.0675, 0.0854, 0.1261,
+                    0.1427, 0.1834, 0.2166, 0.2803,
+                    0.2561, 0.2968, 0.3299, 0.3962,
+                    0.3771, 0.4102, 0.4510, 0.5108,
+                    0.4930, 0.5261, 0.5682, 0.6306,
+                    0.6127, 0.6675, 0.7338, 0.8229,
+                    0.7847, 0.8369, 0.9045, 1.0000
+                },
+                torch::TensorOptions().dtype(torch::kFloat32)
+            );
+            m_table_r = m_table.view({1, -1});
             break;
         case PLM_Device_Enum::NIR:
             
@@ -152,6 +174,7 @@ void PLM_Device::set_device(PLM_Device_Enum device, int num_levels) {
 torch::Tensor PLM_Device::operator[](const torch::Tensor &x) {
     switch (m_device) {
         case PLM_Device_Enum::VISIBLE:
+        case PLM_Device_Enum::NIR2: // Can use visible-style mapping since we treat as single table (no odd/even distinction)
             return operator_implt_visible(x);
         case PLM_Device_Enum::NIR:
             return operator_implt_nir(x);
@@ -188,5 +211,61 @@ torch::Tensor PLM_Device::operator_implt_visible(const torch::Tensor &x) {
 }
 
 torch::Tensor PLM_Device::operator_implt_nir(const torch::Tensor &x) {
-    throw std::runtime_error("NIR device operator not implemented yet\n");
+    // Input shape: [N, H, W]
+    if (x.device() != m_table.device())
+        m_table = m_table.to(x.device()).to(x.dtype());
+
+    // Split table into odd and even parts
+    auto table_odd = m_table.slice(0, 0, 32);   // First 32 values for odd rows
+    auto table_even = m_table.slice(0, 32, 64); // Next 32 values for even rows
+    
+    auto normalized_x = (x + M_PI) / (2 * M_PI);  // [N, H, W] -> [0, 1]
+    
+    auto sizes = x.sizes();
+    int N = sizes[0];
+    int H = sizes[1];
+    int W = sizes[2];
+    
+    // Flatten for processing: [N, H, W] -> [N*H*W]
+    auto flat_x = normalized_x.reshape({-1});
+    
+    // Create row indices: [N*H*W] where each element gets its row number (0 to H-1)
+    auto row_indices = torch::arange(H, torch::TensorOptions().device(x.device()))
+                              .unsqueeze(1)              // [H, 1]
+                              .expand({H, W})            // [H, W]
+                              .unsqueeze(0)              // [1, H, W]
+                              .expand({N, H, W})         // [N, H, W]
+                              .reshape({-1});            // [N*H*W]
+    
+    // Determine if row is odd (row index % 2 == 1)
+    auto is_odd_row = (row_indices % 2 == 1);
+    
+    // Prepare tables for broadcasting
+    auto table_odd_r = table_odd.unsqueeze(0);   // [1, 32]
+    auto table_even_r = table_even.unsqueeze(0); // [1, 32]
+    
+    auto t1 = Utils::GetCurrentTime_us();
+    
+    // Compute differences for odd rows: [N*H*W, 32]
+    auto diffs_odd = torch::remainder(flat_x.unsqueeze(1) - table_odd_r + 0.5, 1.0) - 0.5;
+    auto indices_odd = torch::argmin(diffs_odd.abs(), 1);  // [N*H*W]
+    
+    // Compute differences for even rows: [N*H*W, 32]
+    auto diffs_even = torch::remainder(flat_x.unsqueeze(1) - table_even_r + 0.5, 1.0) - 0.5;
+    auto indices_even = torch::argmin(diffs_even.abs(), 1);  // [N*H*W]
+    
+    Utils::SynchronizeCUDADevices();
+    auto t2 = Utils::GetCurrentTime_us();
+    
+    // Select appropriate indices based on row parity: [N*H*W]
+    auto indices = torch::where(is_odd_row, indices_odd, indices_even);
+    
+    Utils::SynchronizeCUDADevices();
+    auto t3 = Utils::GetCurrentTime_us();
+    
+    std::cout << "INFO: [PLM_Device::operator_implt_nir] Quantization took: " << (t2 - t1) << " us\n";
+    std::cout << "INFO: [PLM_Device::operator_implt_nir] Selection took: " << (t3 - t2) << " us\n";
+    
+    // Reshape back to [N, H, W]
+    return indices.view({N, H, W}).contiguous();
 }

@@ -6,7 +6,8 @@
 
 enum PLM_Device_Enum : int {
     VISIBLE = 0,
-    NIR     = 1
+    NIR     = 1,
+    NIR2    = 2
 };
 
 struct PLM_Device {
@@ -27,6 +28,7 @@ struct PLM_Device {
     torch::Tensor operator[](const torch::Tensor &x);
     torch::Tensor operator_implt_visible(const torch::Tensor &x);
     torch::Tensor operator_implt_nir(const torch::Tensor &x);
+    torch::Tensor operator_implt_nir2(const torch::Tensor &x);
 
 };
 
