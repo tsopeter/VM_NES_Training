@@ -9,12 +9,12 @@ LearningRate    0.2
 IterateN        4
 PLMDevice       nir
 NumLevels       32
-ADC_Delay_us    100
+ADC_Delay_us    200
 ADC_AverageN    5
 ADC_BurstN      24
 ADC_Host_IP     192.168.2.100
 ADC_Host_Port   8000
 output_path     06_03_02/a
 Invert          0
-EntropyReg      1
+EntropyReg      0
 EntropyCoeff    0.0001
