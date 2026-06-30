@@ -22,7 +22,7 @@ int64_t Utils::GetCurrentTime_s () {
 #include <cuda_gl_interop.h>
 
 void Utils::SynchronizeCUDADevices () {
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 }
 #else
 #include <iostream>

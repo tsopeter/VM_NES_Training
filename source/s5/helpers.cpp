@@ -7,17 +7,34 @@
 #include <filesystem>
 #include <future>
 
+#define RED_TEXT_START "\033[31m"
+#define RED_TEXT_END   "\033[0m"
+#define GREEN_TEXT_START "\033[32m"
+#define GREEN_TEXT_END   "\033[0m"
+#define BLUE_TEXT_START "\033[34m"
+#define BLUE_TEXT_END   "\033[0m"
+#define YELLOW_TEXT_START "\033[33m"
+#define YELLOW_TEXT_END   "\033[0m"
+#define MAGENTA_TEXT_START "\033[35m"
+#define MAGENTA_TEXT_END   "\033[0m"
+#define CYAN_TEXT_START "\033[36m"
+#define CYAN_TEXT_END   "\033[0m"
+
 Helpers::Performance Helpers::Run::Evaluate (
     Parameters &params,
     Scheduler2 &scheduler,
     EvalFunctions &eval_fn
 ) {
 
-    int64_t start_time = Utils::GetCurrentTime_s();
+    int64_t start_time = Utils::GetCurrentTime_us ();
+
+    using Clock = std::chrono::steady_clock;
+
 
     for (int i = 0; i < params.n_samples; ++i) {
-        auto action = eval_fn.sample(params.burst_n);
 
+        auto start = Clock::now();
+        auto action = eval_fn.sample(params.burst_n);
         action = Utils::UpscaleTensor(
             action,
             params.upscale_amount
@@ -26,6 +43,11 @@ Helpers::Performance Helpers::Run::Evaluate (
         scheduler.SetTextureFromTensor (
             action
         );
+        auto end = Clock::now();
+
+        // get in ms
+        const double duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << "INFO: [Helpers::Run::Evaluate] Sampled and set texture in " << duration_ms << " ms\n";
 
         Iterate(params, scheduler);
         ++params.steps;
@@ -38,13 +60,16 @@ Helpers::Performance Helpers::Run::Evaluate (
     std::cout << "INFO: [Helpers::Run::Evaluate] Step Count: " << params.steps << "\n";
     double loss = eval_fn.update();
 
-    int64_t end_time = Utils::GetCurrentTime_s ();
+    int64_t end_time = Utils::GetCurrentTime_us ();
     int64_t delta    = end_time - start_time;
     auto    entropy  = eval_fn.entropy();
 
+    std::cout << RED_TEXT_START "INFO: [Helpers::Run::Evaluate] elapsed_time= " << 
+        delta / 1e3 << " ms loss= " << loss << " entropy= " << entropy << RED_TEXT_END "\n";
+
     Helpers::Performance perf {
         .loss = loss,
-        .compute_time_s = delta,
+        .compute_time_s = delta / 1e6,
         .entropy = entropy
     };
 

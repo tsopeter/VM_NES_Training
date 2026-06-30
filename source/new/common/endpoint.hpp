@@ -7,7 +7,7 @@
 #include <thread>
 #include <atomic>
 #include <cstdint>
-#include "third-party/concurrentqueue.h"
+#include "../../third-party/concurrentqueue.h"
 
 class EndPoint {
 public:

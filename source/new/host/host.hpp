@@ -8,8 +8,8 @@
 #include <atomic>
 #include <functional>
 
-#include "common/apppac.hpp"
-#include "common/third-party/concurrentqueue.h"
+#include "../common/apppac.hpp"
+#include "../../third-party/concurrentqueue.h"
 
 class Host {
 public:

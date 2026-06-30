@@ -15,6 +15,8 @@
 #include <functional>
 #include <thread>
 
+#include "../new/host/host.hpp"
+
 #include <torch/torch.h>
 
 #if defined(__linux__)
@@ -106,7 +108,11 @@ private:
 
 
     // FPGA
-    ADCS2 adc;
+    //ADCS2 adc;
+
+    Host *host {nullptr};
+
+
     std::atomic<int64_t> captures_pending {0};
     std::atomic<bool>    enable_fpga {false};
 

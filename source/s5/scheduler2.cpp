@@ -12,6 +12,7 @@ Scheduler2::~Scheduler2 () {
 
     std::cout << "INFO: [Scheduler2::~Scheduler2] Scheduler2 destroyed, resources cleaned up.\n";
 
+    if (host) delete host;
 }
 
 void Scheduler2::Start (
@@ -45,10 +46,15 @@ void Scheduler2::Start (
     window.fps     = FPS;
 
     // Setup FPGA
+    /*
     adc.set_delay(Delay_us);
     adc.set_average_n(Average_N);
     adc.set_burst_n(Burst_N);
     burst_n = Burst_N;
+    */
+    host = new Host(Host_IP, Host_Port);
+    //host->Send_Command("set delay " + std::to_string(Delay_us));
+
 
     // Setup Optimizer
     optimizer = opt;
@@ -59,11 +65,12 @@ void Scheduler2::Start (
     m_alpha_ignore_shader = LoadShader(nullptr, "source/shaders/alpha_ignore.fs");
     
     // Start up FPGA
+    /*
     adc.Set_IP_Address(Host_IP);
     adc.Set_Port(Host_Port);
     adc.start();
     adc.spin_up_collection();
-
+    */
 
     // Setup PEncoder
     pen = new PEncoder(
@@ -110,7 +117,8 @@ void Scheduler2::schedule_fpga_capture(std::atomic<uint64_t> &counter) {
     captures_pending.fetch_add(1, std::memory_order_release);
     enable_fpga.store(false, std::memory_order_release);
 
-    adc.trigger();
+    //adc.trigger();
+    host->Send_Command("set trigger 1");
     std::cout << "INFO: [Scheduler2::schedule_fpga_capture] VSYNC captured, FPGA triggered.\n";
 }
 
@@ -128,21 +136,46 @@ void Scheduler2::StartCaptureThread () {
 
             // Read from ADC
             std::vector<uint32_t> data;
+            /*
             while (!adc.try_get_data(data)) {
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
+            }
+            */
+            std::vector<_AppPac> packets;
+            while ((packets = host->Receive()).empty()) {
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+            }
+
+            std::vector<uint32_t> received_data; // Assuming the first packet contains the data
+            for (const auto& packet : packets) {
+                if (packet.type == _AppPacType::DATA) {
+                    received_data.insert(received_data.end(), std::begin(packet.data), std::end(packet.data));
+
+
+                    torch::Tensor tensor_data = torch::from_blob(
+                        (void*)received_data.data(),
+                        {static_cast<long>(received_data.size())},
+                        torch::kUInt32
+                    ).clone(); // Clone to own the memory
+
+                    // Queue to Processing Pipeline
+                    process_queue.enqueue(tensor_data);
+                }
             }
 
             std::cout << "INFO: [Scheduler2::CaptureThread] Received ADC data, processing...\n";
 
+            /*
             // To tensor
             torch::Tensor tensor_data = torch::from_blob(
-                data.data(),
-                {static_cast<long>(data.size())},
+                received_data.data(),
+                {static_cast<long>(received_data.size())},
                 torch::kUInt32
             ).clone(); // Clone to own the memory
 
             // Queue to Processing Pipeline
             process_queue.enqueue(tensor_data);
+            */
 
             captures_pending.fetch_sub(1, std::memory_order_release);
         }
@@ -225,8 +258,9 @@ void Scheduler2::ReadFromADC () {
     while (captures_pending.load(std::memory_order_acquire) != 0); // wait till capture is done
     std::cout << "INFO: [Scheduler2::ReadFromADC] FPGA capture complete, data should be in the queue.\n";
     */
-    while (!adc.recv_valid()) {}
-    adc.trigger();
+    //while (!adc.recv_valid()) {}
+    //adc.trigger();
+    host->Send_Command("set trigger 1");
     captures_pending.fetch_add(1, std::memory_order_release);
     ++frame_count; // Increment frame count after capture is done
     std::cout << "INFO: [Scheduler2::ReadFromADC] Frame count incremented to " << frame_count << "\n";
@@ -274,7 +308,11 @@ void Scheduler2::StopWindow () {
 }
 
 void Scheduler2::StopFPGA () {
-    adc.close ();
+    // adc.close ();
+    if (host) {
+        delete host;
+        host = nullptr;
+    }
 }
 
 void Scheduler2::StopThreads () {
@@ -293,11 +331,15 @@ void Scheduler2::StopThreads () {
 
 void Scheduler2::SetTextureFromTensor (const torch::Tensor &tensor) {
     torch::Tensor timage;
+    using Clock = std::chrono::steady_clock;
+
+    auto t0 = Clock::now();
     if (m_categorical_mode) {
         timage = pen->MEncode_u8Tensor_Categorical(tensor).contiguous().to(torch::kInt32); // Categorical
     } else {
         timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // Normal
     }
+    auto t1 = Clock::now();
     
     if (m_texture.width > 0 && m_texture.height > 0) {
         printf("Texture is valid!\n");
@@ -305,10 +347,13 @@ void Scheduler2::SetTextureFromTensor (const torch::Tensor &tensor) {
     } else {
         printf("Texture not loaded.\n");
     }
-    
-
     m_texture = pen->u8Tensor_Texture_CPU(timage);
     std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Texture size: " << m_texture.width << "x" << m_texture.height << '\n';
+    auto t2 = Clock::now();
+
+    const double encode_duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    const double texture_duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    std::cout << "INFO: [Scheduler2::SetTextureFromTensor] Encoding took " << encode_duration_ms << " ms, Texture creation took "<< texture_duration_ms << " ms\n";
 }
 
 void Scheduler2::UnloadTextures () {
