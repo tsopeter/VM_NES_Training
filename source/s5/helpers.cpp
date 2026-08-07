@@ -117,10 +117,11 @@ Helpers::Parameters::Parameters () {
         // Convert to float
         data_cuda = data_cuda.to(torch::kFloat32);
 
-        // It is originally stored as 32-bit integers (actually 16-bit offset binary)
-        // We need to convert it to a range of [-1, 1]
-        data_cuda = (data_cuda - 32768.0f) / 32768.0f;
-        data_cuda *= 4.0f;
+        data_cuda = torch::where(
+            data_cuda >= 32768.0f,
+            data_cuda - 65536.0f,
+            data_cuda
+        ) / 32768.0f; // map to [-1, 1] range
 
         // do not invert if adc_invert is false, otherwise invert the signal
         if (!this->adc_invert)
