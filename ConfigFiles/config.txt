@@ -4,13 +4,13 @@ Distribution    categorical
 Samples         20
 Upscale         2
 Epochs          100
-Steps_Per_Epoch 1
-LearningRate    0.2
+Steps_Per_Epoch 5
+LearningRate    0.15
 IterateN        4
 PLMDevice       nir
 NumLevels       32
-ADC_Delay_us    200
-ADC_AverageN    5
+ADC_Delay_us    10
+ADC_AverageN    14
 ADC_BurstN      24
 ADC_Host_IP     192.168.2.11
 ADC_Host_Port   8000

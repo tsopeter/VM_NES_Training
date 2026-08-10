@@ -151,6 +151,10 @@ void Scheduler2::StartCaptureThread () {
                 if (packet.type == _AppPacType::DATA) {
                     received_data.insert(received_data.end(), std::begin(packet.data), std::end(packet.data));
 
+                    // We need to truncate to 16-bits
+                    for (auto& value : received_data) {
+                        value &= 0xFFFF; // Keep only the lower 16 bits
+                    }
 
                     torch::Tensor tensor_data = torch::from_blob(
                         (void*)received_data.data(),
