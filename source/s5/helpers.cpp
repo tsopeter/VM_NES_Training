@@ -176,4 +176,7 @@ void Helpers::Setup_Scheduler (
 
     optimizer.entropy_regularization = params.entropy_regularization;
     optimizer.entropy_coeff = params.entropy_coeff;
+
+    // Set range
+    scheduler.SetRange(params.range);
 }

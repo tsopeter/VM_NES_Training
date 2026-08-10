@@ -341,7 +341,12 @@ void Scheduler2::SetTextureFromTensor (const torch::Tensor &tensor) {
     if (m_categorical_mode) {
         timage = pen->MEncode_u8Tensor_Categorical(tensor).contiguous().to(torch::kInt32); // Categorical
     } else {
-        timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // Normal
+        if (m_range < 1.0) {
+            auto xx = tensor * m_range;
+            timage = pen->MEncode_u8Tensor5(xx).contiguous().to(torch::kInt32); // Reduced range 
+        } else {
+            timage = pen->MEncode_u8Tensor5(tensor).contiguous().to(torch::kInt32); // Normal
+        }
     }
     auto t1 = Clock::now();
     
@@ -367,4 +372,12 @@ void Scheduler2::UnloadTextures () {
         m_texture.height = 0;
         std::cout << "INFO: [Scheduler2::UnloadTexture] Texture unloaded.\n";
     }
+}
+
+void Scheduler2::SetRange (double range) {
+    m_range = range;
+}
+
+double Scheduler2::GetRange () const {
+    return m_range;
 }

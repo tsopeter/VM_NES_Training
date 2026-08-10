@@ -16,3 +16,4 @@ ADC_BurstN      24
 ADC_Host_IP     192.168.2.100
 ADC_Host_Port   8000
 output_path     06_02/a
+Range           1.0

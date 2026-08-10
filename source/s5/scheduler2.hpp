@@ -94,11 +94,17 @@ public:
     void SetVSYNC_Marker ();
     void WaitVSYNC_Diff (uint64_t target_diff);
 
+
+    void   SetRange (double range);
+    double GetRange () const;
+
 private:
     // Windowing
     s3_Window window;
     Texture m_texture;
     Shader  m_alpha_ignore_shader;
+
+    double  m_range = 1.0; // Range for normalization of normal distribution
 
     // Data Pipeline
     std::atomic<bool> processing_thread_running {false};

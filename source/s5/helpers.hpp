@@ -58,6 +58,8 @@ struct Parameters {
     bool entropy_regularization = false;
     double entropy_coeff = 1.0;
 
+    double range = 1.0;
+
     Parameters ();
 };
 

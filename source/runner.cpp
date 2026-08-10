@@ -286,6 +286,13 @@ void Runner::InitConfigKeyMap () {
                 ifs >> params.entropy_coeff;
                 std::cout << "Setting Entropy Coefficient...\n";
             }
+        },
+        {
+            "Range",
+            [this](std::ifstream &ifs) {
+                ifs >> params.range;
+                std::cout << "Setting Range...\n";
+            }
         }
     };
 }
