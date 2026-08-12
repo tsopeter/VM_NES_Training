@@ -69,7 +69,7 @@ Helpers::Performance Helpers::Run::Evaluate (
 
     Helpers::Performance perf {
         .loss = loss,
-        .compute_time_s = delta / 1e6,
+        .compute_time_s = static_cast<int64_t>(delta / 1e6),
         .entropy = entropy
     };
 
@@ -179,4 +179,9 @@ void Helpers::Setup_Scheduler (
 
     // Set range
     scheduler.SetRange(params.range);
+
+    // Set map
+    if (params.___map_enabled) {
+        scheduler.SetPencoderRemapper(params.___map);
+    }
 }

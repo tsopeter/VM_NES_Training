@@ -293,6 +293,20 @@ void Runner::InitConfigKeyMap () {
                 ifs >> params.range;
                 std::cout << "Setting Range...\n";
             }
+        },
+        {
+            "Remap",
+            [this](std::ifstream &ifs) {
+                // Mapper 
+                // This depends on the number of levels to the PLM
+                std::vector<float> map_data(params.num_levels);
+                for (int i = 0; i < params.num_levels; ++i) {
+                    ifs >> map_data[i];
+                }
+                // store to params.___map
+                params.___map = torch::from_blob(map_data.data(), {params.num_levels}, torch::kLong).clone();
+                params.___map_enabled = true;
+            }
         }
     };
 }

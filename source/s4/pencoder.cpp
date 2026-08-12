@@ -706,5 +706,15 @@ torch::Tensor PEncoder::MEncode_u8Tensor_Binary (const torch::Tensor &x) {
 }
 
 torch::Tensor PEncoder::level_mapping (torch::Tensor x) {
-    return m_plm_device.mapper(x); 
+    if (m_remapper_initialized) {
+        return m_remapper.remap(x);
+    }
+    else {
+        return m_plm_device.mapper(x);
+    }
+}
+
+void PEncoder::init_remapper (torch::Tensor map) {
+    m_remapper.set_map(map);
+    m_remapper_initialized = true;
 }

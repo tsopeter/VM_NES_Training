@@ -98,6 +98,8 @@ public:
     void   SetRange (double range);
     double GetRange () const;
 
+    void   SetPencoderRemapper (torch::Tensor map);
+
 private:
     // Windowing
     s3_Window window;

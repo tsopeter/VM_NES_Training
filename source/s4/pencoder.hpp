@@ -7,6 +7,7 @@
 #include "../s2/quantize.hpp"
 #include "../s3/cam.hpp" /* u8Image */
 #include "../s2/plm_device.hpp" /* PLM_Device */
+#include "remapper.hpp"
 
 #if defined(__linux__)
 #define GL_GLEXT_PROTOTYPES
@@ -145,6 +146,8 @@ public:
 
     void init_pbo ();
 
+    void init_remapper (torch::Tensor map);
+
 private:
     torch::Tensor MEncode_u8Tensor_Categorical_visible_implt(const torch::Tensor &x);
     torch::Tensor MEncode_u8Tensor_Categorical_nir_implt(const torch::Tensor &x);
@@ -168,6 +171,9 @@ private:
 
     int m_num_levels;
     torch::Tensor level_mapping (torch::Tensor x);
+
+    Remapper m_remapper;
+    bool     m_remapper_initialized = false;
 
 };
 

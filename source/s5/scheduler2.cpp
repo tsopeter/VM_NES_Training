@@ -381,3 +381,12 @@ void Scheduler2::SetRange (double range) {
 double Scheduler2::GetRange () const {
     return m_range;
 }
+
+void Scheduler2::SetPencoderRemapper (torch::Tensor map) {
+    if (pen) {
+        pen->init_remapper(map);
+        std::cout << "INFO: [Scheduler2::SetPencoderRemapper] Remapper initialized in PEncoder.\n";
+    } else {
+        std::cerr << "ERROR: [Scheduler2::SetPencoderRemapper] PEncoder is not initialized.\n";
+    }
+}

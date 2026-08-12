@@ -60,6 +60,9 @@ struct Parameters {
 
     double range = 1.0;
 
+    bool ___map_enabled = false;
+    torch::Tensor ___map;
+
     Parameters ();
 };
 
